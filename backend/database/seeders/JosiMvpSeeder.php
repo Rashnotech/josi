@@ -31,12 +31,19 @@ use App\Models\Zone;
 use App\Models\ZonePrice;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class JosiMvpSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = Hash::make(env('JOSI_SEED_PASSWORD', 'password'));
+        $seedPassword = env('JOSI_SEED_PASSWORD', env('SUPER_ADMIN_PASSWORD'));
+
+        if (! $seedPassword) {
+            throw new RuntimeException('JOSI_SEED_PASSWORD or SUPER_ADMIN_PASSWORD must be set before running JosiMvpSeeder.');
+        }
+
+        $password = Hash::make($seedPassword);
 
         $superAdmin = $this->seedUser(
             'superadmin@josi.test',
@@ -330,7 +337,10 @@ class JosiMvpSeeder extends Seeder
 
     private function syncUserRole(User $user, UserRole $role): void
     {
-        $roleModel = Role::query()->where('name', $role->value)->first();
+        $roleModel = Role::query()
+            ->where('name', $role->value)
+            ->where('guard_name', 'web')
+            ->first();
 
         if ($roleModel) {
             $user->roles()->sync([$roleModel->getKey()]);

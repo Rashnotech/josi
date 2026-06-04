@@ -8,16 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('role_has_permissions', function (Blueprint $table) {
+        Schema::create('model_has_permissions', function (Blueprint $table) {
             $table->foreignId('permission_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('role_id')->constrained()->cascadeOnDelete();
+            $table->string('model_type');
+            $table->unsignedBigInteger('model_id');
 
-            $table->unique(['permission_id', 'role_id']);
+            $table->index(['model_id', 'model_type']);
+            $table->unique(['permission_id', 'model_id', 'model_type']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('role_has_permissions');
+        Schema::dropIfExists('model_has_permissions');
     }
 };

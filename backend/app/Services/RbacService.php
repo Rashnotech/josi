@@ -109,7 +109,7 @@ class RbacService
             ->mapWithKeys(function (string $permission) {
                 return [
                     $permission => Permission::query()->updateOrCreate(
-                        ['name' => $permission],
+                        ['name' => $permission, 'guard_name' => 'web'],
                         ['display_name' => $this->displayName($permission)]
                     ),
                 ];
@@ -117,7 +117,7 @@ class RbacService
 
         foreach (UserRole::cases() as $roleEnum) {
             $role = Role::query()->updateOrCreate(
-                ['name' => $roleEnum->value],
+                ['name' => $roleEnum->value, 'guard_name' => 'web'],
                 ['display_name' => $this->displayName($roleEnum->value)]
             );
 

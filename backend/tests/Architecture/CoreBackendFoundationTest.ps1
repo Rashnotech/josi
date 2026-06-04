@@ -126,8 +126,9 @@ $tables = @(
     'personal_access_tokens',
     'roles',
     'permissions',
-    'permission_role',
-    'role_user'
+    'role_has_permissions',
+    'model_has_roles',
+    'model_has_permissions'
 )
 
 foreach ($table in $tables) {

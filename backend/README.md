@@ -135,3 +135,7 @@ After PHP/Composer are installed and a full Laravel runtime exists, add PHPUnit 
 ## Auth API
 
 The authentication and API access layer is documented in `docs/auth-api.md`.
+
+## Database Setup
+
+MySQL/MariaDB setup, cPanel deployment notes, migration commands, seeders, and the database health check are documented in `docs/database-setup.md`.

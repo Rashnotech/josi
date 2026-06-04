@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphedByMany;
 
 class Role extends Model
 {
@@ -12,16 +13,17 @@ class Role extends Model
 
     protected $fillable = [
         'name',
+        'guard_name',
         'display_name',
     ];
 
     public function permissions(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class);
+        return $this->belongsToMany(Permission::class, 'role_has_permissions');
     }
 
-    public function users(): BelongsToMany
+    public function users(): MorphedByMany
     {
-        return $this->belongsToMany(User::class);
+        return $this->morphedByMany(User::class, 'model', 'model_has_roles');
     }
 }

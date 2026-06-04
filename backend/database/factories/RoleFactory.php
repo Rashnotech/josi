@@ -19,6 +19,7 @@ class RoleFactory extends Factory
 
         return [
             'name' => Str::snake($name),
+            'guard_name' => 'web',
             'display_name' => Str::headline($name),
         ];
     }

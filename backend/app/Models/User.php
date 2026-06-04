@@ -5,9 +5,9 @@ namespace App\Models;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -83,8 +83,8 @@ class User extends Authenticatable
         return $this->hasMany(AuditLog::class);
     }
 
-    public function roles(): BelongsToMany
+    public function roles(): MorphToMany
     {
-        return $this->belongsToMany(Role::class);
+        return $this->morphToMany(Role::class, 'model', 'model_has_roles');
     }
 }

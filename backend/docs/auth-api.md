@@ -189,7 +189,7 @@ Forgot password:
 
 ## RBAC Matrix
 
-This skeleton uses custom `roles`, `permissions`, `permission_role`, and `role_user` tables because this workspace does not currently include Composer or package installation metadata. If the full Laravel runtime later installs `spatie/laravel-permission`, the `RbacService` boundary is the place to swap the implementation without changing controllers.
+This skeleton uses Spatie-compatible `roles`, `permissions`, `model_has_roles`, `model_has_permissions`, and `role_has_permissions` tables. Once Composer is available, install `spatie/laravel-permission` and keep `RbacService` as the controller-facing boundary.
 
 `super_admin`: `manage_all_users`, `manage_admins`, `manage_drivers`, `manage_fleets`, `manage_vehicles`, `manage_documents`, `manage_pricing`, `manage_trips`, `manage_payments`, `manage_cash_ledger`, `view_reports`, `manage_system_settings`.
 
