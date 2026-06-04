@@ -10,7 +10,7 @@ enum UserRole: string
 
     case SuperAdmin = 'super_admin';
     case Admin = 'admin';
-    case PackOwner = 'pack_owner';
-    case Rider = 'rider';
+    case FleetOwner = 'fleet_owner';
+    case Driver = 'driver';
     case Customer = 'customer';
 }

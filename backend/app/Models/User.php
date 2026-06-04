@@ -5,13 +5,16 @@ namespace App\Models;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
+    use HasApiTokens;
     use HasFactory;
     use Notifiable;
 
@@ -23,26 +26,46 @@ class User extends Authenticatable
         'role',
         'status',
         'email_verified_at',
+        'phone_verified_at',
+        'last_login_at',
+        'password_reset_code',
+        'password_reset_code_expires_at',
+        'password_reset_verified_at',
+        'password_reset_token',
+        'password_reset_code_attempts',
+        'password_reset_sent_at',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'password_reset_code',
+        'password_reset_token',
     ];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
             'status' => UserStatus::class,
+            'password_reset_code_expires_at' => 'datetime',
+            'password_reset_verified_at' => 'datetime',
+            'password_reset_sent_at' => 'datetime',
         ];
     }
 
     public function riderProfile(): HasOne
     {
         return $this->hasOne(RiderProfile::class);
+    }
+
+    public function driverProfile(): HasOne
+    {
+        return $this->riderProfile();
     }
 
     public function fleet(): HasOne
@@ -58,5 +81,10 @@ class User extends Authenticatable
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class);
     }
 }

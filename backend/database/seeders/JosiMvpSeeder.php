@@ -19,6 +19,7 @@ use App\Enums\VerificationStatus;
 use App\Models\Fleet;
 use App\Models\FleetDocument;
 use App\Models\Payment;
+use App\Models\Role;
 use App\Models\RiderCashLedger;
 use App\Models\RiderDocument;
 use App\Models\RiderProfile;
@@ -56,7 +57,7 @@ class JosiMvpSeeder extends Seeder
         $fleetOwner = $this->seedUser(
             'fleet.owner@josi.test',
             'Mainland Pack Owner',
-            UserRole::PackOwner,
+            UserRole::FleetOwner,
             $password,
             '+2348000000003'
         );
@@ -64,7 +65,7 @@ class JosiMvpSeeder extends Seeder
         $driverUser = $this->seedUser(
             'rider@josi.test',
             'Ayo Rider',
-            UserRole::Rider,
+            UserRole::Driver,
             $password,
             '+2348000000004'
         );
@@ -238,7 +239,7 @@ class JosiMvpSeeder extends Seeder
 
     private function seedUser(string $email, string $name, UserRole $role, string $password, string $phone): User
     {
-        return User::query()->updateOrCreate(
+        $user = User::query()->updateOrCreate(
             ['email' => $email],
             [
                 'name' => $name,
@@ -249,6 +250,10 @@ class JosiMvpSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        $this->syncUserRole($user, $role);
+
+        return $user;
     }
 
     private function seedZone(string $name, float $latitude, float $longitude, string $description): Zone
@@ -321,5 +326,14 @@ class JosiMvpSeeder extends Seeder
                 'verified_at' => now(),
             ]
         );
+    }
+
+    private function syncUserRole(User $user, UserRole $role): void
+    {
+        $roleModel = Role::query()->where('name', $role->value)->first();
+
+        if ($roleModel) {
+            $user->roles()->sync([$roleModel->getKey()]);
+        }
     }
 }

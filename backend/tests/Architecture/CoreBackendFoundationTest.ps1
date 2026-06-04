@@ -75,7 +75,7 @@ foreach ($enum in $enumFiles) {
 }
 
 $enumCases = @{
-    'app/Enums/UserRole.php' = @('super_admin', 'admin', 'pack_owner', 'rider', 'customer')
+    'app/Enums/UserRole.php' = @('super_admin', 'admin', 'fleet_owner', 'driver', 'customer')
     'app/Enums/UserStatus.php' = @('active', 'inactive', 'suspended')
     'app/Enums/ApplicationStatus.php' = @('pending', 'under_review', 'approved', 'rejected', 'suspended')
     'app/Enums/AvailabilityStatus.php' = @('offline', 'online', 'busy', 'unavailable')
@@ -122,7 +122,12 @@ $tables = @(
     'trips',
     'payments',
     'rider_cash_ledgers',
-    'audit_logs'
+    'audit_logs',
+    'personal_access_tokens',
+    'roles',
+    'permissions',
+    'permission_role',
+    'role_user'
 )
 
 foreach ($table in $tables) {

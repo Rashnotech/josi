@@ -17,7 +17,7 @@ class FleetFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory()->packOwner(),
+            'user_id' => User::factory()->fleetOwner(),
             'business_name' => fake()->company(),
             'business_email' => fake()->companyEmail(),
             'business_phone' => fake()->unique()->phoneNumber(),

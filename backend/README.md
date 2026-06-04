@@ -131,3 +131,7 @@ powershell -ExecutionPolicy Bypass -File evals\CoreBackendBusinessRulesEval.ps1
 ```
 
 After PHP/Composer are installed and a full Laravel runtime exists, add PHPUnit or Pest tests for migrations, model relationships, service transitions, pricing failures, and cash ledger creation.
+
+## Auth API
+
+The authentication and API access layer is documented in `docs/auth-api.md`.

@@ -42,14 +42,14 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => UserRole::Admin]);
     }
 
-    public function packOwner(): static
+    public function fleetOwner(): static
     {
-        return $this->state(fn () => ['role' => UserRole::PackOwner]);
+        return $this->state(fn () => ['role' => UserRole::FleetOwner]);
     }
 
-    public function rider(): static
+    public function driver(): static
     {
-        return $this->state(fn () => ['role' => UserRole::Rider]);
+        return $this->state(fn () => ['role' => UserRole::Driver]);
     }
 
     public function customer(): static
