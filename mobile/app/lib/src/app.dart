@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/account_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/splash_screen.dart';
@@ -17,6 +18,7 @@ class JosiRideApp extends StatelessWidget {
       routes: <String, WidgetBuilder>{
         SignInScreen.routeName: (BuildContext context) => const SignInScreen(),
         RideHomeScreen.routeName: (BuildContext context) => const RideHomeScreen(),
+        AccountScreen.routeName: (BuildContext context) => const AccountScreen(),
       },
       home: const SplashScreen(),
     );

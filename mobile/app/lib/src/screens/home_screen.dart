@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/josi_colors.dart';
+import 'account_screen.dart';
 
 class RideHomeScreen extends StatefulWidget {
   const RideHomeScreen({super.key});
@@ -13,6 +14,14 @@ class RideHomeScreen extends StatefulWidget {
 
 class _RideHomeScreenState extends State<RideHomeScreen> {
   int _currentIndex = 0;
+
+  void _handleDestinationSelected(int index) {
+    if (index == 2) {
+      Navigator.of(context).push(AccountScreen.smoothRoute());
+      return;
+    }
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +49,7 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
             alignment: Alignment.bottomCenter,
             child: _RideSheet(
               selectedIndex: _currentIndex,
-              onDestinationSelected: (int index) => setState(() => _currentIndex = index),
+              onDestinationSelected: _handleDestinationSelected,
             ),
           ),
         ],

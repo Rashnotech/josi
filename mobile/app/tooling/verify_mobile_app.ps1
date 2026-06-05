@@ -65,6 +65,7 @@ $requiredFiles = @(
   "pubspec.yaml",
   "lib/main.dart",
   "lib/src/app.dart",
+  "lib/src/screens/account_screen.dart",
   "lib/src/screens/splash_screen.dart",
   "lib/src/screens/sign_in_screen.dart",
   "lib/src/screens/home_screen.dart",
@@ -116,8 +117,22 @@ Assert-NotContains "lib/src/screens/sign_in_screen.dart" "JosiLogo|josi-logo\.pn
 Assert-Contains "lib/src/screens/sign_in_screen.dart" "FilteringTextInputFormatter" "Phone input must stay constrained to phone digits."
 Assert-Contains "lib/src/screens/home_screen.dart" "class _TopBrand" "Home must use a non-logo brand treatment."
 Assert-NotContains "lib/src/screens/home_screen.dart" "JosiLogo|josi-logo\.png" "Home must not render the Josi logo."
+Assert-Contains "lib/src/screens/home_screen.dart" "AccountScreen\.smoothRoute\(\)" "Home Account tab must use the smooth account route."
 Assert-Contains "lib/src/screens/home_screen.dart" "Where to\?" "Ride home must expose destination search."
+Assert-Contains "lib/src/screens/account_screen.dart" "PageRouteBuilder" "Account transition must use a custom smooth route."
+Assert-Contains "lib/src/screens/account_screen.dart" "FadeTransition" "Account route must fade during transition."
+Assert-Contains "lib/src/screens/account_screen.dart" "SlideTransition" "Account route must slide during transition."
+Assert-Contains "lib/src/screens/account_screen.dart" "Rik Space" "Account screen must show the customer name."
+Assert-Contains "lib/src/screens/account_screen.dart" "Upload profile picture" "Account screen must expose profile picture upload."
+Assert-Contains "lib/src/screens/account_screen.dart" "Profile" "Account screen must include Profile."
+Assert-Contains "lib/src/screens/account_screen.dart" "Payment" "Account screen must include Payment."
+Assert-Contains "lib/src/screens/account_screen.dart" "Support" "Account screen must include Support."
+Assert-Contains "lib/src/screens/account_screen.dart" "Safety" "Account screen must include Safety."
+Assert-Contains "lib/src/screens/account_screen.dart" "Saved places" "Account screen must include Saved places."
+Assert-Contains "lib/src/screens/account_screen.dart" "Settings" "Account screen must include Settings."
+Assert-NotContains "lib/src/screens/account_screen.dart" "Promotions|Family Profile|Work Profile" "Account screen must not include removed profile sections."
 Assert-Contains "test/josi_ride_app_test.dart" "starts on splash and advances to sign in" "Widget tests must cover splash-to-auth flow."
+Assert-Contains "test/josi_ride_app_test.dart" "account tab opens the customer account page" "Widget tests must cover account navigation."
 Assert-Contains "test/josi_ride_app_test.dart" "theme uses Josi brand color and Inter typography" "Tests must cover the design contract."
 Assert-NotContains "test/josi_ride_app_test.dart" "Urbanist" "Tests must not reference Urbanist."
 

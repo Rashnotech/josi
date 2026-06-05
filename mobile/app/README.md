@@ -7,6 +7,7 @@ What is included:
 - Splash screen with the Josi logo, red and black brand system, and timed transition.
 - Phone-first sign-in screen with Nigeria country code, terms gate, and social sign-in actions.
 - Post-auth ride home shell with Abuja-style map surface, destination search, scheduling action, and navigation shortcuts.
+- Account screen with customer name, profile-picture upload action, rating, and focused account settings list.
 - Bundled Inter font weights and bundled Josi logo asset.
 - Flutter widget tests plus a deterministic local design eval.
 

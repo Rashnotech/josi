@@ -9,7 +9,9 @@ Gate rubric:
 3. Typography: the Flutter theme declares Inter and the bundled font files cover regular, medium, semibold, bold, and extrabold weights.
 4. Auth flow: app starts on splash, transitions to sign in, validates terms acceptance, and can navigate to the ride home shell.
 5. Ride context: post-auth screen shows a map-like Abuja ride surface with destination search and later scheduling affordance.
-6. Portability: no API keys, map SDKs, runtime font downloads, or network calls are required for the current UI.
+6. Account flow: tapping Account opens a smooth slide/fade account page with customer name, rating, right-side profile-picture upload action, and only Profile, Payment, Support, Safety, Saved places, and Settings.
+7. Removed account sections: Promotions, Family Profile, and Work Profile must not render in the account list.
+8. Portability: no API keys, map SDKs, runtime font downloads, or network calls are required for the current UI.
 
 Run the deterministic local eval:
 
