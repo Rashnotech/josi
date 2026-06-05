@@ -19,13 +19,13 @@ class JosiTheme {
     ).apply(
       bodyColor: JosiColors.ink,
       displayColor: JosiColors.ink,
-      fontFamily: 'Urbanist',
+      fontFamily: 'Inter',
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      fontFamily: 'Urbanist',
+      fontFamily: 'Inter',
       scaffoldBackgroundColor: Colors.white,
       textTheme: textTheme,
       colorScheme: const ColorScheme.light(
@@ -76,8 +76,8 @@ class JosiTheme {
         ),
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.resolveWith((Set<MaterialState> states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
             return JosiColors.red;
           }
           return Colors.white;

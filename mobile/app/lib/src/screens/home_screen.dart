@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../theme/josi_colors.dart';
-import '../widgets/josi_logo.dart';
 
 class RideHomeScreen extends StatefulWidget {
   const RideHomeScreen({super.key});
@@ -28,7 +27,7 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
               child: Row(
                 children: <Widget>[
-                  const JosiLogo(width: 96, framed: true),
+                  const _TopBrand(),
                   const Spacer(),
                   _CircleAction(icon: Icons.notifications_none_rounded, onPressed: () {}),
                   const SizedBox(width: 10),
@@ -43,6 +42,39 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
               selectedIndex: _currentIndex,
               onDestinationSelected: (int index) => setState(() => _currentIndex = index),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopBrand extends StatelessWidget {
+  const _TopBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const Icon(Icons.two_wheeler_rounded, color: JosiColors.red, size: 22),
+          const SizedBox(width: 8),
+          Text(
+            'Josi Ride',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: JosiColors.black),
           ),
         ],
       ),
@@ -327,7 +359,7 @@ class _AbujaMapPainter extends CustomPainter {
         text: label,
         style: TextStyle(
           color: JosiColors.black.withOpacity(0.48),
-          fontFamily: 'Urbanist',
+          fontFamily: 'Inter',
           fontSize: size,
           fontWeight: FontWeight.w800,
         ),

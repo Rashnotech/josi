@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/josi_colors.dart';
-import '../widgets/josi_logo.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/social_button.dart';
 import 'home_screen.dart';
@@ -17,7 +16,7 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  final TextEditingController _phoneController = TextEditingController(text: '8114510020');
+  final TextEditingController _phoneController = TextEditingController(text: '');
   bool _acceptedTerms = false;
   bool _showError = false;
 
@@ -95,7 +94,7 @@ class _SignInScreenState extends State<SignInScreen> {
                               child: Padding(
                                 padding: const EdgeInsets.only(top: 12),
                                 child: Text.rich(
-                                  TextSpan(
+                                  const TextSpan(
                                     text: 'I agree to Josi Ride ',
                                     children: <TextSpan>[
                                       TextSpan(
@@ -105,7 +104,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
-                                      const TextSpan(text: ' and '),
+                                      TextSpan(text: ' and '),
                                       TextSpan(
                                         text: 'Privacy Policy',
                                         style: TextStyle(
@@ -113,7 +112,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
-                                      const TextSpan(text: '.'),
+                                      TextSpan(text: '.'),
                                     ],
                                   ),
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: JosiColors.muted),
@@ -194,7 +193,7 @@ class _Header extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    const JosiLogo(width: 126, framed: true),
+                    const _HeaderBrand(),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -229,6 +228,33 @@ class _Header extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderBrand extends StatelessWidget {
+  const _HeaderBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const Icon(Icons.two_wheeler_rounded, color: JosiColors.red, size: 22),
+          const SizedBox(width: 9),
+          Text(
+            'Josi Ride',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white),
           ),
         ],
       ),

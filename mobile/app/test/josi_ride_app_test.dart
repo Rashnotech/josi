@@ -24,6 +24,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 2300));
     await tester.pumpAndSettle();
 
+    await tester.enterText(find.byKey(const ValueKey<String>('phone-field')), '8114510020');
     await tester.tap(find.byKey(const ValueKey<String>('terms-checkbox')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey<String>('continue-button')));
@@ -43,14 +44,15 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey<String>('sign-in-screen')), findsOneWidget);
+    expect(find.text('Enter at least 10 phone digits.'), findsOneWidget);
     expect(find.text('Accept the terms to continue.'), findsOneWidget);
   });
 
-  test('theme uses Josi brand color and Urbanist typography', () {
+  test('theme uses Josi brand color and Inter typography', () {
     final ThemeData theme = JosiTheme.light;
 
     expect(theme.colorScheme.primary, JosiColors.red);
-    expect(theme.textTheme.bodyMedium?.fontFamily, 'Urbanist');
-    expect(theme.textTheme.headlineLarge?.fontFamily, 'Urbanist');
+    expect(theme.textTheme.bodyMedium?.fontFamily, 'Inter');
+    expect(theme.textTheme.headlineLarge?.fontFamily, 'Inter');
   });
 }
