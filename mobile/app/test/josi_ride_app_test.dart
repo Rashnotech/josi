@@ -31,8 +31,49 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('ride-home-screen')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('booking-drawer')), findsOneWidget);
+    expect(find.text('Enter pickup location'), findsOneWidget);
     expect(find.text('Where to?'), findsOneWidget);
-    expect(find.text('Later'), findsOneWidget);
+  });
+
+  testWidgets('booking flow selects a rider, payment, then opens driver page', (WidgetTester tester) async {
+    await tester.pumpWidget(const JosiRideApp());
+    await tester.pump(const Duration(milliseconds: 2300));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const ValueKey<String>('phone-field')), '8114510020');
+    await tester.tap(find.byKey(const ValueKey<String>('terms-checkbox')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey<String>('continue-button')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const ValueKey<String>('pickup-location-field')), 'Abuja-Keffi Expressway');
+    await tester.enterText(find.byKey(const ValueKey<String>('dropoff-location-field')), 'J.T. Useni Way');
+    await tester.drag(find.byKey(const ValueKey<String>('booking-drawer')), const Offset(0, -360));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey<String>('rider-Tanzir Fahad')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nearby riders'), findsOneWidget);
+    expect(find.text('Popular Rides'), findsNothing);
+    expect(find.text('0.7 km from pickup'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('rider-Tanzir Fahad')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('How would you like to pay?'), findsOneWidget);
+    expect(find.text('Cash'), findsOneWidget);
+    expect(find.text('Add debit/credit card'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('cash-payment-option')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const ValueKey<String>('driver-on-way-screen')), findsOneWidget);
+    expect(find.text('Driver on the way'), findsOneWidget);
+    expect(find.text('Tanzir Fahad'), findsOneWidget);
+    expect(find.text('3 mins'), findsOneWidget);
+    expect(find.text('Share Trip'), findsOneWidget);
   });
 
   testWidgets('account tab opens the customer account page', (WidgetTester tester) async {
