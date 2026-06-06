@@ -122,7 +122,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   _RedSocialButton(
                     key: const ValueKey<String>('google-login-button'),
                     label: 'Continue With Google',
-                    mark: 'G',
+                    icon: Icons.g_mobiledata_rounded,
                     onPressed: _continue,
                   ),
                   const SizedBox(height: 14),
@@ -251,15 +251,13 @@ class _RedSocialButton extends StatelessWidget {
   const _RedSocialButton({
     required this.label,
     required this.onPressed,
-    this.mark,
-    this.icon,
+    required this.icon,
     super.key,
   });
 
   final String label;
   final VoidCallback onPressed;
-  final String? mark;
-  final IconData? icon;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -283,12 +281,7 @@ class _RedSocialButton extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: icon != null
-                ? Icon(icon, color: Colors.black, size: 18)
-                : Text(
-                    mark ?? '',
-                    style: const TextStyle(color: JosiColors.red, fontSize: 16, fontWeight: FontWeight.w800),
-                  ),
+            child: Icon(icon, color: Colors.black, size: 21),
           ),
           const SizedBox(width: 12),
           Text(label),

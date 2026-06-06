@@ -73,7 +73,7 @@ class DriverOnWayScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Stack(
         children: <Widget>[
-          const Positioned.fill(child: _DriverMapBackdrop()),
+          const Positioned.fill(child: _DriverMapLayer()),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
@@ -391,12 +391,104 @@ class _TripFact extends StatelessWidget {
   }
 }
 
-class _DriverMapBackdrop extends StatelessWidget {
-  const _DriverMapBackdrop();
+class _DriverMapLayer extends StatelessWidget {
+  const _DriverMapLayer();
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(painter: _DriverMapPainter());
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = constraints.maxWidth;
+        final double height = constraints.maxHeight;
+
+        return Stack(
+          children: <Widget>[
+            Positioned.fill(child: CustomPaint(painter: _DriverMapPainter())),
+            Positioned(
+              left: width * 0.48 - 42,
+              top: height * 0.24 - 42,
+              child: const _MapIconPulse(
+                key: ValueKey<String>('driver-map-car-icon'),
+                icon: Icons.directions_car_filled_rounded,
+                size: 84,
+                iconSize: 42,
+                rotation: -0.52,
+              ),
+            ),
+            Positioned(
+              left: width * 0.62 - 28,
+              top: height * 0.54 - 28,
+              child: const _MapIconPulse(
+                key: ValueKey<String>('driver-map-person-icon'),
+                icon: Icons.person_rounded,
+                size: 56,
+                iconSize: 28,
+                backgroundColor: JosiColors.red,
+                iconColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MapIconPulse extends StatelessWidget {
+  const _MapIconPulse({
+    required this.icon,
+    required this.size,
+    required this.iconSize,
+    this.rotation = 0,
+    this.backgroundColor = Colors.white,
+    this.iconColor = JosiColors.black,
+  });
+
+  final IconData icon;
+  final double size;
+  final double iconSize;
+  final double rotation;
+  final Color backgroundColor;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: JosiColors.red.withOpacity(0.18),
+              shape: BoxShape.circle,
+            ),
+          ),
+          Transform.rotate(
+            angle: rotation,
+            child: Container(
+              width: size * 0.48,
+              height: size * 0.48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                shape: BoxShape.circle,
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x26000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: iconColor, size: iconSize),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -437,56 +529,6 @@ class _DriverMapPainter extends CustomPainter {
       ..lineTo(size.width * 0.56, size.height * 0.44)
       ..lineTo(size.width * 0.62, size.height * 0.54);
     canvas.drawPath(path, route);
-
-    _drawPulse(canvas, Offset(size.width * 0.48, size.height * 0.24), 74);
-    _drawCar(canvas, Offset(size.width * 0.48, size.height * 0.24));
-    _drawUserPin(canvas, Offset(size.width * 0.62, size.height * 0.54));
-  }
-
-  void _drawPulse(Canvas canvas, Offset center, double radius) {
-    final Paint pulse = Paint()..color = JosiColors.red.withOpacity(0.18);
-    canvas.drawCircle(center, radius, pulse);
-  }
-
-  void _drawCar(Canvas canvas, Offset center) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(-0.52);
-    final RRect body = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(-22, -14, 44, 28),
-      const Radius.circular(8),
-    );
-    canvas.drawRRect(body, Paint()..color = Colors.white);
-    canvas.drawRRect(
-      body,
-      Paint()
-        ..color = JosiColors.black.withOpacity(0.22)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-    canvas.drawRect(const Rect.fromLTWH(-12, -10, 24, 20), Paint()..color = const Color(0xFFE8EEF1));
-    canvas.restore();
-  }
-
-  void _drawUserPin(Canvas canvas, Offset center) {
-    final Paint pulse = Paint()..color = JosiColors.red.withOpacity(0.18);
-    final Paint pin = Paint()..color = JosiColors.red;
-    canvas.drawCircle(center, 34, pulse);
-    canvas.drawCircle(center, 18, pin);
-    final IconData icon = Icons.person_rounded;
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(icon.codePoint),
-        style: TextStyle(
-          fontFamily: icon.fontFamily,
-          package: icon.fontPackage,
-          fontSize: 20,
-          color: Colors.white,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(canvas, Offset(center.dx - painter.width / 2, center.dy - painter.height / 2));
   }
 
   @override

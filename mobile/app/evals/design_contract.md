@@ -8,12 +8,13 @@ Gate rubric:
 2. Logo placement: the actual Josi image logo only appears on the splash screen, not on login or home.
 3. Typography: the Flutter theme declares Inter and the bundled font files cover regular, medium, semibold, bold, and extrabold weights.
 4. Auth flow: app starts on splash, transitions to a black email/password login screen, uses red Google/Apple buttons, and can navigate to the ride home shell.
-5. Booking drawer: the home drawer is draggable, accepts pickup and drop-off locations, shows nearby riders with proximity instead of Popular Rides, and keeps the bottom menu fixed outside the drawer scroll.
-6. Payment flow: selecting a rider opens a payment section with "How would you like to pay?", Cash, and Add debit/credit card.
-7. Driver flow: selecting a payment method opens the driver-on-the-way page with arrival time, driver, vehicle, fare, route facts, cancel, and share actions.
-8. Account flow: tapping Account opens a smooth slide/fade account page with customer name, rating, right-side profile-picture upload action, and only Profile, Payment, Support, Safety, Saved places, and Settings.
-9. Removed account sections: Promotions, Family Profile, and Work Profile must not render in the account list.
-10. Portability: no API keys, map SDKs, runtime font downloads, or network calls are required for the current UI.
+5. Icon sourcing: UI icons use Flutter Material icon resources instead of text-made or hand-drawn icon shapes.
+6. Booking drawer: the home drawer is draggable, accepts pickup and drop-off locations, shows nearby riders with proximity instead of Popular Rides, and keeps the bottom menu fixed outside the drawer scroll.
+7. Payment flow: selecting a rider opens a payment section with "How would you like to pay?", Cash, and Add debit/credit card.
+8. Driver flow: selecting a payment method opens the driver-on-the-way page with arrival time, driver, vehicle, fare, route facts, cancel, and share actions.
+9. Account flow: tapping Account opens a smooth slide/fade account page with customer name, rating, right-side profile-picture upload action, and only Profile, Payment, Support, Safety, Saved places, and Settings.
+10. Removed account sections: Promotions, Family Profile, and Work Profile must not render in the account list.
+11. Portability: no API keys, map SDKs, runtime font downloads, or network calls are required for the current UI.
 
 Run the deterministic local eval:
 

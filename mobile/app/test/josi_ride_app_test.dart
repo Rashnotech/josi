@@ -33,6 +33,42 @@ void main() {
     expect(find.bySemanticsLabel('Josi Ride logo'), findsNothing);
   });
 
+  testWidgets('uses Material icon resources for social and trip UI', (WidgetTester tester) async {
+    await _pumpToSignIn(tester);
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('google-login-button')),
+        matching: find.byIcon(Icons.g_mobiledata_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('apple-login-button')),
+        matching: find.byIcon(Icons.apple_rounded),
+      ),
+      findsOneWidget,
+    );
+
+    await _bookRideWithCash(tester);
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('driver-map-car-icon')),
+        matching: find.byIcon(Icons.directions_car_filled_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('driver-map-person-icon')),
+        matching: find.byIcon(Icons.person_rounded),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('valid sign in moves rider to the home shell', (WidgetTester tester) async {
     await _loginWithGoogle(tester);
 
@@ -44,29 +80,7 @@ void main() {
   });
 
   testWidgets('booking flow selects a rider, payment, then opens driver page', (WidgetTester tester) async {
-    await _loginWithGoogle(tester);
-
-    await tester.enterText(find.byKey(const ValueKey<String>('pickup-location-field')), 'Abuja-Keffi Expressway');
-    await tester.enterText(find.byKey(const ValueKey<String>('dropoff-location-field')), 'J.T. Useni Way');
-    await tester.drag(find.byKey(const ValueKey<String>('booking-drawer')), const Offset(0, -360));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey<String>('rider-Tanzir Fahad')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Nearby riders'), findsOneWidget);
-    expect(find.text('Popular Rides'), findsNothing);
-    expect(find.text('0.7 km from pickup'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey<String>('rider-Tanzir Fahad')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('How would you like to pay?'), findsOneWidget);
-    expect(find.text('Cash'), findsOneWidget);
-    expect(find.text('Add debit/credit card'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey<String>('cash-payment-option')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await _bookRideWithCash(tester);
 
     expect(find.byKey(const ValueKey<String>('driver-on-way-screen')), findsOneWidget);
     expect(find.text('Driver on the way'), findsOneWidget);
@@ -117,4 +131,30 @@ Future<void> _loginWithGoogle(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey<String>('google-login-button')));
   await tester.pumpAndSettle();
+}
+
+Future<void> _bookRideWithCash(WidgetTester tester) async {
+  await _loginWithGoogle(tester);
+
+  await tester.enterText(find.byKey(const ValueKey<String>('pickup-location-field')), 'Abuja-Keffi Expressway');
+  await tester.enterText(find.byKey(const ValueKey<String>('dropoff-location-field')), 'J.T. Useni Way');
+  await tester.drag(find.byKey(const ValueKey<String>('booking-drawer')), const Offset(0, -360));
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(find.byKey(const ValueKey<String>('rider-Tanzir Fahad')));
+  await tester.pumpAndSettle();
+
+  expect(find.text('Nearby riders'), findsOneWidget);
+  expect(find.text('Popular Rides'), findsNothing);
+  expect(find.text('0.7 km from pickup'), findsOneWidget);
+
+  await tester.tap(find.byKey(const ValueKey<String>('rider-Tanzir Fahad')));
+  await tester.pumpAndSettle();
+
+  expect(find.text('How would you like to pay?'), findsOneWidget);
+  expect(find.text('Cash'), findsOneWidget);
+  expect(find.text('Add debit/credit card'), findsOneWidget);
+
+  await tester.tap(find.byKey(const ValueKey<String>('cash-payment-option')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 }
