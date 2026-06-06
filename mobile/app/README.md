@@ -1,33 +1,29 @@
-# Josi Ride Mobile App
+# Josi Mobile App
 
-Flutter source for the Josi Ride rider experience in `mobile/app`.
+Flutter source for the Josi customer and rider MVP.
 
-What is included:
+Included:
 
-- Red splash screen with the centered Josi logo and slower timed transition.
-- Dark email/password login screen with red Google and Apple actions.
-- Post-auth ride home shell with Abuja-style map surface, draggable booking drawer, pickup/drop-off fields, nearby rider choices, payment selection, and driver-on-the-way confirmation.
-- Account screen with customer name, profile-picture upload action, rating, and focused account settings list.
-- Bundled Inter font weights and bundled Josi logo asset.
-- Flutter widget tests plus a deterministic local design eval.
+- Material 3 app shell with Inter typography and a centralized red-based Josi design system.
+- GoRouter route map for splash, onboarding, auth/reset, customer flows, rider flows, and shared profile/support/settings surfaces.
+- Riverpod providers for auth, users, rider application data, trips, wallet, cash ledger, and notifications.
+- Mock data and placeholder repositories ready to swap for Laravel API calls.
+- Reusable UI components for forms, cards, status badges, bottom navigation, map placeholders, trip cards, wallet cards, vehicle cards, document upload cards, and empty/loading/error states.
+- Customer screens for booking, trip status, history/detail, wallet, notifications, support, settings, and profile.
+- Rider screens for onboarding approval, KYC documents, vehicle setup, available requests, active trip actions, earnings, cash ledger, notifications, support, settings, and profile.
+- Widget tests and deterministic source eval.
 
 Run locally:
 
 ```powershell
 cd mobile/app
 flutter pub get
+flutter analyze
 flutter test
 flutter run
 ```
 
-If platform folders are not generated yet:
-
-```powershell
-cd mobile/app
-flutter create --platforms=android,ios .
-```
-
-Deterministic source check without Flutter:
+Deterministic source check:
 
 ```powershell
 cd mobile/app
@@ -36,6 +32,6 @@ powershell -ExecutionPolicy Bypass -File tooling/verify_mobile_app.ps1
 
 Notes:
 
-- The current UI uses no map SDK or backend keys. The home screen paints a lightweight map-like surface for the first product pass.
-- Inter is bundled from Google Fonts under the SIL Open Font License in `assets/fonts/Inter-OFL.txt`.
-- The Josi logo asset comes from `mobile/josi-logo.png`.
+- No Laravel API calls are made yet. Repository classes currently return mock/static data.
+- No payment processor, Google Maps SDK, WebSocket tracking, or backend keys are required for this UI pass.
+- The bundled Josi logo and Inter font assets are used locally.

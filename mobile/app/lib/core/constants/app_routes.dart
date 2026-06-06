@@ -1,0 +1,57 @@
+class AppRoutes {
+  const AppRoutes._();
+
+  static const String splash = '/splash';
+  static const String onboarding = '/onboarding';
+  static const String roleSelection = '/role-selection';
+  static const String login = '/login';
+  static const String customerRegister = '/register/customer';
+  static const String riderRegister = '/register/rider';
+  static const String forgotPassword = '/forgot-password';
+  static const String verifyResetCode = '/verify-reset-code';
+  static const String resetPassword = '/reset-password';
+  static const String editProfile = '/edit-profile';
+  static const String fleetDashboard = '/fleet/dashboard';
+
+  static const String customerHome = '/customer/home';
+  static const String customerBookTrip = '/customer/book-trip';
+  static const String customerSelectLocation = '/customer/select-location';
+  static const String customerConfirmTrip = '/customer/confirm-trip';
+  static const String customerSearchingRider = '/customer/searching-rider';
+  static const String customerTripActive = '/customer/trip-active';
+  static const String customerTripCompleted = '/customer/trip-completed';
+  static const String customerTrips = '/customer/trips';
+  static const String customerTripDetail = '/customer/trip-detail/:id';
+  static const String customerWallet = '/customer/wallet';
+  static const String customerNotifications = '/customer/notifications';
+  static const String customerProfile = '/customer/profile';
+  static const String customerSupport = '/customer/support';
+  static const String customerSettings = '/customer/settings';
+
+  static const String riderHome = '/rider/home';
+  static const String riderApplicationStatus = '/rider/application-status';
+  static const String riderProfileSetup = '/rider/profile-setup';
+  static const String riderDocumentUpload = '/rider/document-upload';
+  static const String riderVehicleSetup = '/rider/vehicle-setup';
+  static const String riderAvailableTrips = '/rider/available-trips';
+  static const String riderTripRequest = '/rider/trip-request/:id';
+  static const String riderActiveTrip = '/rider/active-trip/:id';
+  static const String riderTripCompleted = '/rider/trip-completed/:id';
+  static const String riderTrips = '/rider/trips';
+  static const String riderWallet = '/rider/wallet';
+  static const String riderCashLedger = '/rider/cash-ledger';
+  static const String riderNotifications = '/rider/notifications';
+  static const String riderProfile = '/rider/profile';
+  static const String riderSupport = '/rider/support';
+  static const String riderSettings = '/rider/settings';
+
+  static String customerTripDetailPath(String id) =>
+      '/customer/trip-detail/$id';
+
+  static String riderTripRequestPath(String id) => '/rider/trip-request/$id';
+
+  static String riderActiveTripPath(String id) => '/rider/active-trip/$id';
+
+  static String riderTripCompletedPath(String id) =>
+      '/rider/trip-completed/$id';
+}

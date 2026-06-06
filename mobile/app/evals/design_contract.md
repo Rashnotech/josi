@@ -1,31 +1,31 @@
-# Josi Ride Mobile Design Eval
+# Josi Mobile MVP Design Eval
 
-Outcome: a rider should see the Josi brand first, complete the dark email login experience, and land on a ride request surface without needing any external service.
+Outcome: a customer or rider can launch Josi, understand the role split, authenticate through the shared login, and reach a polished mock MVP experience that is ready for Laravel API integration.
 
 Gate rubric:
 
-1. Brand: splash is only red `0xFFE50914`, keeps the Josi logo centered, and remains visible for 4.2 seconds before routing.
-2. Logo placement: the actual Josi image logo only appears on the splash screen, not on login or home.
-3. Typography: the Flutter theme declares Inter and the bundled font files cover regular, medium, semibold, bold, and extrabold weights.
-4. Auth flow: app starts on splash, transitions to a black email/password login screen, uses red Google/Apple buttons, and can navigate to the ride home shell.
-5. Icon sourcing: UI icons use Flutter Material icon resources instead of text-made or hand-drawn icon shapes.
-6. Booking drawer: the home drawer is draggable, accepts pickup and drop-off locations, shows nearby riders with proximity instead of Popular Rides, and keeps the bottom menu fixed outside the drawer scroll.
-7. Payment flow: selecting a rider opens a payment section with "How would you like to pay?", Cash, and Add debit/credit card.
-8. Driver flow: selecting a payment method opens the driver-on-the-way page with arrival time, driver, vehicle, fare, route facts, cancel, and share actions.
-9. Account flow: tapping Account opens a smooth slide/fade account page with customer name, rating, right-side profile-picture upload action, and only Profile, Payment, Support, Safety, Saved places, and Settings.
-10. Removed account sections: Promotions, Family Profile, and Work Profile must not render in the account list.
-11. Portability: no API keys, map SDKs, runtime font downloads, or network calls are required for the current UI.
+1. Architecture: app source lives in `lib/core` and `lib/features`, with the old `lib/src` prototype removed from active use.
+2. Navigation: `GoRouter` owns every required general, customer, rider, and dynamic trip route.
+3. State: Riverpod provides auth, current user, rider profile, trips, wallet, cash ledger, documents, and notifications.
+4. Backend readiness: placeholder repositories exist for auth, customer, rider, trip, wallet, and notifications.
+5. Theme: Material 3, Inter, Josi red `0xFFE50914`, charcoal secondary, off-white background, success, warning, error, and readable text colors are centralized.
+6. Components: shared widgets cover buttons, fields, dropdowns, search, cards, status badges, empty/loading/error states, section headers, trip/vehicle/wallet/profile/document/map UI, scaffold, and role-aware bottom nav.
+7. General flow: splash shows brand identity, onboarding has four pages, role selection offers customer/rider, login does not ask for a role, registration/reset screens are present.
+8. Customer flow: home, book trip, select location, confirm trip, searching rider, active trip, completed trip, trips, trip detail, wallet, profile, notifications, support, and settings are routed.
+9. Rider flow: home, application status, profile setup, documents, vehicle setup, available trips, trip request, active trip, completed trip, trips, wallet, cash ledger, notifications, profile, support, and settings are routed.
+10. MVP constraints: no backend, payment processor, map SDK, WebSockets, API keys, or network runtime dependency is required for the UI.
 
-Run the deterministic local eval:
+Run the deterministic source eval:
 
 ```powershell
 cd mobile/app
 powershell -ExecutionPolicy Bypass -File tooling/verify_mobile_app.ps1
 ```
 
-Run the Flutter widget tests when the Flutter SDK is installed:
+Run Flutter checks:
 
 ```powershell
 cd mobile/app
+flutter analyze
 flutter test
 ```
