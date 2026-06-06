@@ -1,14 +1,14 @@
 # Josi Ride Mobile Design Eval
 
-Outcome: a rider should see the Josi brand first, complete phone-based sign in, and land on a ride request surface without needing any external service.
+Outcome: a rider should see the Josi brand first, complete the dark email login experience, and land on a ride request surface without needing any external service.
 
 Gate rubric:
 
-1. Brand: splash renders the Josi logo, red `0xFFE50914`, black `0xFF080808`, and no unrelated dominant palette.
-2. Logo placement: the actual Josi image logo only appears on the splash screen.
+1. Brand: splash is only red `0xFFE50914`, keeps the Josi logo centered, and remains visible for 4.2 seconds before routing.
+2. Logo placement: the actual Josi image logo only appears on the splash screen, not on login or home.
 3. Typography: the Flutter theme declares Inter and the bundled font files cover regular, medium, semibold, bold, and extrabold weights.
-4. Auth flow: app starts on splash, transitions to sign in, validates terms acceptance, and can navigate to the ride home shell.
-5. Booking drawer: the home drawer is draggable, accepts pickup and drop-off locations, and shows nearby riders with proximity instead of Popular Rides.
+4. Auth flow: app starts on splash, transitions to a black email/password login screen, uses red Google/Apple buttons, and can navigate to the ride home shell.
+5. Booking drawer: the home drawer is draggable, accepts pickup and drop-off locations, shows nearby riders with proximity instead of Popular Rides, and keeps the bottom menu fixed outside the drawer scroll.
 6. Payment flow: selecting a rider opens a payment section with "How would you like to pay?", Cash, and Add debit/credit card.
 7. Driver flow: selecting a payment method opens the driver-on-the-way page with arrival time, driver, vehicle, fare, route facts, cancel, and share actions.
 8. Account flow: tapping Account opens a smooth slide/fade account page with customer name, rating, right-side profile-picture upload action, and only Profile, Payment, Support, Safety, Saved places, and Settings.

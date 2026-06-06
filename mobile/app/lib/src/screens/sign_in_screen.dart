@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../theme/josi_colors.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/social_button.dart';
 import 'home_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -16,144 +13,147 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  final TextEditingController _phoneController = TextEditingController(text: '');
-  bool _acceptedTerms = false;
-  bool _showError = false;
-
-  String get _digitsOnly => _phoneController.text.replaceAll(RegExp('[^0-9]'), '');
-
-  bool get _canContinue => _digitsOnly.length >= 10 && _acceptedTerms;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _rememberMe = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   void _continue() {
-    if (!_canContinue) {
-      setState(() => _showError = true);
-      return;
-    }
     Navigator.of(context).pushReplacementNamed(RideHomeScreen.routeName);
   }
 
-  void _toggleTerms(bool? value) {
-    setState(() {
-      _acceptedTerms = value ?? false;
-      if (_canContinue) {
-        _showError = false;
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final Size screen = MediaQuery.of(context).size;
-
     return Scaffold(
       key: const ValueKey<String>('sign-in-screen'),
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.black,
       body: SafeArea(
-        bottom: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
-            child: CustomScrollView(
-              slivers: <Widget>[
-                SliverToBoxAdapter(child: _Header(height: screen.height < 720 ? 238 : 286)),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 30, 24, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        Text('Enter your number', style: Theme.of(context).textTheme.headlineLarge),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Sign in or create your rider account with a Nigerian phone number.',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: JosiColors.muted),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(30, 42, 30, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const SizedBox(height: 36),
+                  Text(
+                    'Hop In - Log In to Your\nJosi Account',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          height: 1.18,
                         ),
-                        const SizedBox(height: 24),
-                        _PhoneInput(controller: _phoneController),
-                        if (_showError && _digitsOnly.length < 10) ...<Widget>[
-                          const SizedBox(height: 8),
-                          const _FieldError('Enter at least 10 phone digits.'),
-                        ],
-                        const SizedBox(height: 18),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Checkbox(
-                              key: const ValueKey<String>('terms-checkbox'),
-                              value: _acceptedTerms,
-                              onChanged: _toggleTerms,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: Text.rich(
-                                  const TextSpan(
-                                    text: 'I agree to Josi Ride ',
-                                    children: <TextSpan>[
-                                      TextSpan(
-                                        text: 'Terms',
-                                        style: TextStyle(
-                                          color: JosiColors.red,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      TextSpan(text: ' and '),
-                                      TextSpan(
-                                        text: 'Privacy Policy',
-                                        style: TextStyle(
-                                          color: JosiColors.red,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      TextSpan(text: '.'),
-                                    ],
-                                  ),
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: JosiColors.muted),
-                                ),
-                              ),
-                            ),
-                          ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Access your rides, track trips, manage payments,\nand travel anywhere with ease.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF8C8C8C),
+                          height: 1.45,
                         ),
-                        if (_showError && !_acceptedTerms) ...<Widget>[
-                          const SizedBox(height: 4),
-                          const _FieldError('Accept the terms to continue.'),
-                        ],
-                        const SizedBox(height: 22),
-                        PrimaryButton(
-                          key: const ValueKey<String>('continue-button'),
-                          label: 'Sign in',
-                          icon: Icons.arrow_forward_rounded,
-                          onPressed: _continue,
-                        ),
-                        const SizedBox(height: 26),
-                        const _DividerLabel(label: 'Or'),
-                        const SizedBox(height: 20),
-                        SocialButton(
-                          label: 'Sign in with Google',
-                          mark: 'G',
-                          markColor: const Color(0xFF4285F4),
-                          onPressed: () {},
-                        ),
-                        const SizedBox(height: 14),
-                        SocialButton(
-                          label: 'Sign in with Facebook',
-                          mark: 'f',
-                          markColor: const Color(0xFF1877F2),
-                          onPressed: () {},
-                        ),
-                        const SizedBox(height: 28),
-                      ],
+                  ),
+                  const SizedBox(height: 64),
+                  _AuthField(
+                    key: const ValueKey<String>('email-field'),
+                    controller: _emailController,
+                    label: 'Email',
+                    hintText: 'Gail_santos@icloud.com',
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 20),
+                  _AuthField(
+                    key: const ValueKey<String>('password-field'),
+                    controller: _passwordController,
+                    label: 'Password',
+                    hintText: '.......',
+                    obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    suffixIcon: IconButton(
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      color: const Color(0xFF8C8C8C),
+                      icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Row(
+                    children: <Widget>[
+                      SizedBox.square(
+                        dimension: 22,
+                        child: Checkbox(
+                          key: const ValueKey<String>('remember-checkbox'),
+                          value: _rememberMe,
+                          onChanged: (bool? value) => setState(() => _rememberMe = value ?? false),
+                          side: const BorderSide(color: Color(0xFF6F6F6F), width: 1.3),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Remember Me',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF8C8C8C)),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {},
+                        style: TextButton.styleFrom(
+                          foregroundColor: JosiColors.red,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 34),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Forgot Password ?'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  const _DividerLabel(label: 'Or'),
+                  const SizedBox(height: 22),
+                  _RedSocialButton(
+                    key: const ValueKey<String>('google-login-button'),
+                    label: 'Continue With Google',
+                    mark: 'G',
+                    onPressed: _continue,
+                  ),
+                  const SizedBox(height: 14),
+                  _RedSocialButton(
+                    key: const ValueKey<String>('apple-login-button'),
+                    label: 'Continue With Apple',
+                    icon: Icons.apple_rounded,
+                    onPressed: _continue,
+                  ),
+                  const SizedBox(height: 26),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        "Don't have an account ! ",
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF737373)),
+                      ),
+                      TextButton(
+                        onPressed: () {},
+                        style: TextButton.styleFrom(
+                          foregroundColor: JosiColors.red,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 32),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Register'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -162,156 +162,64 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          const ColoredBox(color: JosiColors.black),
-          Positioned(
-            left: -60,
-            right: -60,
-            bottom: -74,
-            height: 150,
-            child: Transform.rotate(
-              angle: -0.12,
-              child: Container(color: JosiColors.red),
-            ),
-          ),
-          Positioned.fill(child: CustomPaint(painter: _PickupPatternPainter())),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 26, 24, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    const _HeaderBrand(),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.white.withOpacity(0.14)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const Icon(Icons.shield_outlined, color: Colors.white, size: 17),
-                          const SizedBox(width: 7),
-                          Text(
-                            'Secure',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  'Ride through your city with Josi.',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Fast pickups, scheduled trips, and logistics support in one account.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderBrand extends StatelessWidget {
-  const _HeaderBrand();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.14)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const Icon(Icons.two_wheeler_rounded, color: JosiColors.red, size: 22),
-          const SizedBox(width: 9),
-          Text(
-            'Josi Ride',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PhoneInput extends StatelessWidget {
-  const _PhoneInput({required this.controller});
+class _AuthField extends StatelessWidget {
+  const _AuthField({
+    required this.controller,
+    required this.label,
+    required this.hintText,
+    this.keyboardType,
+    this.textInputAction,
+    this.obscureText = false,
+    this.suffixIcon,
+    super.key,
+  });
 
   final TextEditingController controller;
+  final String label;
+  final String hintText;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final bool obscureText;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      key: const ValueKey<String>('phone-field'),
-      controller: controller,
-      keyboardType: TextInputType.phone,
-      textInputAction: TextInputAction.done,
-      inputFormatters: <TextInputFormatter>[
-        FilteringTextInputFormatter.allow(RegExp('[0-9 ]')),
-      ],
-      style: Theme.of(context).textTheme.titleMedium,
-      decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 12, right: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 36,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: JosiColors.line),
-                ),
-                child: const Text(
-                  'NG',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                '+234',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-              ),
-              const SizedBox(width: 6),
-              const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: JosiColors.muted),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.white),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          obscureText: obscureText,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: const Color(0xFF777777)),
+            filled: true,
+            fillColor: const Color(0xFF111111),
+            suffixIcon: suffixIcon,
+            border: OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: JosiColors.red, width: 1.4),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
           ),
         ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 132),
-        hintText: 'Phone number',
-      ),
-      onChanged: (_) {},
+      ],
     );
   }
 }
@@ -325,58 +233,67 @@ class _DividerLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        const Expanded(child: Divider(color: JosiColors.line)),
+        const Expanded(child: Divider(color: Color(0xFF1E1E1E))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: JosiColors.muted),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF8C8C8C)),
           ),
         ),
-        const Expanded(child: Divider(color: JosiColors.line)),
+        const Expanded(child: Divider(color: Color(0xFF1E1E1E))),
       ],
     );
   }
 }
 
-class _FieldError extends StatelessWidget {
-  const _FieldError(this.message);
+class _RedSocialButton extends StatelessWidget {
+  const _RedSocialButton({
+    required this.label,
+    required this.onPressed,
+    this.mark,
+    this.icon,
+    super.key,
+  });
 
-  final String message;
+  final String label;
+  final VoidCallback onPressed;
+  final String? mark;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      message,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: JosiColors.redDark,
-            fontWeight: FontWeight.w700,
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size.fromHeight(58),
+        backgroundColor: JosiColors.red,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        textStyle: Theme.of(context).textTheme.labelLarge,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: icon != null
+                ? Icon(icon, color: Colors.black, size: 18)
+                : Text(
+                    mark ?? '',
+                    style: const TextStyle(color: JosiColors.red, fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
           ),
+          const SizedBox(width: 12),
+          Text(label),
+        ],
+      ),
     );
   }
-}
-
-class _PickupPatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint line = Paint()
-      ..color = Colors.white.withOpacity(0.07)
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
-    final Paint point = Paint()
-      ..color = JosiColors.red.withOpacity(0.34)
-      ..style = PaintingStyle.fill;
-
-    for (int index = 0; index < 7; index++) {
-      final double x = size.width * (0.08 + index * 0.16);
-      final Path path = Path()
-        ..moveTo(x, size.height * 0.2)
-        ..quadraticBezierTo(x + 28, size.height * 0.46, x - 18, size.height * 0.76);
-      canvas.drawPath(path, line);
-      canvas.drawCircle(Offset(x, size.height * (0.26 + (index % 3) * 0.17)), 3.5, point);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

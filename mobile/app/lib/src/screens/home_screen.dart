@@ -75,7 +75,6 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
               child: Row(
                 children: <Widget>[
-                  const _TopBrand(),
                   const Spacer(),
                   _CircleAction(icon: Icons.notifications_none_rounded, onPressed: () {}),
                   const SizedBox(width: 10),
@@ -94,39 +93,6 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
             onRiderSelected: _selectRider,
             onBackToRiders: _resetBooking,
             onPaymentSelected: _selectPayment,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TopBrand extends StatelessWidget {
-  const _TopBrand();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const Icon(Icons.two_wheeler_rounded, color: JosiColors.red, size: 22),
-          const SizedBox(width: 8),
-          Text(
-            'Josi Ride',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: JosiColors.black),
           ),
         ],
       ),
@@ -184,46 +150,57 @@ class _BookingDrawer extends StatelessWidget {
             ),
             child: SafeArea(
               top: false,
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: Column(
                 children: <Widget>[
-                  Center(
-                    child: Container(
-                      width: 58,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: JosiColors.line,
-                        borderRadius: BorderRadius.circular(20),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Center(
+                      child: Container(
+                        width: 58,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: JosiColors.line,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  _LocationCard(
-                    pickupController: pickupController,
-                    destinationController: destinationController,
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                      children: <Widget>[
+                        _LocationCard(
+                          pickupController: pickupController,
+                          destinationController: destinationController,
+                        ),
+                        const SizedBox(height: 18),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 260),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          child: bookingStep == _BookingStep.riders
+                              ? _NearbyRiderList(
+                                  key: const ValueKey<String>('nearby-rider-list'),
+                                  onRiderSelected: onRiderSelected,
+                                )
+                              : _PaymentSection(
+                                  key: const ValueKey<String>('payment-section'),
+                                  rider: selectedRider,
+                                  onBack: onBackToRiders,
+                                  onPaymentSelected: onPaymentSelected,
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 18),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 260),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: bookingStep == _BookingStep.riders
-                        ? _NearbyRiderList(
-                            key: const ValueKey<String>('nearby-rider-list'),
-                            onRiderSelected: onRiderSelected,
-                          )
-                        : _PaymentSection(
-                            key: const ValueKey<String>('payment-section'),
-                            rider: selectedRider,
-                            onBack: onBackToRiders,
-                            onPaymentSelected: onPaymentSelected,
-                          ),
-                  ),
-                  const SizedBox(height: 18),
-                  _BottomNav(
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onDestinationSelected,
+                  const Divider(height: 1, color: JosiColors.line),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                    child: _BottomNav(
+                      selectedIndex: selectedIndex,
+                      onDestinationSelected: onDestinationSelected,
+                    ),
                   ),
                 ],
               ),

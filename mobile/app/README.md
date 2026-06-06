@@ -4,8 +4,8 @@ Flutter source for the Josi Ride rider experience in `mobile/app`.
 
 What is included:
 
-- Splash screen with the Josi logo, red and black brand system, and timed transition.
-- Phone-first sign-in screen with Nigeria country code, terms gate, and social sign-in actions.
+- Red splash screen with the centered Josi logo and slower timed transition.
+- Dark email/password login screen with red Google and Apple actions.
 - Post-auth ride home shell with Abuja-style map surface, draggable booking drawer, pickup/drop-off fields, nearby rider choices, payment selection, and driver-on-the-way confirmation.
 - Account screen with customer name, profile-picture upload action, rating, and focused account settings list.
 - Bundled Inter font weights and bundled Josi logo asset.

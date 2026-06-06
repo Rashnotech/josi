@@ -5,47 +5,46 @@ import 'package:josi_ride/src/theme/josi_colors.dart';
 import 'package:josi_ride/src/theme/josi_theme.dart';
 
 void main() {
-  testWidgets('starts on splash and advances to sign in', (WidgetTester tester) async {
+  testWidgets('starts on red splash and advances to sign in', (WidgetTester tester) async {
     await tester.pumpWidget(const JosiRideApp());
 
     expect(find.byKey(const ValueKey<String>('splash-screen')), findsOneWidget);
-    expect(find.text('Josi Ride'), findsOneWidget);
+    expect(find.bySemanticsLabel('Josi Ride logo'), findsOneWidget);
+    expect(find.text('Josi Ride'), findsNothing);
 
-    await tester.pump(const Duration(milliseconds: 2300));
+    await tester.pump(const Duration(milliseconds: 4300));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('sign-in-screen')), findsOneWidget);
-    expect(find.text('Enter your number'), findsOneWidget);
-    expect(find.text('Sign in with Google'), findsOneWidget);
+    expect(find.text('Hop In - Log In to Your\nJosi Account'), findsOneWidget);
+    expect(find.text('Continue With Google'), findsOneWidget);
+  });
+
+  testWidgets('login screen matches the email password reference', (WidgetTester tester) async {
+    await _pumpToSignIn(tester);
+
+    expect(find.byKey(const ValueKey<String>('email-field')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('password-field')), findsOneWidget);
+    expect(find.text('Remember Me'), findsOneWidget);
+    expect(find.text('Forgot Password ?'), findsOneWidget);
+    expect(find.text('Continue With Google'), findsOneWidget);
+    expect(find.text('Continue With Apple'), findsOneWidget);
+    expect(find.text('Register'), findsOneWidget);
+    expect(find.bySemanticsLabel('Josi Ride logo'), findsNothing);
   });
 
   testWidgets('valid sign in moves rider to the home shell', (WidgetTester tester) async {
-    await tester.pumpWidget(const JosiRideApp());
-    await tester.pump(const Duration(milliseconds: 2300));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byKey(const ValueKey<String>('phone-field')), '8114510020');
-    await tester.tap(find.byKey(const ValueKey<String>('terms-checkbox')));
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey<String>('continue-button')));
-    await tester.pumpAndSettle();
+    await _loginWithGoogle(tester);
 
     expect(find.byKey(const ValueKey<String>('ride-home-screen')), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('booking-drawer')), findsOneWidget);
     expect(find.text('Enter pickup location'), findsOneWidget);
     expect(find.text('Where to?'), findsOneWidget);
+    expect(find.text('Josi Ride'), findsNothing);
   });
 
   testWidgets('booking flow selects a rider, payment, then opens driver page', (WidgetTester tester) async {
-    await tester.pumpWidget(const JosiRideApp());
-    await tester.pump(const Duration(milliseconds: 2300));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byKey(const ValueKey<String>('phone-field')), '8114510020');
-    await tester.tap(find.byKey(const ValueKey<String>('terms-checkbox')));
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey<String>('continue-button')));
-    await tester.pumpAndSettle();
+    await _loginWithGoogle(tester);
 
     await tester.enterText(find.byKey(const ValueKey<String>('pickup-location-field')), 'Abuja-Keffi Expressway');
     await tester.enterText(find.byKey(const ValueKey<String>('dropoff-location-field')), 'J.T. Useni Way');
@@ -77,15 +76,7 @@ void main() {
   });
 
   testWidgets('account tab opens the customer account page', (WidgetTester tester) async {
-    await tester.pumpWidget(const JosiRideApp());
-    await tester.pump(const Duration(milliseconds: 2300));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byKey(const ValueKey<String>('phone-field')), '8114510020');
-    await tester.tap(find.byKey(const ValueKey<String>('terms-checkbox')));
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey<String>('continue-button')));
-    await tester.pumpAndSettle();
+    await _loginWithGoogle(tester);
 
     await tester.tap(find.text('Account'));
     await tester.pump();
@@ -105,19 +96,6 @@ void main() {
     expect(find.text('Work Profile'), findsNothing);
   });
 
-  testWidgets('terms gate blocks incomplete sign in', (WidgetTester tester) async {
-    await tester.pumpWidget(const JosiRideApp());
-    await tester.pump(const Duration(milliseconds: 2300));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey<String>('continue-button')));
-    await tester.pump();
-
-    expect(find.byKey(const ValueKey<String>('sign-in-screen')), findsOneWidget);
-    expect(find.text('Enter at least 10 phone digits.'), findsOneWidget);
-    expect(find.text('Accept the terms to continue.'), findsOneWidget);
-  });
-
   test('theme uses Josi brand color and Inter typography', () {
     final ThemeData theme = JosiTheme.light;
 
@@ -125,4 +103,18 @@ void main() {
     expect(theme.textTheme.bodyMedium?.fontFamily, 'Inter');
     expect(theme.textTheme.headlineLarge?.fontFamily, 'Inter');
   });
+}
+
+Future<void> _pumpToSignIn(WidgetTester tester) async {
+  await tester.pumpWidget(const JosiRideApp());
+  await tester.pump(const Duration(milliseconds: 4300));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _loginWithGoogle(WidgetTester tester) async {
+  await _pumpToSignIn(tester);
+  await tester.ensureVisible(find.byKey(const ValueKey<String>('google-login-button')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey<String>('google-login-button')));
+  await tester.pumpAndSettle();
 }
