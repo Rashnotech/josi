@@ -21,14 +21,16 @@ void main() {
     expect(find.text('Welcome to Josi Ride'), findsOneWidget);
     expect(find.text('Continue as Customer'), findsOneWidget);
     expect(find.text('Continue as Rider'), findsOneWidget);
+    _expectVisibleInViewport(tester, find.text('Get Started'));
+    _expectVisibleInViewport(tester, find.text('Drive with Us'));
+    _expectVisibleInViewport(tester, find.text('POWERED BY JOSI RIDE'));
   });
 
   testWidgets('customer role opens customer login and signs into customer home',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
 
-    await tester.ensureVisible(find.text('Get Started'));
-    await tester.pumpAndSettle();
+    _expectVisibleInViewport(tester, find.text('Get Started'));
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
 
@@ -41,10 +43,11 @@ void main() {
     expect(find.byKey(const ValueKey<String>('login-password-field')),
         findsOneWidget);
     expect(find.text('Continue with Google'), findsOneWidget);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('login-button')));
+    _expectVisibleInViewport(tester, find.text('Continue with Google'));
+    _expectVisibleInViewport(tester, find.text('Create account'));
 
-    await tester
-        .ensureVisible(find.byKey(const ValueKey<String>('login-button')));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey<String>('login-button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 650));
@@ -60,16 +63,14 @@ void main() {
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
 
-    await tester.ensureVisible(find.text('Drive with Us'));
-    await tester.pumpAndSettle();
+    _expectVisibleInViewport(tester, find.text('Drive with Us'));
     await tester.tap(find.text('Drive with Us'));
     await tester.pumpAndSettle();
 
     expect(find.text('Rider Login'), findsOneWidget);
     expect(find.text('Rider Dashboard Access'), findsOneWidget);
+    _expectVisibleInViewport(tester, find.text('Create account'));
 
-    await tester.ensureVisible(find.text('Create account'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 
@@ -79,10 +80,11 @@ void main() {
     expect(find.text('Start earning on your own schedule'), findsOneWidget);
     expect(find.text('Vehicle Type'), findsOneWidget);
     expect(find.text('Sign Up to Drive'), findsOneWidget);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('rider-sign-up-button')));
+    _expectVisibleInViewport(tester, find.text('Continue with Google'));
+    _expectVisibleInViewport(tester, find.text('Log in'));
 
-    await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('rider-sign-up-button')));
-    await tester.pumpAndSettle();
     await tester
         .tap(find.byKey(const ValueKey<String>('rider-sign-up-button')));
     await tester.pump();
@@ -99,13 +101,11 @@ void main() {
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
 
-    await tester.ensureVisible(find.text('Get Started'));
-    await tester.pumpAndSettle();
+    _expectVisibleInViewport(tester, find.text('Get Started'));
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Create account'));
-    await tester.pumpAndSettle();
+    _expectVisibleInViewport(tester, find.text('Create account'));
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 
@@ -115,10 +115,11 @@ void main() {
     expect(find.text('Join Josi Ride today'), findsOneWidget);
     expect(find.text('Full Name'), findsOneWidget);
     expect(find.text('Sign Up'), findsOneWidget);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('customer-sign-up-button')));
+    _expectVisibleInViewport(tester, find.text('Continue with Google'));
+    _expectVisibleInViewport(tester, find.text('Log in'));
 
-    await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('customer-sign-up-button')));
-    await tester.pumpAndSettle();
     await tester
         .tap(find.byKey(const ValueKey<String>('customer-sign-up-button')));
     await tester.pump();
@@ -174,15 +175,26 @@ Future<void> _pumpToRoleSelection(WidgetTester tester) async {
 
 Future<void> _loginAsCustomer(WidgetTester tester) async {
   await _pumpToRoleSelection(tester);
-  await tester.ensureVisible(find.text('Get Started'));
-  await tester.pumpAndSettle();
+  _expectVisibleInViewport(tester, find.text('Get Started'));
   await tester.tap(find.text('Get Started'));
   await tester.pumpAndSettle();
-  await tester
-      .ensureVisible(find.byKey(const ValueKey<String>('login-button')));
-  await tester.pumpAndSettle();
+  _expectVisibleInViewport(
+      tester, find.byKey(const ValueKey<String>('login-button')));
   await tester.tap(find.byKey(const ValueKey<String>('login-button')));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 650));
   await tester.pumpAndSettle();
+}
+
+void _expectVisibleInViewport(WidgetTester tester, Finder finder) {
+  expect(finder, findsOneWidget);
+
+  final Rect rect = tester.getRect(finder);
+  final Size viewportSize =
+      tester.view.physicalSize / tester.view.devicePixelRatio;
+
+  expect(rect.left, greaterThanOrEqualTo(0));
+  expect(rect.top, greaterThanOrEqualTo(0));
+  expect(rect.right, lessThanOrEqualTo(viewportSize.width));
+  expect(rect.bottom, lessThanOrEqualTo(viewportSize.height));
 }

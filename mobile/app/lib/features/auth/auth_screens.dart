@@ -23,7 +23,7 @@ class RoleSelectionScreen extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(27, 29, 27, 36),
+              padding: const EdgeInsets.fromLTRB(27, 24, 27, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
@@ -37,56 +37,56 @@ class RoleSelectionScreen extends StatelessWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 72),
-                  const Center(child: _LogoCard(size: 128, innerSize: 86)),
-                  const SizedBox(height: 42),
+                  const SizedBox(height: 22),
+                  const Center(child: _LogoCard(size: 82, innerSize: 58)),
+                  const SizedBox(height: 22),
                   Text(
                     'Welcome to Josi Ride',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 30,
+                          fontSize: 25,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.2,
                         ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   Text(
                     'Select your experience',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: JosiColors.muted,
-                          fontSize: 20,
+                          fontSize: 16,
                           height: 1.2,
                         ),
                   ),
-                  const SizedBox(height: 72),
+                  const SizedBox(height: 28),
                   _RoleCard(
                     title: 'Continue as Customer',
                     subtitle:
                         'Book rides, track your driver, and\nmanage your trips.',
                     buttonLabel: 'Get Started',
-                    icon: const _SvgIcon(asset: AppAssets.profile, size: 46),
+                    icon: const _SvgIcon(asset: AppAssets.profile, size: 30),
                     onTap: () => context.go(AppRoutes.loginFor('customer')),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 18),
                   _RoleCard(
                     title: 'Continue as Rider',
                     subtitle:
                         'Accept requests, navigate routes, and\nmanage your earnings.',
                     buttonLabel: 'Drive with Us',
                     isPrimary: false,
-                    icon: const _SvgIcon(asset: AppAssets.bikeLane, size: 46),
+                    icon: const _SvgIcon(asset: AppAssets.bikeLane, size: 30),
                     onTap: () => context.go(AppRoutes.loginFor('rider')),
                   ),
-                  const SizedBox(height: 66),
+                  const SizedBox(height: 24),
                   Text(
                     'POWERED BY JOSI RIDE',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: JosiColors.outline,
-                          letterSpacing: 3.2,
-                          fontSize: 13,
+                          letterSpacing: 2.6,
+                          fontSize: 11,
                         ),
                   ),
                 ],
@@ -157,7 +157,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(29, 29, 29, _isRider ? 44 : 52),
+              padding: const EdgeInsets.fromLTRB(29, 24, 29, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
@@ -168,36 +168,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: () => context.go(AppRoutes.roleSelection),
                     ),
                   ),
-                  SizedBox(height: _isRider ? 44 : 101),
+                  const SizedBox(height: 18),
                   Center(
                     child: _isRider
                         ? const _LogoCard(
                             size: 72, innerSize: 58, framed: false)
                         : const _LogoCard(
-                            size: 130, innerSize: 86, framed: false),
+                            size: 78, innerSize: 72, framed: false),
                   ),
-                  SizedBox(height: _isRider ? 235 : 38),
+                  const SizedBox(height: 24),
                   Text(
                     title,
                     textAlign: _isRider ? TextAlign.left : TextAlign.center,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: _isRider ? 40 : 42,
+                          fontSize: _isRider ? 30 : 32,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.2,
                         ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Text(
                     subtitle,
                     textAlign: _isRider ? TextAlign.left : TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: JosiColors.softMuted,
-                          fontSize: _isRider ? 26 : 22,
+                          fontSize: _isRider ? 17 : 16,
                           height: 1.18,
                         ),
                   ),
-                  const SizedBox(height: 74),
+                  const SizedBox(height: 28),
                   _RedlineTextField(
                     key: const ValueKey<String>('login-identity-field'),
                     label: emailLabel,
@@ -207,7 +207,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 16),
                   _RedlineTextField(
                     key: const ValueKey<String>('login-password-field'),
                     label: 'PASSWORD',
@@ -220,7 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textInputAction: TextInputAction.done,
                   ),
                   if (session.errorMessage != null) ...<Widget>[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                     Text(
                       session.errorMessage!,
                       style: Theme.of(context)
@@ -229,9 +229,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ?.copyWith(color: JosiColors.redDark),
                     ),
                   ],
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 24),
                   SizedBox(
-                    height: 88,
+                    height: 56,
                     child: ElevatedButton(
                       key: const ValueKey<String>('login-button'),
                       onPressed: session.isLoading ? null : _submit,
@@ -245,7 +245,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Theme.of(context).textTheme.titleLarge?.copyWith(
                                   color: JosiColors.white,
                                   fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.5,
+                                  fontSize: 17,
+                                  letterSpacing: 1.2,
                                 ),
                       ),
                       child: session.isLoading
@@ -258,18 +259,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: <Widget>[
                                 Text(buttonLabel),
-                                const SizedBox(width: 17),
+                                const SizedBox(width: 12),
                                 const Icon(Icons.arrow_forward_rounded,
-                                    size: 32),
+                                    size: 25),
                               ],
                             ),
                     ),
                   ),
-                  const SizedBox(height: 94),
+                  const SizedBox(height: 28),
                   const _OrDivider(),
-                  const SizedBox(height: 38),
+                  const SizedBox(height: 20),
                   SizedBox(
-                    height: 90,
+                    height: 56,
                     child: OutlinedButton(
                       onPressed: _submit,
                       style: OutlinedButton.styleFrom(
@@ -285,10 +286,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           SizedBox.square(
-                            dimension: 29,
+                            dimension: 24,
                             child: SvgPicture.asset(AppAssets.google),
                           ),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 14),
                           Flexible(
                             child: Text(
                               'Continue with Google',
@@ -299,7 +300,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   .titleMedium
                                   ?.copyWith(
                                     color: JosiColors.ink,
-                                    fontSize: 19,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 1.2,
                                   ),
@@ -309,7 +310,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 104),
+                  const SizedBox(height: 28),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
@@ -321,11 +322,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style:
                               Theme.of(context).textTheme.bodyLarge?.copyWith(
                                     color: JosiColors.softMuted,
-                                    fontSize: 22,
+                                    fontSize: 17,
                                   ),
                         ),
                       ),
-                      const SizedBox(width: 15),
+                      const SizedBox(width: 8),
                       Flexible(
                         child: GestureDetector(
                           onTap: () => context.go(_isRider
@@ -340,7 +341,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       color: _isRider
                                           ? JosiColors.ink
                                           : JosiColors.redDark,
-                                      fontSize: 22,
+                                      fontSize: 17,
                                       fontWeight: FontWeight.w800,
                                     ),
                           ),
@@ -405,7 +406,7 @@ class _CustomerRegistrationScreenState
           hintText: 'e.g. Alex Josi',
           controller: _fullNameController,
         ),
-        const SizedBox(height: 23),
+        const SizedBox(height: 12),
         _SignupTextField(
           label: 'Email Address',
           hintText: 'name@example.com',
@@ -413,7 +414,7 @@ class _CustomerRegistrationScreenState
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
         ),
-        const SizedBox(height: 23),
+        const SizedBox(height: 12),
         _SignupTextField(
           label: 'Phone Number',
           hintText: '+1 (555) 000-0000',
@@ -421,7 +422,7 @@ class _CustomerRegistrationScreenState
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
         ),
-        const SizedBox(height: 23),
+        const SizedBox(height: 12),
         _SignupTextField(
           label: 'Password',
           hintText: '••••••••',
@@ -429,18 +430,18 @@ class _CustomerRegistrationScreenState
           obscureText: true,
           textInputAction: TextInputAction.done,
         ),
-        const SizedBox(height: 54),
+        const SizedBox(height: 28),
         _SignupPrimaryButton(
           key: const ValueKey<String>('customer-sign-up-button'),
           label: 'Sign Up',
           isLoading: session.isLoading,
           onPressed: _submit,
         ),
-        const SizedBox(height: 49),
+        const SizedBox(height: 26),
         const _SignupOrDivider(),
-        const SizedBox(height: 38),
+        const SizedBox(height: 18),
         _SignupGoogleButton(onPressed: _submit),
-        const SizedBox(height: 72),
+        const SizedBox(height: 32),
         _SignupLoginLink(
           onTap: () => context.go(AppRoutes.loginFor('customer')),
         ),
@@ -489,12 +490,12 @@ class _RiderRegistrationScreenState
       key: const ValueKey<String>('rider-register-screen'),
       title: 'Drive with Josi Ride',
       subtitle: 'Start earning on your own schedule',
-      logoSize: 116,
-      logoInnerSize: 86,
-      titleFontSize: 34,
-      topSpacing: 6,
-      titleSpacing: 43,
-      fieldSpacing: 56,
+      logoSize: 60,
+      logoInnerSize: 60,
+      titleFontSize: 26,
+      topSpacing: 0,
+      titleSpacing: 12,
+      fieldSpacing: 14,
       onBack: () => context.go(AppRoutes.loginFor('rider')),
       children: <Widget>[
         _SignupTextField(
@@ -505,7 +506,7 @@ class _RiderRegistrationScreenState
           filled: false,
           borderColor: const Color(0xFF536178),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 6),
         _SignupTextField(
           label: 'Email Address',
           hintText: 'alex@example.com',
@@ -515,7 +516,7 @@ class _RiderRegistrationScreenState
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 6),
         _SignupTextField(
           label: 'Phone Number',
           hintText: '+1 (555) 000-0000',
@@ -525,7 +526,7 @@ class _RiderRegistrationScreenState
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 6),
         _SignupDropdownField(
           label: 'Vehicle Type',
           value: _vehicleType,
@@ -539,7 +540,7 @@ class _RiderRegistrationScreenState
           onChanged: (String? value) =>
               setState(() => _vehicleType = value ?? _vehicleType),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 6),
         _SignupTextField(
           label: 'Password',
           hintText: '••••••••',
@@ -549,18 +550,18 @@ class _RiderRegistrationScreenState
           borderColor: const Color(0xFF536178),
           textInputAction: TextInputAction.done,
         ),
-        const SizedBox(height: 45),
+        const SizedBox(height: 16),
         _SignupPrimaryButton(
           key: const ValueKey<String>('rider-sign-up-button'),
           label: 'Sign Up to Drive',
           isLoading: session.isLoading,
           onPressed: _submit,
         ),
-        const SizedBox(height: 48),
+        const SizedBox(height: 16),
         const _SignupOrDivider(),
-        const SizedBox(height: 37),
+        const SizedBox(height: 12),
         _SignupGoogleButton(onPressed: _submit),
-        const SizedBox(height: 69),
+        const SizedBox(height: 14),
         _SignupLoginLink(
           onTap: () => context.go(AppRoutes.loginFor('rider')),
         ),
@@ -576,12 +577,12 @@ class _SignupScaffold extends StatelessWidget {
     required this.children,
     required this.onBack,
     super.key,
-    this.logoSize = 128,
-    this.logoInnerSize = 96,
-    this.titleFontSize = 32,
-    this.topSpacing = 78,
-    this.titleSpacing = 60,
-    this.fieldSpacing = 56,
+    this.logoSize = 68,
+    this.logoInnerSize = 68,
+    this.titleFontSize = 27,
+    this.topSpacing = 8,
+    this.titleSpacing = 18,
+    this.fieldSpacing = 24,
   });
 
   final String title;
@@ -604,7 +605,7 @@ class _SignupScaffold extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(29, 29, 29, 48),
+              padding: const EdgeInsets.fromLTRB(27, 22, 27, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
@@ -614,8 +615,8 @@ class _SignupScaffold extends StatelessWidget {
                       onPressed: onBack,
                       icon: SvgPicture.asset(
                         AppAssets.arrowLeft,
-                        width: 28,
-                        height: 28,
+                        width: 24,
+                        height: 24,
                         colorFilter: const ColorFilter.mode(
                             JosiColors.muted, BlendMode.srcIn),
                       ),
@@ -640,13 +641,13 @@ class _SignupScaffold extends StatelessWidget {
                           letterSpacing: -0.2,
                         ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   Text(
                     subtitle,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: JosiColors.muted,
-                          fontSize: 21,
+                          fontSize: 16,
                           height: 1.2,
                         ),
                   ),
@@ -696,7 +697,7 @@ class _SignupTextFieldState extends State<_SignupTextField> {
     return _SignupFieldShell(
       label: widget.label,
       child: SizedBox(
-        height: 82,
+        height: 52,
         child: TextField(
           controller: widget.controller,
           obscureText: _obscure,
@@ -704,8 +705,8 @@ class _SignupTextFieldState extends State<_SignupTextField> {
           textInputAction: widget.textInputAction,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: JosiColors.muted,
-                fontSize: 20,
-                letterSpacing: widget.obscureText ? 3.5 : 0,
+                fontSize: 15,
+                letterSpacing: widget.obscureText ? 2.8 : 0,
               ),
           decoration: InputDecoration(
             hintText: widget.hintText,
@@ -713,8 +714,8 @@ class _SignupTextFieldState extends State<_SignupTextField> {
                   color: widget.filled
                       ? JosiColors.muted
                       : const Color(0xFFC6C4C6),
-                  fontSize: 20,
-                  letterSpacing: widget.obscureText ? 3.5 : 0,
+                  fontSize: 15,
+                  letterSpacing: widget.obscureText ? 2.8 : 0,
                 ),
             filled: true,
             fillColor:
@@ -727,12 +728,12 @@ class _SignupTextFieldState extends State<_SignupTextField> {
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                       color: JosiColors.muted,
-                      size: 28,
+                      size: 20,
                     ),
                   )
                 : null,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 25),
+                const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(4),
               borderSide: BorderSide(color: widget.borderColor),
@@ -771,12 +772,12 @@ class _SignupDropdownField extends StatelessWidget {
     return _SignupFieldShell(
       label: label,
       child: SizedBox(
-        height: 82,
+        height: 52,
         child: DropdownButtonFormField<String>(
           initialValue: value,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded,
-              color: JosiColors.muted, size: 34),
+              color: JosiColors.muted, size: 24),
           items: items
               .map((String item) =>
                   DropdownMenuItem<String>(value: item, child: Text(item)))
@@ -784,13 +785,13 @@ class _SignupDropdownField extends StatelessWidget {
           onChanged: onChanged,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: JosiColors.ink,
-                fontSize: 20,
+                fontSize: 15,
               ),
           decoration: InputDecoration(
             filled: true,
             fillColor: JosiColors.white,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 25),
+                const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(4),
               borderSide: const BorderSide(color: JosiColors.line),
@@ -829,12 +830,12 @@ class _SignupFieldShell extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: JosiColors.black,
-                fontSize: 16,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.2,
               ),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 5),
         child,
       ],
     );
@@ -856,7 +857,7 @@ class _SignupPrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 76,
+      height: 52,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
@@ -866,7 +867,8 @@ class _SignupPrimaryButton extends StatelessWidget {
           textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: JosiColors.white,
                 fontWeight: FontWeight.w800,
-                letterSpacing: 1.4,
+                fontSize: 16,
+                letterSpacing: 1.1,
               ),
         ),
         child: isLoading
@@ -890,7 +892,7 @@ class _SignupOrDivider extends StatelessWidget {
       children: <Widget>[
         const Expanded(child: Divider(color: JosiColors.line)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 31),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
             'OR',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -916,7 +918,7 @@ class _SignupGoogleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 76,
+      height: 52,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
@@ -928,10 +930,10 @@ class _SignupGoogleButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             SizedBox.square(
-              dimension: 30,
+              dimension: 22,
               child: SvgPicture.asset(AppAssets.google),
             ),
-            const SizedBox(width: 19),
+            const SizedBox(width: 14),
             Flexible(
               child: Text(
                 'Continue with Google',
@@ -939,7 +941,7 @@ class _SignupGoogleButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: JosiColors.ink,
-                      fontSize: 18,
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.1,
                     ),
@@ -969,7 +971,7 @@ class _SignupLoginLink extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.muted,
-                  fontSize: 20,
+                  fontSize: 16,
                 ),
           ),
         ),
@@ -980,7 +982,7 @@ class _SignupLoginLink extends StatelessWidget {
             'Log in',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.redDark,
-                  fontSize: 20,
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
           ),
@@ -1192,22 +1194,22 @@ class _BackSquareButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
-      dimension: 72,
+      dimension: 48,
       child: Material(
         color: outlined ? JosiColors.white : const Color(0xFFF0F2F4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           side: BorderSide(
               color: outlined ? JosiColors.outlineVariant : Colors.transparent),
         ),
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           child: Center(
             child: SvgPicture.asset(
               AppAssets.arrowLeft,
-              width: 29,
-              height: 29,
+              width: 24,
+              height: 24,
               colorFilter:
                   const ColorFilter.mode(JosiColors.ink, BlendMode.srcIn),
             ),
@@ -1312,7 +1314,7 @@ class _RoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(40, 48, 40, 39),
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
       decoration: BoxDecoration(
         color: JosiColors.white,
         borderRadius: BorderRadius.circular(8),
@@ -1322,29 +1324,29 @@ class _RoleCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           icon,
-          const SizedBox(height: 58),
+          const SizedBox(height: 22),
           Text(
             title,
             style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   color: JosiColors.ink,
-                  fontSize: 30,
+                  fontSize: 23,
                   fontWeight: FontWeight.w800,
                   height: 1.15,
                 ),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 8),
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.muted,
-                  fontSize: 21,
-                  height: 1.45,
+                  fontSize: 15,
+                  height: 1.34,
                 ),
           ),
-          const SizedBox(height: 31),
+          const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
-            height: 64,
+            height: 46,
             child: isPrimary
                 ? ElevatedButton(
                     onPressed: onTap,
@@ -1355,6 +1357,7 @@ class _RoleCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4)),
                       textStyle:
                           Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontSize: 15,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.4,
                               ),
@@ -1371,8 +1374,9 @@ class _RoleCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4)),
                       textStyle:
                           Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontSize: 15,
                                 fontWeight: FontWeight.w800,
-                                letterSpacing: 1,
+                                letterSpacing: 0.8,
                               ),
                     ),
                     child: Text(buttonLabel),
@@ -1420,7 +1424,7 @@ class _RedlineTextField extends StatelessWidget {
                 label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: JosiColors.softMuted,
-                      fontSize: 18,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 2.4,
                     ),
@@ -1433,16 +1437,16 @@ class _RedlineTextField extends StatelessWidget {
                   trailingLabel!,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: JosiColors.redDark,
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 13),
+        const SizedBox(height: 8),
         SizedBox(
-          height: 88,
+          height: 58,
           child: TextField(
             controller: controller,
             obscureText: obscureText,
@@ -1450,8 +1454,8 @@ class _RedlineTextField extends StatelessWidget {
             textInputAction: textInputAction,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.outline,
-                  fontSize: 21,
-                  letterSpacing: obscureText ? 5 : 0,
+                  fontSize: 16,
+                  letterSpacing: obscureText ? 3.2 : 0,
                 ),
             decoration: InputDecoration(
               hintText: hintText,
@@ -1459,27 +1463,27 @@ class _RedlineTextField extends StatelessWidget {
                     color: obscureText
                         ? JosiColors.outline
                         : const Color(0xFF6B7280),
-                    fontSize: 21,
-                    letterSpacing: obscureText ? 5 : 0,
+                    fontSize: 16,
+                    letterSpacing: obscureText ? 3.2 : 0,
                   ),
               filled: true,
               fillColor: JosiColors.white,
               prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 28, right: 18),
+                padding: const EdgeInsets.only(left: 18, right: 12),
                 child: svgAsset == null
                     ? const Icon(Icons.lock_outline_rounded,
-                        color: JosiColors.softMuted, size: 29)
+                        color: JosiColors.softMuted, size: 23)
                     : SvgPicture.asset(
                         svgAsset!,
-                        width: 29,
-                        height: 29,
+                        width: 23,
+                        height: 23,
                         colorFilter: const ColorFilter.mode(
                             JosiColors.softMuted, BlendMode.srcIn),
                       ),
               ),
-              prefixIconConstraints: const BoxConstraints(minWidth: 76),
+              prefixIconConstraints: const BoxConstraints(minWidth: 54),
               contentPadding:
-                  const EdgeInsets.symmetric(vertical: 29, horizontal: 0),
+                  const EdgeInsets.symmetric(vertical: 17, horizontal: 0),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(4),
                 borderSide: const BorderSide(color: JosiColors.outlineVariant),
@@ -1511,12 +1515,12 @@ class _OrDivider extends StatelessWidget {
         const Expanded(
             child: Divider(color: JosiColors.outlineVariant, thickness: 1)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
           child: Text(
             'OR',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.line,
-                  fontSize: 16,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.5,
                 ),
