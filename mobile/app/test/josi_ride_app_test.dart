@@ -56,9 +56,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 650));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ready for your next city move?'), findsOneWidget);
-    expect(find.text('Where are you going?'), findsOneWidget);
-    expect(find.text('Book Ride'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-home-screen')),
+        findsOneWidget);
+    expect(find.text('Where to?'), findsOneWidget);
+    expect(find.text('Destination'), findsOneWidget);
+    expect(find.text('Last Trip'), findsOneWidget);
+    _expectVisibleInViewport(tester, find.text('Home'));
+    _expectVisibleInViewport(tester, find.text('Activity'));
   });
 
   testWidgets(
@@ -129,7 +133,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 650));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ready for your next city move?'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-home-screen')),
+        findsOneWidget);
+    expect(find.text('Where to?'), findsOneWidget);
   });
 
   testWidgets('forgot password flow uses redline recovery screens',
@@ -193,16 +199,42 @@ void main() {
     _expectVisibleInViewport(tester, find.text('BACK TO LOGIN'));
   });
 
-  testWidgets('customer bottom navigation opens wallet',
+  testWidgets('customer destination screen confirms trip',
       (WidgetTester tester) async {
     await _loginAsCustomer(tester);
 
-    await tester.tap(find.text('Wallet').last);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('home-destination-tile')));
+    await tester
+        .tap(find.byKey(const ValueKey<String>('home-destination-tile')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Payments and transactions'), findsOneWidget);
-    expect(find.text('Available balance'), findsOneWidget);
-    expect(find.text('Add money'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-destination-screen')),
+        findsOneWidget);
+    expect(find.text('Destination'), findsOneWidget);
+    expect(find.text('Saved Places'), findsOneWidget);
+    expect(find.text('Confirm'), findsOneWidget);
+    _expectVisibleInViewport(tester,
+        find.byKey(const ValueKey<String>('destination-confirm-button')));
+    _expectVisibleInViewport(tester, find.text('Activity'));
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Confirm trip'), findsOneWidget);
+    expect(find.text('Fare estimate and payment'), findsOneWidget);
+  });
+
+  testWidgets('customer fixed bottom navigation opens activity',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Activity').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Trips'), findsWidgets);
+    expect(find.text('History and active requests'), findsOneWidget);
   });
 
   test('theme follows the Josi light redline', () {

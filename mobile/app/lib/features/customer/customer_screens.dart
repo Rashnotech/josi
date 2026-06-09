@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
@@ -16,129 +18,259 @@ class CustomerHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<JosiUser> user = ref.watch(currentCustomerProvider);
     final AsyncValue<List<Trip>> trips = ref.watch(tripsProvider);
+    final String firstName = user.maybeWhen(
+      data: (JosiUser value) => value.name.split(' ').first,
+      orElse: () => 'there',
+    );
+    final Trip lastTrip = trips.maybeWhen(
+      data: (List<Trip> values) =>
+          values.isEmpty ? JosiMockData.trips.first : values.first,
+      orElse: () => JosiMockData.trips.first,
+    );
 
-    return AppScaffold(
-      title: user.maybeWhen(
-          data: (JosiUser value) => 'Hi, ${value.name.split(' ').first}',
-          orElse: () => 'Hi'),
-      subtitle: 'Ready for your next city move?',
-      navRole: AppNavRole.customer,
-      selectedTab: 'home',
-      showBackButton: false,
-      actions: <Widget>[
-        IconButton(
-          onPressed: () => context.go(AppRoutes.customerNotifications),
-          icon: const Icon(Icons.notifications_none_rounded),
-        ),
-      ],
-      child: AppScreenBody(
-        children: <Widget>[
-          AppCard(
-            child: Row(
-              children: <Widget>[
-                const Icon(Icons.my_location_rounded, color: JosiColors.red),
-                const SizedBox(width: 12),
-                Expanded(
+    return Scaffold(
+      key: const ValueKey<String>('customer-home-screen'),
+      backgroundColor: JosiColors.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final double mapHeight = (constraints.maxHeight * 0.32)
+                    .clamp(226.0, 292.0)
+                    .toDouble();
+
+                return SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      Text('Current location',
-                          style: Theme.of(context).textTheme.labelMedium),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Wuse 2, Abuja',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: JosiColors.muted),
+                      _HomeHeader(
+                        firstName: firstName,
+                        onNotifications: () =>
+                            context.go(AppRoutes.customerNotifications),
+                      ),
+                      const SizedBox(height: 8),
+                      _HomeMapSection(
+                        mapHeight: mapHeight,
+                        lastTrip: lastTrip,
                       ),
                     ],
                   ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: const _CustomerFixedBottomNav(selectedTab: 'home'),
+    );
+  }
+}
+
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({
+    required this.firstName,
+    required this.onNotifications,
+  });
+
+  final String firstName;
+  final VoidCallback onNotifications;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        _SoftIconButton(
+          onTap: () {},
+          child:
+              const Icon(Icons.menu_rounded, color: JosiColors.red, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Hi, $firstName',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
                 ),
-                TextButton(
-                    onPressed: () =>
-                        context.go(AppRoutes.customerSelectLocation),
-                    child: const Text('Change')),
-              ],
+          ),
+        ),
+        _SoftIconButton(
+          onTap: onNotifications,
+          child: const _AssetIcon(
+            asset: AppAssets.notification,
+            color: JosiColors.red,
+            size: 17,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeMapSection extends StatelessWidget {
+  const _HomeMapSection({
+    required this.mapHeight,
+    required this.lastTrip,
+  });
+
+  final double mapHeight;
+  final Trip lastTrip;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: mapHeight + 258,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: AppMapPlaceholder(
+              height: mapHeight,
+              title: 'City route preview',
+            ),
+          ),
+          const Positioned(
+            left: 10,
+            right: 10,
+            top: 10,
+            child: _CurrentLocationBar(),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: mapHeight - 28,
+            child: _WhereToPanel(lastTrip: lastTrip),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurrentLocationBar extends StatelessWidget {
+  const _CurrentLocationBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Row(
+        children: <Widget>[
+          const _AssetIcon(
+            asset: AppAssets.location,
+            color: JosiColors.red,
+            size: 16,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Current Location',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: JosiColors.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                  ),
+            ),
+          ),
+          const Icon(Icons.bookmark_border_rounded,
+              color: JosiColors.red, size: 18),
+        ],
+      ),
+    );
+  }
+}
+
+class _WhereToPanel extends StatelessWidget {
+  const _WhereToPanel({required this.lastTrip});
+
+  final Trip lastTrip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Center(
+            child: Container(
+              width: 30,
+              height: 3,
+              decoration: BoxDecoration(
+                color: JosiColors.line,
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
           ),
           const SizedBox(height: 14),
-          AppSearchField(
-            hintText: 'Where are you going?',
-            onTap: () => context.go(AppRoutes.customerSelectLocation),
-          ),
-          const SizedBox(height: 18),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.35,
-            physics: const NeverScrollableScrollPhysics(),
+          Row(
             children: <Widget>[
-              for (final QuickAction action in JosiMockData.customerActions)
-                _QuickActionTile(action: action),
+              Expanded(
+                child: Text(
+                  'Where to?',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.go(AppRoutes.customerTrips),
+                child: const Text('MANAGE'),
+              ),
             ],
           ),
-          const SizedBox(height: 18),
-          AppCard(
-            color: JosiColors.charcoal,
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Cash rides are live',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(color: JosiColors.white),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Pay riders directly while keeping every receipt in Josi.',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: JosiColors.softMuted),
-                      ),
-                    ],
-                  ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _HomePlaceTile(
+                  key: const ValueKey<String>('home-destination-tile'),
+                  title: 'Destination',
+                  subtitle: 'Enter Destination',
+                  asset: AppAssets.location,
+                  isPrimary: true,
+                  onTap: () => context.go(AppRoutes.customerSelectLocation),
                 ),
-                const SizedBox(width: 10),
-                const Icon(Icons.payments_rounded,
-                    color: JosiColors.white, size: 42),
-              ],
-            ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _HomePlaceTile(
+                  title: 'Office',
+                  subtitle: '35 KM Away',
+                  asset: AppAssets.card,
+                  onTap: () => context.go(AppRoutes.customerSelectLocation),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
-          SectionHeader(
-            title: 'Recent trips',
-            actionLabel: 'View all',
-            onAction: () => context.go(AppRoutes.customerTrips),
-          ),
-          trips.when(
-            data: (List<Trip> values) => Column(
-              children: values.take(2).map((Trip trip) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: TripCard(
-                    trip: trip,
-                    onTap: () =>
-                        context.go(AppRoutes.customerTripDetailPath(trip.id)),
-                  ),
-                );
-              }).toList(),
-            ),
-            error: (Object error, StackTrace stackTrace) => const ErrorState(
-              title: 'Trips unavailable',
-              message: 'Trip history could not be loaded.',
-            ),
-            loading: () => const SizedBox(
-                height: 120, child: LoadingState(label: 'Loading trips')),
-          ),
+          const SizedBox(height: 12),
+          _LastTripTile(trip: lastTrip),
         ],
       ),
     );
@@ -201,52 +333,668 @@ class CustomerSelectLocationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Select location',
-      subtitle: 'Pickup and destination',
-      child: AppScreenBody(
-        children: <Widget>[
-          const AppTextField(
-              label: 'Pickup',
-              hintText: 'Use current location',
-              icon: Icons.my_location_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Destination',
-              hintText: 'Search destination',
-              icon: Icons.location_on_rounded),
-          const SizedBox(height: 14),
-          const AppMapPlaceholder(height: 280),
-          const SizedBox(height: 14),
-          AppButton(
-            label: 'Use current location',
-            icon: Icons.near_me_rounded,
-            variant: AppButtonVariant.secondary,
-            onPressed: () {},
+    return Scaffold(
+      key: const ValueKey<String>('customer-destination-screen'),
+      backgroundColor: JosiColors.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _DestinationHeader(
+                    onBack: () => context.go(AppRoutes.customerHome),
+                  ),
+                  const SizedBox(height: 42),
+                  const _DestinationRouteCard(),
+                  const SizedBox(height: 28),
+                  _SavedPlacesCard(
+                    onTap: () => context.go(AppRoutes.customerProfile),
+                  ),
+                  const SizedBox(height: 28),
+                  for (final String location in const <String>[
+                    '2118 Thornridge Cir. Syracuse, C...',
+                    '4517 Washington Ave. Manche...',
+                    '2715 Ash Dr. San Jose, South Da...',
+                  ]) ...<Widget>[
+                    _RecentDestinationTile(location: location),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 18),
-          const SectionHeader(title: 'Recent locations'),
-          for (final String location in JosiMockData.recentLocations)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppCard(
-                onTap: () => context.go(AppRoutes.customerConfirmTrip),
-                child: Row(
+        ),
+      ),
+      bottomNavigationBar: _DestinationBottomBar(
+        onConfirm: () => context.go(AppRoutes.customerConfirmTrip),
+      ),
+    );
+  }
+}
+
+class _HomePlaceTile extends StatelessWidget {
+  const _HomePlaceTile({
+    required this.title,
+    required this.subtitle,
+    required this.asset,
+    required this.onTap,
+    super.key,
+    this.isPrimary = false,
+  });
+
+  final String title;
+  final String subtitle;
+  final String asset;
+  final VoidCallback onTap;
+  final bool isPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color background = isPrimary ? JosiColors.red : JosiColors.surface;
+    final Color foreground = isPrimary ? JosiColors.white : JosiColors.ink;
+    final Color muted =
+        isPrimary ? JosiColors.white.withValues(alpha: 0.82) : JosiColors.muted;
+
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          height: 112,
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            border:
+                Border.all(color: isPrimary ? JosiColors.red : JosiColors.line),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+                width: 31,
+                height: 31,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isPrimary
+                      ? JosiColors.white.withValues(alpha: 0.18)
+                      : JosiColors.white,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: _AssetIcon(asset: asset, color: foreground, size: 17),
+              ),
+              const Spacer(),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: foreground,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LastTripTile extends StatelessWidget {
+  const _LastTripTile({required this.trip});
+
+  final Trip trip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFFFF8F8),
+      borderRadius: BorderRadius.circular(4),
+      child: InkWell(
+        onTap: () => context.go(AppRoutes.customerTripDetailPath(trip.id)),
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: JosiColors.outlineVariant),
+          ),
+          child: Row(
+            children: <Widget>[
+              const Icon(Icons.history_rounded,
+                  color: JosiColors.red, size: 19),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Icon(Icons.history_rounded, color: JosiColors.muted),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Text(location,
-                            style: Theme.of(context).textTheme.bodyLarge)),
-                    const Icon(Icons.chevron_right_rounded,
-                        color: JosiColors.muted),
+                    Text(
+                      'Last Trip',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: JosiColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    Text(
+                      trip.destination,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: JosiColors.muted,
+                            fontSize: 10,
+                          ),
+                    ),
                   ],
                 ),
               ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: JosiColors.muted, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DestinationHeader extends StatelessWidget {
+  const _DestinationHeader({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        _SoftIconButton(
+          onTap: onBack,
+          child: const _AssetIcon(
+            asset: AppAssets.arrowLeft,
+            color: JosiColors.redDark,
+            size: 22,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            'Destination',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  color: JosiColors.redDark,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
+          ),
+        ),
+        const SizedBox(width: 48),
+      ],
+    );
+  }
+}
+
+class _DestinationRouteCard extends StatelessWidget {
+  const _DestinationRouteCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const _DestinationRail(),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              children: <Widget>[
+                const _DestinationInputLine(
+                  text: '6391 Elgin St. Celina, Delawa...',
+                  isFilled: true,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: <Widget>[
+                    const Expanded(
+                      child: _DestinationInputLine(
+                        text: '1901 Thornridge Cir. Sh...',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.map_outlined,
+                        color: JosiColors.red, size: 24),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      constraints:
+                          const BoxConstraints.tightFor(width: 34, height: 34),
+                      padding: EdgeInsets.zero,
+                      onPressed: () {},
+                      icon: const Icon(Icons.add_rounded,
+                          color: JosiColors.red, size: 27),
+                    ),
+                  ],
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
+  }
+}
+
+class _DestinationRail extends StatelessWidget {
+  const _DestinationRail();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 28,
+      height: 86,
+      child: Column(
+        children: <Widget>[
+          Container(
+            width: 27,
+            height: 27,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: JosiColors.red, width: 3),
+            ),
+            child: Center(
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: JosiColors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+          const Expanded(
+            child: CustomPaint(
+              painter: _DashedLinePainter(color: JosiColors.outline),
+              child: SizedBox(width: 1),
+            ),
+          ),
+          const _AssetIcon(
+            asset: AppAssets.location,
+            color: JosiColors.red,
+            size: 25,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DestinationInputLine extends StatelessWidget {
+  const _DestinationInputLine({
+    required this.text,
+    this.isFilled = false,
+  });
+
+  final String text;
+  final bool isFilled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: isFilled ? const Color(0xFFF0F1F4) : JosiColors.white,
+        border: const Border(
+          bottom: BorderSide(color: JosiColors.ink, width: 1),
+        ),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: JosiColors.ink,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
+      ),
+    );
+  }
+}
+
+class _SavedPlacesCard extends StatelessWidget {
+  const _SavedPlacesCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DestinationListCard(
+      onTap: onTap,
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.bookmark_rounded, color: JosiColors.red, size: 28),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Text(
+              'Saved Places',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded,
+              color: JosiColors.muted, size: 26),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentDestinationTile extends StatelessWidget {
+  const _RecentDestinationTile({required this.location});
+
+  final String location;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DestinationListCard(
+      onTap: () => context.go(AppRoutes.customerConfirmTrip),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.history_rounded, color: JosiColors.muted, size: 25),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Text(
+              location,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DestinationListCard extends StatelessWidget {
+  const _DestinationListCard({
+    required this.child,
+    this.onTap,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      borderRadius: BorderRadius.circular(4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 72),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: JosiColors.line),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _DestinationBottomBar extends StatelessWidget {
+  const _DestinationBottomBar({required this.onConfirm});
+
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: JosiColors.surface),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 14),
+            child: SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                key: const ValueKey<String>('destination-confirm-button'),
+                onPressed: onConfirm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: JosiColors.red,
+                  foregroundColor: JosiColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: JosiColors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                child: const Text('Confirm'),
+              ),
+            ),
+          ),
+          const _CustomerFixedBottomNav(selectedTab: 'activity'),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerFixedBottomNav extends StatelessWidget {
+  const _CustomerFixedBottomNav({required this.selectedTab});
+
+  final String selectedTab;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        border: Border(top: BorderSide(color: JosiColors.line)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 66,
+          child: Row(
+            children: <Widget>[
+              _CustomerNavItem(
+                tab: 'home',
+                label: 'Home',
+                asset: AppAssets.home,
+                route: AppRoutes.customerHome,
+                selectedTab: selectedTab,
+              ),
+              _CustomerNavItem(
+                tab: 'activity',
+                label: 'Activity',
+                asset: AppAssets.notification,
+                route: AppRoutes.customerTrips,
+                selectedTab: selectedTab,
+              ),
+              _CustomerNavItem(
+                tab: 'rides',
+                label: 'Rides',
+                asset: AppAssets.bikeLane,
+                route: AppRoutes.customerBookTrip,
+                selectedTab: selectedTab,
+              ),
+              _CustomerNavItem(
+                tab: 'profile',
+                label: 'Profile',
+                asset: AppAssets.profile,
+                route: AppRoutes.customerProfile,
+                selectedTab: selectedTab,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomerNavItem extends StatelessWidget {
+  const _CustomerNavItem({
+    required this.tab,
+    required this.label,
+    required this.asset,
+    required this.route,
+    required this.selectedTab,
+  });
+
+  final String tab;
+  final String label;
+  final String asset;
+  final String route;
+  final String selectedTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isSelected = tab == selectedTab;
+    final Color color = isSelected ? JosiColors.red : JosiColors.softMuted;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => context.go(route),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            _AssetIcon(asset: asset, color: color, size: 22),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SoftIconButton extends StatelessWidget {
+  const _SoftIconButton({
+    required this.child,
+    required this.onTap,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFF0F2F4),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox.square(
+          dimension: 42,
+          child: Center(child: child),
+        ),
+      ),
+    );
+  }
+}
+
+class _AssetIcon extends StatelessWidget {
+  const _AssetIcon({
+    required this.asset,
+    required this.color,
+    required this.size,
+  });
+
+  final String asset;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      asset,
+      width: size,
+      height: size,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+    );
+  }
+}
+
+class _DashedLinePainter extends CustomPainter {
+  const _DashedLinePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..strokeCap = StrokeCap.round;
+    double y = 3;
+    while (y < size.height) {
+      canvas.drawLine(
+          Offset(size.width / 2, y), Offset(size.width / 2, y + 3), paint);
+      y += 7;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedLinePainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
 
@@ -813,27 +1561,6 @@ class CustomerProfileScreen extends ConsumerWidget {
               }
             },
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickActionTile extends StatelessWidget {
-  const _QuickActionTile({required this.action});
-
-  final QuickAction action;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      onTap: () => context.go(action.route),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(action.icon, color: JosiColors.red, size: 30),
-          const Spacer(),
-          Text(action.label, style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
     );
