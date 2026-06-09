@@ -123,14 +123,21 @@ The seed password defaults to `password`; set `JOSI_SEED_PASSWORD` before seedin
 
 ## Local Validation
 
-PHP and Composer were not available on this machine when this foundation was created. The current gate and eval scripts are deterministic static checks:
+The backend now has a Laravel runtime and local Composer dependencies. Run Artisan with your system PHP or the ignored portable PHP under `.tools\php83` if you are using this Windows setup.
 
 ```powershell
+.tools\php83\php.exe artisan josi:check-db
+.tools\php83\php.exe artisan migrate:status
+.tools\php83\php.exe artisan route:list --except-vendor
 powershell -ExecutionPolicy Bypass -File tests\Architecture\CoreBackendFoundationTest.ps1
+powershell -ExecutionPolicy Bypass -File tests\Architecture\AuthApiFoundationTest.ps1
+powershell -ExecutionPolicy Bypass -File tests\Architecture\DatabaseSetupTest.ps1
 powershell -ExecutionPolicy Bypass -File evals\CoreBackendBusinessRulesEval.ps1
+powershell -ExecutionPolicy Bypass -File evals\AuthSecurityBusinessRulesEval.ps1
+powershell -ExecutionPolicy Bypass -File evals\DatabaseOperationalReadinessEval.ps1
 ```
 
-After PHP/Composer are installed and a full Laravel runtime exists, add PHPUnit or Pest tests for migrations, model relationships, service transitions, pricing failures, and cash ledger creation.
+Add PHPUnit or Pest tests next for migrations, model relationships, service transitions, pricing failures, and cash ledger creation.
 
 ## Auth API
 

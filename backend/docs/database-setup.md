@@ -56,6 +56,47 @@ This supports names, addresses, symbols, and future multilingual data safely.
 
 Use `APP_TIMEZONE=Africa/Lagos` in `.env`. Treat database timestamps consistently across API clients, admin screens, and background jobs.
 
+## Laravel Runtime Setup
+
+Install PHP 8.3 or newer with these extensions enabled:
+
+- `curl`
+- `fileinfo`
+- `mbstring`
+- `openssl`
+- `pdo_mysql`
+- `zip`
+
+Install Composer dependencies:
+
+```powershell
+composer install
+```
+
+Create local environment config and app key:
+
+```powershell
+copy .env.example .env
+php artisan key:generate
+```
+
+Create the public storage link for development:
+
+```powershell
+php artisan storage:link
+```
+
+This repository ignores generated local runtime folders such as `vendor/`, `.tools/`, and `public/storage`.
+
+## MariaDB 10.1 compatibility
+
+Some Namecheap/cPanel-style hosts and older XAMPP installations still run old MariaDB versions. Two compatibility choices are intentional:
+
+- `AppServiceProvider` calls `Schema::defaultStringLength(191)` so unique/indexed strings work with `utf8mb4` on old 767-byte index limits.
+- `payments.gateway_response`, `audit_logs.old_values`, and `audit_logs.new_values` use `longText` columns instead of native `json`. Eloquent model casts still expose these values as arrays in PHP.
+
+Do not change those fields back to native `json` until the target database version is confirmed to support it.
+
 ## Local Development Setup
 
 Create the database:

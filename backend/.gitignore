@@ -2,7 +2,9 @@
 .env.*
 !.env.example
 /vendor/
+/.tools/
 /node_modules/
+/public/storage
 /storage/*.key
 /storage/app/private/*
 /storage/framework/cache/*

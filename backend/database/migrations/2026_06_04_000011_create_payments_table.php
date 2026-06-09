@@ -19,7 +19,9 @@ return new class extends Migration
             $table->string('payment_status')->default(PaymentStatus::Pending->value)->index();
             $table->string('payment_reference')->nullable()->unique();
             $table->string('gateway')->nullable()->index();
-            $table->json('gateway_response')->nullable();
+            // MariaDB 10.1 on older cPanel/XAMPP targets does not support native JSON.
+            // The Payment model casts this longText payload back to an array.
+            $table->longText('gateway_response')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->timestamp('failed_at')->nullable();
             $table->timestamps();
