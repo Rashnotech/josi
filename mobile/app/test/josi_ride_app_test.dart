@@ -56,7 +56,7 @@ void main() {
   });
 
   testWidgets(
-      'rider role opens rider login and create account reaches rider registration',
+      'rider role opens rider login and create account reaches rider signup',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
 
@@ -73,20 +73,59 @@ void main() {
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Rider registration'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('rider-register-screen')),
+        findsOneWidget);
+    expect(find.text('Drive with Josi Ride'), findsOneWidget);
+    expect(find.text('Start earning on your own schedule'), findsOneWidget);
+    expect(find.text('Vehicle Type'), findsOneWidget);
+    expect(find.text('Sign Up to Drive'), findsOneWidget);
 
-    for (int index = 0; index < 3; index++) {
-      await tester
-          .tap(find.text(index == 2 ? 'Submit application' : 'Continue'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 650));
-      await tester.pumpAndSettle();
-    }
+    await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('rider-sign-up-button')));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-sign-up-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
 
     expect(find.text('Application status'), findsOneWidget);
     expect(find.text('Profile completed'), findsOneWidget);
     expect(find.text('Documents uploaded'), findsOneWidget);
     expect(find.text('Admin approval'), findsOneWidget);
+  });
+
+  testWidgets('customer create account opens customer signup and submits',
+      (WidgetTester tester) async {
+    await _pumpToRoleSelection(tester);
+
+    await tester.ensureVisible(find.text('Get Started'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Create account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-register-screen')),
+        findsOneWidget);
+    expect(find.text('Create Account'), findsOneWidget);
+    expect(find.text('Join Josi Ride today'), findsOneWidget);
+    expect(find.text('Full Name'), findsOneWidget);
+    expect(find.text('Sign Up'), findsOneWidget);
+
+    await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('customer-sign-up-button')));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('customer-sign-up-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ready for your next city move?'), findsOneWidget);
   });
 
   testWidgets('customer bottom navigation opens wallet',

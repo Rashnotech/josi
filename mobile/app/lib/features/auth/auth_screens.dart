@@ -368,7 +368,19 @@ class CustomerRegistrationScreen extends ConsumerStatefulWidget {
 
 class _CustomerRegistrationScreenState
     extends ConsumerState<CustomerRegistrationScreen> {
-  bool _acceptedTerms = true;
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     await ref.read(authControllerProvider.notifier).registerCustomer();
@@ -381,59 +393,58 @@ class _CustomerRegistrationScreenState
   Widget build(BuildContext context) {
     final AuthSession session = ref.watch(authControllerProvider);
 
-    return AppScaffold(
-      title: 'Customer account',
-      subtitle: 'Create your Josi profile',
-      child: AppScreenBody(
-        children: <Widget>[
-          const AppTextField(
-              label: 'Name',
-              hintText: 'Rik Space',
-              icon: Icons.person_outline_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Email',
-              hintText: 'rik@josi.ng',
-              icon: Icons.email_outlined),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Phone',
-              hintText: '+234 801 234 5678',
-              icon: Icons.phone_outlined),
-          const SizedBox(height: 12),
-          const AppPasswordField(
-              label: 'Password', hintText: 'Create password'),
-          const SizedBox(height: 12),
-          const AppPasswordField(
-              label: 'Confirm password', hintText: 'Repeat password'),
-          const SizedBox(height: 12),
-          CheckboxListTile(
-            value: _acceptedTerms,
-            onChanged: (bool? value) =>
-                setState(() => _acceptedTerms = value ?? false),
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            title: Text(
-              'I agree to Josi terms and privacy policy.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-          const SizedBox(height: 10),
-          AppButton(
-            label: 'Create account',
-            icon: Icons.person_add_alt_1_rounded,
-            isLoading: session.isLoading,
-            onPressed: _acceptedTerms ? _submit : null,
-          ),
-          const SizedBox(height: 10),
-          Center(
-            child: TextButton(
-              onPressed: () => context.go(AppRoutes.login),
-              child: const Text('Already have an account? Log in'),
-            ),
-          ),
-        ],
-      ),
+    return _SignupScaffold(
+      key: const ValueKey<String>('customer-register-screen'),
+      title: 'Create Account',
+      subtitle: 'Join Josi Ride today',
+      onBack: () => context.go(AppRoutes.loginFor('customer')),
+      children: <Widget>[
+        _SignupTextField(
+          key: const ValueKey<String>('customer-name-field'),
+          label: 'Full Name',
+          hintText: 'e.g. Alex Josi',
+          controller: _fullNameController,
+        ),
+        const SizedBox(height: 23),
+        _SignupTextField(
+          label: 'Email Address',
+          hintText: 'name@example.com',
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 23),
+        _SignupTextField(
+          label: 'Phone Number',
+          hintText: '+1 (555) 000-0000',
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 23),
+        _SignupTextField(
+          label: 'Password',
+          hintText: '••••••••',
+          controller: _passwordController,
+          obscureText: true,
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: 54),
+        _SignupPrimaryButton(
+          key: const ValueKey<String>('customer-sign-up-button'),
+          label: 'Sign Up',
+          isLoading: session.isLoading,
+          onPressed: _submit,
+        ),
+        const SizedBox(height: 49),
+        const _SignupOrDivider(),
+        const SizedBox(height: 38),
+        _SignupGoogleButton(onPressed: _submit),
+        const SizedBox(height: 72),
+        _SignupLoginLink(
+          onTap: () => context.go(AppRoutes.loginFor('customer')),
+        ),
+      ],
     );
   }
 }
@@ -448,13 +459,22 @@ class RiderRegistrationScreen extends ConsumerStatefulWidget {
 
 class _RiderRegistrationScreenState
     extends ConsumerState<RiderRegistrationScreen> {
-  int _step = 0;
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  String _vehicleType = 'Select vehicle type';
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
-    if (_step < 2) {
-      setState(() => _step += 1);
-      return;
-    }
     await ref.read(authControllerProvider.notifier).registerRider();
     if (mounted) {
       context.go(AppRoutes.riderApplicationStatus);
@@ -465,40 +485,507 @@ class _RiderRegistrationScreenState
   Widget build(BuildContext context) {
     final AuthSession session = ref.watch(authControllerProvider);
 
-    return AppScaffold(
-      title: 'Rider registration',
-      subtitle: 'Step ${_step + 1} of 3',
-      child: AppScreenBody(
-        children: <Widget>[
-          LinearProgressIndicator(
-            value: (_step + 1) / 3,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(999),
-            color: JosiColors.red,
-            backgroundColor: JosiColors.line,
-          ),
-          const SizedBox(height: 20),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: _RiderRegistrationStep(step: _step),
-          ),
-          const SizedBox(height: 18),
-          AppButton(
-            label: _step == 2 ? 'Submit application' : 'Continue',
-            icon:
-                _step == 2 ? Icons.check_rounded : Icons.arrow_forward_rounded,
-            isLoading: session.isLoading,
-            onPressed: _submit,
-          ),
-          if (_step > 0)
-            Center(
-              child: TextButton(
-                onPressed: () => setState(() => _step -= 1),
-                child: const Text('Back'),
+    return _SignupScaffold(
+      key: const ValueKey<String>('rider-register-screen'),
+      title: 'Drive with Josi Ride',
+      subtitle: 'Start earning on your own schedule',
+      logoSize: 116,
+      logoInnerSize: 86,
+      titleFontSize: 34,
+      topSpacing: 6,
+      titleSpacing: 43,
+      fieldSpacing: 56,
+      onBack: () => context.go(AppRoutes.loginFor('rider')),
+      children: <Widget>[
+        _SignupTextField(
+          key: const ValueKey<String>('rider-name-field'),
+          label: 'Full Name',
+          hintText: 'Alex Josi',
+          controller: _fullNameController,
+          filled: false,
+          borderColor: const Color(0xFF536178),
+        ),
+        const SizedBox(height: 22),
+        _SignupTextField(
+          label: 'Email Address',
+          hintText: 'alex@example.com',
+          controller: _emailController,
+          filled: false,
+          borderColor: const Color(0xFF536178),
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 22),
+        _SignupTextField(
+          label: 'Phone Number',
+          hintText: '+1 (555) 000-0000',
+          controller: _phoneController,
+          filled: false,
+          borderColor: const Color(0xFF536178),
+          keyboardType: TextInputType.phone,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 22),
+        _SignupDropdownField(
+          label: 'Vehicle Type',
+          value: _vehicleType,
+          items: const <String>[
+            'Select vehicle type',
+            'Motorcycle',
+            'Car',
+            'Tricycle',
+            'Van',
+          ],
+          onChanged: (String? value) =>
+              setState(() => _vehicleType = value ?? _vehicleType),
+        ),
+        const SizedBox(height: 22),
+        _SignupTextField(
+          label: 'Password',
+          hintText: '••••••••',
+          controller: _passwordController,
+          obscureText: true,
+          filled: false,
+          borderColor: const Color(0xFF536178),
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: 45),
+        _SignupPrimaryButton(
+          key: const ValueKey<String>('rider-sign-up-button'),
+          label: 'Sign Up to Drive',
+          isLoading: session.isLoading,
+          onPressed: _submit,
+        ),
+        const SizedBox(height: 48),
+        const _SignupOrDivider(),
+        const SizedBox(height: 37),
+        _SignupGoogleButton(onPressed: _submit),
+        const SizedBox(height: 69),
+        _SignupLoginLink(
+          onTap: () => context.go(AppRoutes.loginFor('rider')),
+        ),
+      ],
+    );
+  }
+}
+
+class _SignupScaffold extends StatelessWidget {
+  const _SignupScaffold({
+    required this.title,
+    required this.subtitle,
+    required this.children,
+    required this.onBack,
+    super.key,
+    this.logoSize = 128,
+    this.logoInnerSize = 96,
+    this.titleFontSize = 32,
+    this.topSpacing = 78,
+    this.titleSpacing = 60,
+    this.fieldSpacing = 56,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+  final VoidCallback onBack;
+  final double logoSize;
+  final double logoInnerSize;
+  final double titleFontSize;
+  final double topSpacing;
+  final double titleSpacing;
+  final double fieldSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(29, 29, 29, 48),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: onBack,
+                      icon: SvgPicture.asset(
+                        AppAssets.arrowLeft,
+                        width: 28,
+                        height: 28,
+                        colorFilter: const ColorFilter.mode(
+                            JosiColors.muted, BlendMode.srcIn),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: topSpacing),
+                  Center(
+                    child: _LogoCard(
+                      size: logoSize,
+                      innerSize: logoInnerSize,
+                      framed: false,
+                    ),
+                  ),
+                  SizedBox(height: titleSpacing),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: JosiColors.muted,
+                          fontSize: 21,
+                          height: 1.2,
+                        ),
+                  ),
+                  SizedBox(height: fieldSpacing),
+                  ...children,
+                ],
               ),
             ),
-        ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _SignupTextField extends StatefulWidget {
+  const _SignupTextField({
+    required this.label,
+    required this.hintText,
+    required this.controller,
+    super.key,
+    this.obscureText = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.filled = true,
+    this.borderColor = JosiColors.line,
+  });
+
+  final String label;
+  final String hintText;
+  final TextEditingController controller;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final bool filled;
+  final Color borderColor;
+
+  @override
+  State<_SignupTextField> createState() => _SignupTextFieldState();
+}
+
+class _SignupTextFieldState extends State<_SignupTextField> {
+  late bool _obscure = widget.obscureText;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SignupFieldShell(
+      label: widget.label,
+      child: SizedBox(
+        height: 82,
+        child: TextField(
+          controller: widget.controller,
+          obscureText: _obscure,
+          keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: JosiColors.muted,
+                fontSize: 20,
+                letterSpacing: widget.obscureText ? 3.5 : 0,
+              ),
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: widget.filled
+                      ? JosiColors.muted
+                      : const Color(0xFFC6C4C6),
+                  fontSize: 20,
+                  letterSpacing: widget.obscureText ? 3.5 : 0,
+                ),
+            filled: true,
+            fillColor:
+                widget.filled ? const Color(0xFFF7F9FB) : JosiColors.white,
+            suffixIcon: widget.obscureText
+                ? IconButton(
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                    icon: Icon(
+                      _obscure
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: JosiColors.muted,
+                      size: 28,
+                    ),
+                  )
+                : null,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 25),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: BorderSide(color: widget.borderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: BorderSide(color: widget.borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide:
+                  const BorderSide(color: JosiColors.redDark, width: 1.3),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SignupDropdownField extends StatelessWidget {
+  const _SignupDropdownField({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SignupFieldShell(
+      label: label,
+      child: SizedBox(
+        height: 82,
+        child: DropdownButtonFormField<String>(
+          initialValue: value,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: JosiColors.muted, size: 34),
+          items: items
+              .map((String item) =>
+                  DropdownMenuItem<String>(value: item, child: Text(item)))
+              .toList(),
+          onChanged: onChanged,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 20,
+              ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: JosiColors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 25),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: JosiColors.line),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: JosiColors.line),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide:
+                  const BorderSide(color: JosiColors.redDark, width: 1.3),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SignupFieldShell extends StatelessWidget {
+  const _SignupFieldShell({
+    required this.label,
+    required this.child,
+  });
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: JosiColors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+        ),
+        const SizedBox(height: 9),
+        child,
+      ],
+    );
+  }
+}
+
+class _SignupPrimaryButton extends StatelessWidget {
+  const _SignupPrimaryButton({
+    required this.label,
+    required this.isLoading,
+    required this.onPressed,
+    super.key,
+  });
+
+  final String label;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 76,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: JosiColors.red,
+          foregroundColor: JosiColors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: JosiColors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.4,
+              ),
+        ),
+        child: isLoading
+            ? const SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.4, color: JosiColors.white),
+              )
+            : Text(label),
+      ),
+    );
+  }
+}
+
+class _SignupOrDivider extends StatelessWidget {
+  const _SignupOrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        const Expanded(child: Divider(color: JosiColors.line)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 31),
+          child: Text(
+            'OR',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.muted,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+        const Expanded(child: Divider(color: JosiColors.line)),
+      ],
+    );
+  }
+}
+
+class _SignupGoogleButton extends StatelessWidget {
+  const _SignupGoogleButton({
+    required this.onPressed,
+  });
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 76,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: JosiColors.white,
+          side: const BorderSide(color: JosiColors.line),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            SizedBox.square(
+              dimension: 30,
+              child: SvgPicture.asset(AppAssets.google),
+            ),
+            const SizedBox(width: 19),
+            Flexible(
+              child: Text(
+                'Continue with Google',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.1,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SignupLoginLink extends StatelessWidget {
+  const _SignupLoginLink({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Flexible(
+          child: Text(
+            'Already have an account?',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.muted,
+                  fontSize: 20,
+                ),
+          ),
+        ),
+        const SizedBox(width: 7),
+        GestureDetector(
+          onTap: onTap,
+          child: Text(
+            'Log in',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.redDark,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1037,70 +1524,6 @@ class _OrDivider extends StatelessWidget {
         ),
         const Expanded(
             child: Divider(color: JosiColors.outlineVariant, thickness: 1)),
-      ],
-    );
-  }
-}
-
-class _RiderRegistrationStep extends StatelessWidget {
-  const _RiderRegistrationStep({required this.step});
-
-  final int step;
-
-  @override
-  Widget build(BuildContext context) {
-    if (step == 0) {
-      return const Column(
-        key: ValueKey<String>('rider-step-personal'),
-        children: <Widget>[
-          AppTextField(
-              label: 'First name',
-              hintText: 'Amina',
-              icon: Icons.person_outline_rounded),
-          SizedBox(height: 12),
-          AppTextField(
-              label: 'Last name',
-              hintText: 'Yusuf',
-              icon: Icons.person_outline_rounded),
-          SizedBox(height: 12),
-          AppTextField(
-              label: 'Email',
-              hintText: 'amina@josi.ng',
-              icon: Icons.email_outlined),
-        ],
-      );
-    }
-    if (step == 1) {
-      return const Column(
-        key: ValueKey<String>('rider-step-location'),
-        children: <Widget>[
-          AppTextField(
-              label: 'Phone',
-              hintText: '+234 802 345 6789',
-              icon: Icons.phone_outlined),
-          SizedBox(height: 12),
-          AppTextField(
-              label: 'Address',
-              hintText: '22 Adetokunbo Ademola Crescent',
-              icon: Icons.home_outlined),
-          SizedBox(height: 12),
-          AppTextField(
-              label: 'City',
-              hintText: 'Abuja',
-              icon: Icons.location_city_rounded),
-          SizedBox(height: 12),
-          AppTextField(
-              label: 'State', hintText: 'FCT', icon: Icons.map_outlined),
-        ],
-      );
-    }
-    return const Column(
-      key: ValueKey<String>('rider-step-password'),
-      children: <Widget>[
-        AppPasswordField(label: 'Password', hintText: 'Create password'),
-        SizedBox(height: 12),
-        AppPasswordField(
-            label: 'Confirm password', hintText: 'Repeat password'),
       ],
     );
   }
