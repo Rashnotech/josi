@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_routes.dart';
+import '../../core/constants/app_assets.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/theme/josi_colors.dart';
@@ -35,7 +36,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final AuthSession session = ref.read(authControllerProvider);
     final JosiUser? user = session.user;
     if (user == null) {
-      context.go(AppRoutes.onboarding);
+      context.go(AppRoutes.roleSelection);
       return;
     }
     switch (user.role) {
@@ -61,32 +62,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return Scaffold(
       key: const ValueKey<String>('splash-screen'),
       backgroundColor: JosiColors.red,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Semantics(
-                label: 'Josi logo',
-                image: true,
-                child: Image.asset('assets/images/josi-logo.png', width: 184),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'City rides. Clean logistics.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyLarge
-                    ?.copyWith(color: Colors.white.withAlpha(219)),
-              ),
-              const SizedBox(height: 28),
-              const SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2.6),
-              ),
-            ],
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 34),
+          child: Semantics(
+            label: 'Josi splash logo',
+            image: true,
+            child: Image.asset(
+              AppAssets.splashLogo,
+              key: const ValueKey<String>('splash-logo'),
+              width: 330,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       ),

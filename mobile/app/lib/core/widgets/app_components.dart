@@ -242,13 +242,6 @@ class AppCard extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: JosiColors.line),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 16,
-            offset: Offset(0, 8),
-          ),
-        ],
       ),
       child: child,
     );
@@ -482,12 +475,13 @@ class TripCard extends StatelessWidget {
           const SizedBox(height: 14),
           _RouteLine(pickup: trip.pickup, destination: trip.destination),
           const SizedBox(height: 14),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               _FactChip(icon: Icons.payments_rounded, label: trip.fare),
-              const SizedBox(width: 8),
               _FactChip(icon: Icons.route_rounded, label: trip.distance),
-              const Spacer(),
               Text(
                 trip.dateLabel,
                 style: Theme.of(context)

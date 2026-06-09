@@ -31,8 +31,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       ),
       GoRoute(
           path: AppRoutes.login,
-          builder: (BuildContext context, GoRouterState state) =>
-              const LoginScreen()),
+          builder: (BuildContext context, GoRouterState state) => LoginScreen(
+              role: state.uri.queryParameters['role'] ?? 'customer')),
       GoRoute(
         path: AppRoutes.customerRegister,
         builder: (BuildContext context, GoRouterState state) =>

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_routes.dart';
-import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
@@ -14,73 +15,107 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Welcome to Josi',
-      subtitle: 'Choose how you want to continue',
-      showBackButton: false,
-      child: AppScreenBody(
-        children: <Widget>[
-          const SizedBox(height: 12),
-          _RoleCard(
-            title: 'Continue as Customer',
-            subtitle: 'Book rides, send packages, and manage payments.',
-            icon: Icons.person_pin_circle_rounded,
-            onTap: () => context.go(AppRoutes.customerRegister),
-          ),
-          const SizedBox(height: 14),
-          _RoleCard(
-            title: 'Continue as Rider',
-            subtitle: 'Accept trips, track earnings, and complete onboarding.',
-            icon: Icons.delivery_dining_rounded,
-            onTap: () => context.go(AppRoutes.riderRegister),
-          ),
-          const SizedBox(height: 14),
-          AppCard(
-            child: Row(
-              children: <Widget>[
-                const Icon(Icons.apartment_rounded, color: JosiColors.charcoal),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Fleet owners can manage fleets from the web/admin dashboard for this MVP.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: JosiColors.muted),
+    return Scaffold(
+      key: const ValueKey<String>('role-selection-screen'),
+      backgroundColor: JosiColors.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(27, 29, 27, 36),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _BackSquareButton(
+                      onPressed: () {
+                        if (GoRouter.of(context).canPop()) {
+                          context.pop();
+                        }
+                      },
+                    ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () => context.go(AppRoutes.fleetDashboard),
-                  child: const Text('View'),
-                ),
-              ],
+                  const SizedBox(height: 72),
+                  const Center(child: _LogoCard(size: 128, innerSize: 86)),
+                  const SizedBox(height: 42),
+                  Text(
+                    'Welcome to Josi Ride',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Select your experience',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: JosiColors.muted,
+                          fontSize: 20,
+                          height: 1.2,
+                        ),
+                  ),
+                  const SizedBox(height: 72),
+                  _RoleCard(
+                    title: 'Continue as Customer',
+                    subtitle:
+                        'Book rides, track your driver, and\nmanage your trips.',
+                    buttonLabel: 'Get Started',
+                    icon: const _SvgIcon(asset: AppAssets.profile, size: 46),
+                    onTap: () => context.go(AppRoutes.loginFor('customer')),
+                  ),
+                  const SizedBox(height: 28),
+                  _RoleCard(
+                    title: 'Continue as Rider',
+                    subtitle:
+                        'Accept requests, navigate routes, and\nmanage your earnings.',
+                    buttonLabel: 'Drive with Us',
+                    isPrimary: false,
+                    icon: const _SvgIcon(asset: AppAssets.bikeLane, size: 46),
+                    onTap: () => context.go(AppRoutes.loginFor('rider')),
+                  ),
+                  const SizedBox(height: 66),
+                  Text(
+                    'POWERED BY JOSI RIDE',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: JosiColors.outline,
+                          letterSpacing: 3.2,
+                          fontSize: 13,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 24),
-          AppButton(
-            label: 'Log in',
-            icon: Icons.login_rounded,
-            variant: AppButtonVariant.secondary,
-            onPressed: () => context.go(AppRoutes.login),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({
+    super.key,
+    this.role = 'customer',
+  });
+
+  final String role;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final TextEditingController _identityController =
-      TextEditingController(text: 'rik@josi.ng');
-  final TextEditingController _passwordController =
-      TextEditingController(text: 'password');
+  final TextEditingController _identityController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool get _isRider => widget.role.toLowerCase() == 'rider';
 
   @override
   void dispose() {
@@ -97,111 +132,227 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) {
       return;
     }
-    final AuthSession session = ref.read(authControllerProvider);
-    final JosiUser? user = session.user;
-    if (user == null) {
+    if (_isRider) {
+      context.go(AppRoutes.riderApplicationStatus);
       return;
     }
-    if (user.role == AppRole.customer) {
-      context.go(AppRoutes.customerHome);
-      return;
-    }
-    if (user.role == AppRole.rider) {
-      context.go(user.applicationStatus == RiderApplicationStatus.approved
-          ? AppRoutes.riderHome
-          : AppRoutes.riderApplicationStatus);
-      return;
-    }
-    context.go(AppRoutes.fleetDashboard);
+    context.go(AppRoutes.customerHome);
   }
 
   @override
   Widget build(BuildContext context) {
     final AuthSession session = ref.watch(authControllerProvider);
+    final String title = _isRider ? 'Rider Login' : 'Customer Login';
+    final String subtitle = _isRider
+        ? 'Rider Dashboard Access'
+        : 'Secure your ride. Enter your details below.';
+    final String emailLabel = _isRider ? 'EMAIL' : 'EMAIL ADDRESS';
+    final String buttonLabel = _isRider ? 'Login' : 'LOGIN';
 
-    return AppScaffold(
-      title: 'Log in',
-      subtitle: 'Backend role detection is automatic',
-      showBackButton: false,
-      child: AppScreenBody(
-        children: <Widget>[
-          const SizedBox(height: 14),
-          Text('Access Josi', style: Theme.of(context).textTheme.headlineLarge),
-          const SizedBox(height: 8),
-          Text(
-            'Use your email or phone number to continue.',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: JosiColors.muted),
-          ),
-          const SizedBox(height: 24),
-          AppTextField(
-            key: const ValueKey<String>('login-identity-field'),
-            label: 'Email or phone',
-            hintText: 'rik@josi.ng',
-            controller: _identityController,
-            icon: Icons.alternate_email_rounded,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 14),
-          AppPasswordField(
-            key: const ValueKey<String>('login-password-field'),
-            label: 'Password',
-            hintText: 'Enter password',
-            controller: _passwordController,
-            textInputAction: TextInputAction.done,
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => context.go(AppRoutes.forgotPassword),
-              child: const Text('Forgot password?'),
-            ),
-          ),
-          if (session.errorMessage != null) ...<Widget>[
-            AppCard(
-              color: JosiColors.redSoft,
-              child: Text(
-                session.errorMessage!,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: JosiColors.redDark),
+    return Scaffold(
+      key: const ValueKey<String>('login-screen'),
+      backgroundColor: JosiColors.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(29, 29, 29, _isRider ? 44 : 52),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _BackSquareButton(
+                      outlined: !_isRider,
+                      onPressed: () => context.go(AppRoutes.roleSelection),
+                    ),
+                  ),
+                  SizedBox(height: _isRider ? 44 : 101),
+                  Center(
+                    child: _isRider
+                        ? const _LogoCard(
+                            size: 72, innerSize: 58, framed: false)
+                        : const _LogoCard(
+                            size: 130, innerSize: 86, framed: false),
+                  ),
+                  SizedBox(height: _isRider ? 235 : 38),
+                  Text(
+                    title,
+                    textAlign: _isRider ? TextAlign.left : TextAlign.center,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: _isRider ? 40 : 42,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    subtitle,
+                    textAlign: _isRider ? TextAlign.left : TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: JosiColors.softMuted,
+                          fontSize: _isRider ? 26 : 22,
+                          height: 1.18,
+                        ),
+                  ),
+                  const SizedBox(height: 74),
+                  _RedlineTextField(
+                    key: const ValueKey<String>('login-identity-field'),
+                    label: emailLabel,
+                    hintText: 'name@example.com',
+                    controller: _identityController,
+                    svgAsset: AppAssets.email,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 36),
+                  _RedlineTextField(
+                    key: const ValueKey<String>('login-password-field'),
+                    label: 'PASSWORD',
+                    hintText: '•••••••••',
+                    controller: _passwordController,
+                    svgAsset: AppAssets.padlock,
+                    obscureText: true,
+                    trailingLabel: 'Forgot Password?',
+                    onTrailingTap: () => context.go(AppRoutes.forgotPassword),
+                    textInputAction: TextInputAction.done,
+                  ),
+                  if (session.errorMessage != null) ...<Widget>[
+                    const SizedBox(height: 16),
+                    Text(
+                      session.errorMessage!,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: JosiColors.redDark),
+                    ),
+                  ],
+                  const SizedBox(height: 50),
+                  SizedBox(
+                    height: 88,
+                    child: ElevatedButton(
+                      key: const ValueKey<String>('login-button'),
+                      onPressed: session.isLoading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            _isRider ? JosiColors.red : JosiColors.redDark,
+                        foregroundColor: JosiColors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4)),
+                        textStyle:
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: JosiColors.white,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.5,
+                                ),
+                      ),
+                      child: session.isLoading
+                          ? const SizedBox.square(
+                              dimension: 22,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2.4, color: JosiColors.white),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: <Widget>[
+                                Text(buttonLabel),
+                                const SizedBox(width: 17),
+                                const Icon(Icons.arrow_forward_rounded,
+                                    size: 32),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 94),
+                  const _OrDivider(),
+                  const SizedBox(height: 38),
+                  SizedBox(
+                    height: 90,
+                    child: OutlinedButton(
+                      onPressed: _submit,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: JosiColors.white,
+                        side: BorderSide(
+                            color: _isRider
+                                ? JosiColors.outlineVariant
+                                : JosiColors.outline),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          SizedBox.square(
+                            dimension: 29,
+                            child: SvgPicture.asset(AppAssets.google),
+                          ),
+                          const SizedBox(width: 24),
+                          Flexible(
+                            child: Text(
+                              'Continue with Google',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    color: JosiColors.ink,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.2,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 104),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          'New here?',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: JosiColors.softMuted,
+                                    fontSize: 22,
+                                  ),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Flexible(
+                        child: GestureDetector(
+                          onTap: () => context.go(_isRider
+                              ? AppRoutes.riderRegister
+                              : AppRoutes.customerRegister),
+                          child: Text(
+                            'Create account',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      color: _isRider
+                                          ? JosiColors.ink
+                                          : JosiColors.redDark,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 14),
-          ],
-          AppButton(
-            key: const ValueKey<String>('login-button'),
-            label: 'Log in',
-            icon: Icons.arrow_forward_rounded,
-            isLoading: session.isLoading,
-            onPressed: _submit,
           ),
-          const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text('New here?',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: JosiColors.muted)),
-              TextButton(
-                onPressed: () => context.go(AppRoutes.customerRegister),
-                child: const Text('Register as customer'),
-              ),
-            ],
-          ),
-          Center(
-            child: TextButton(
-              onPressed: () => context.go(AppRoutes.riderRegister),
-              child: const Text('Register as rider'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -542,54 +693,351 @@ class FleetDashboardPlaceholderScreen extends StatelessWidget {
   }
 }
 
+class _BackSquareButton extends StatelessWidget {
+  const _BackSquareButton({
+    required this.onPressed,
+    this.outlined = false,
+  });
+
+  final VoidCallback onPressed;
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 72,
+      child: Material(
+        color: outlined ? JosiColors.white : const Color(0xFFF0F2F4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+              color: outlined ? JosiColors.outlineVariant : Colors.transparent),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child: SvgPicture.asset(
+              AppAssets.arrowLeft,
+              width: 29,
+              height: 29,
+              colorFilter:
+                  const ColorFilter.mode(JosiColors.ink, BlendMode.srcIn),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LogoCard extends StatelessWidget {
+  const _LogoCard({
+    required this.size,
+    required this.innerSize,
+    this.framed = true,
+  });
+
+  final double size;
+  final double innerSize;
+  final bool framed;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget mark = Container(
+      width: innerSize,
+      height: innerSize,
+      decoration: BoxDecoration(
+        color: JosiColors.red,
+        borderRadius: BorderRadius.circular(innerSize * 0.18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(
+        AppAssets.loginLogo,
+        key: const ValueKey<String>('login-logo'),
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+      ),
+    );
+
+    if (!framed) {
+      return mark;
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: JosiColors.line),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 22,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: mark,
+    );
+  }
+}
+
+class _SvgIcon extends StatelessWidget {
+  const _SvgIcon({
+    required this.asset,
+    required this.size,
+  });
+
+  final String asset;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      asset,
+      width: size,
+      height: size,
+      colorFilter: const ColorFilter.mode(JosiColors.ink, BlendMode.srcIn),
+    );
+  }
+}
+
 class _RoleCard extends StatelessWidget {
   const _RoleCard({
     required this.title,
     required this.subtitle,
+    required this.buttonLabel,
     required this.icon,
     required this.onTap,
+    this.isPrimary = true,
   });
 
   final String title;
   final String subtitle;
-  final IconData icon;
+  final String buttonLabel;
+  final Widget icon;
   final VoidCallback onTap;
+  final bool isPrimary;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      onTap: onTap,
-      child: Row(
+    return Container(
+      padding: const EdgeInsets.fromLTRB(40, 48, 40, 39),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: JosiColors.redSoft,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: JosiColors.red, size: 32),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 5),
-                Text(
-                  subtitle,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: JosiColors.muted),
+          icon,
+          const SizedBox(height: 58),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  height: 1.15,
                 ),
-              ],
-            ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: JosiColors.muted),
+          const SizedBox(height: 15),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.muted,
+                  fontSize: 21,
+                  height: 1.45,
+                ),
+          ),
+          const SizedBox(height: 31),
+          SizedBox(
+            width: double.infinity,
+            height: 64,
+            child: isPrimary
+                ? ElevatedButton(
+                    onPressed: onTap,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: JosiColors.red,
+                      foregroundColor: JosiColors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                      textStyle:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.4,
+                              ),
+                    ),
+                    child: Text(buttonLabel),
+                  )
+                : OutlinedButton(
+                    onPressed: onTap,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: JosiColors.white,
+                      foregroundColor: JosiColors.ink,
+                      side: const BorderSide(color: JosiColors.outline),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                      textStyle:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1,
+                              ),
+                    ),
+                    child: Text(buttonLabel),
+                  ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _RedlineTextField extends StatelessWidget {
+  const _RedlineTextField({
+    required this.label,
+    required this.hintText,
+    required this.controller,
+    super.key,
+    this.svgAsset,
+    this.obscureText = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.trailingLabel,
+    this.onTrailingTap,
+  });
+
+  final String label;
+  final String hintText;
+  final TextEditingController controller;
+  final String? svgAsset;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final String? trailingLabel;
+  final VoidCallback? onTrailingTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: JosiColors.softMuted,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 2.4,
+                    ),
+              ),
+            ),
+            if (trailingLabel != null)
+              GestureDetector(
+                onTap: onTrailingTap,
+                child: Text(
+                  trailingLabel!,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.redDark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 13),
+        SizedBox(
+          height: 88,
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.outline,
+                  fontSize: 21,
+                  letterSpacing: obscureText ? 5 : 0,
+                ),
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: obscureText
+                        ? JosiColors.outline
+                        : const Color(0xFF6B7280),
+                    fontSize: 21,
+                    letterSpacing: obscureText ? 5 : 0,
+                  ),
+              filled: true,
+              fillColor: JosiColors.white,
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 28, right: 18),
+                child: svgAsset == null
+                    ? const Icon(Icons.lock_outline_rounded,
+                        color: JosiColors.softMuted, size: 29)
+                    : SvgPicture.asset(
+                        svgAsset!,
+                        width: 29,
+                        height: 29,
+                        colorFilter: const ColorFilter.mode(
+                            JosiColors.softMuted, BlendMode.srcIn),
+                      ),
+              ),
+              prefixIconConstraints: const BoxConstraints(minWidth: 76),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 29, horizontal: 0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(4),
+                borderSide: const BorderSide(color: JosiColors.outlineVariant),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(4),
+                borderSide: const BorderSide(color: JosiColors.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(4),
+                borderSide:
+                    const BorderSide(color: JosiColors.redDark, width: 1.2),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        const Expanded(
+            child: Divider(color: JosiColors.outlineVariant, thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 30),
+          child: Text(
+            'OR',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.line,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                ),
+          ),
+        ),
+        const Expanded(
+            child: Divider(color: JosiColors.outlineVariant, thickness: 1)),
+      ],
     );
   }
 }

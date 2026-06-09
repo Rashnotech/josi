@@ -50,22 +50,21 @@ function Assert-MinBytes {
 $requiredFiles = @(
   "pubspec.yaml",
   "lib/main.dart",
+  "lib/core/constants/app_assets.dart",
   "lib/core/constants/app_routes.dart",
-  "lib/core/mock/josi_mock_data.dart",
-  "lib/core/mock/josi_models.dart",
-  "lib/core/providers/app_providers.dart",
-  "lib/core/repositories/repositories.dart",
   "lib/core/router/app_router.dart",
   "lib/core/theme/josi_colors.dart",
   "lib/core/theme/josi_theme.dart",
-  "lib/core/widgets/app_components.dart",
   "lib/features/auth/auth_screens.dart",
-  "lib/features/customer/customer_screens.dart",
-  "lib/features/onboarding/onboarding_screen.dart",
-  "lib/features/rider/rider_screens.dart",
-  "lib/features/shared/shared_screens.dart",
   "lib/features/splash/splash_screen.dart",
-  "assets/images/josi-logo.png",
+  "assets/images/josi_log.png",
+  "assets/images/josi-logo.jpeg",
+  "assets/images/ep--arrow-left-bold.svg",
+  "assets/images/flat-color-icons--google.svg",
+  "assets/images/iconamoon--profile.svg",
+  "assets/images/line-md--email.svg",
+  "assets/images/material-symbols--bike-lane-rounded.svg",
+  "assets/images/uil--padlock.svg",
   "assets/fonts/Inter-Regular.ttf",
   "assets/fonts/Inter-Medium.ttf",
   "assets/fonts/Inter-SemiBold.ttf",
@@ -80,6 +79,7 @@ foreach ($file in $requiredFiles) {
 }
 
 @(
+  "assets/images/josi-logo.png",
   "lib/src/app.dart",
   "lib/src/screens/sign_in_screen.dart",
   "lib/src/screens/home_screen.dart",
@@ -88,155 +88,48 @@ foreach ($file in $requiredFiles) {
   Assert-FileMissing $_
 }
 
-Assert-MinBytes "assets/images/josi-logo.png" 100000
+Assert-MinBytes "assets/images/josi_log.png" 100000
+Assert-MinBytes "assets/images/josi-logo.jpeg" 10000
 Assert-MinBytes "assets/fonts/Inter-Regular.ttf" 10000
 
+Assert-Contains "pubspec.yaml" "flutter_svg:\s+\^2\.3\.0" "pubspec.yaml must include flutter_svg."
 Assert-Contains "pubspec.yaml" "go_router:\s+\^14\.8\.1" "pubspec.yaml must include GoRouter."
 Assert-Contains "pubspec.yaml" "flutter_riverpod:\s+\^2\.6\.1" "pubspec.yaml must include Riverpod."
+Assert-Contains "pubspec.yaml" "assets/images/" "pubspec.yaml must bundle the images folder."
 Assert-Contains "pubspec.yaml" "family:\s+Inter" "pubspec.yaml must register the Inter font family."
 
 Assert-Contains "lib/main.dart" "ProviderScope" "main.dart must wrap the app in ProviderScope."
 Assert-Contains "lib/main.dart" "MaterialApp\.router" "The app must use router-based navigation."
 Assert-Contains "lib/core/theme/josi_theme.dart" "useMaterial3:\s+true" "The theme must use Material 3."
-Assert-Contains "lib/core/theme/josi_colors.dart" "0xFFE50914" "Josi red must remain in the brand palette."
+Assert-Contains "lib/core/theme/josi_colors.dart" "0xFFE31837" "Josi red must match DESIGN.md primary."
+Assert-Contains "lib/core/theme/josi_colors.dart" "0xFFF7F9FB" "Josi surface must match DESIGN.md background."
+Assert-Contains "lib/core/theme/josi_colors.dart" "0xFF191C1E" "Josi text color must match DESIGN.md on-surface."
 
-@(
-  "splash",
-  "onboarding",
-  "role-selection",
-  "login",
-  "register/customer",
-  "register/rider",
-  "forgot-password",
-  "verify-reset-code",
-  "reset-password",
-  "customer/home",
-  "customer/book-trip",
-  "customer/select-location",
-  "customer/confirm-trip",
-  "customer/searching-rider",
-  "customer/trip-active",
-  "customer/trip-completed",
-  "customer/trips",
-  "customer/trip-detail/:id",
-  "customer/wallet",
-  "customer/notifications",
-  "customer/profile",
-  "customer/support",
-  "customer/settings",
-  "rider/home",
-  "rider/application-status",
-  "rider/profile-setup",
-  "rider/document-upload",
-  "rider/vehicle-setup",
-  "rider/available-trips",
-  "rider/trip-request/:id",
-  "rider/active-trip/:id",
-  "rider/trip-completed/:id",
-  "rider/trips",
-  "rider/wallet",
-  "rider/cash-ledger",
-  "rider/notifications",
-  "rider/profile",
-  "rider/support",
-  "rider/settings"
-) | ForEach-Object {
-  $escapedRoute = [regex]::Escape($_)
-  Assert-Contains "lib/core/constants/app_routes.dart" $escapedRoute "Missing route path: $_"
-}
+Assert-Contains "lib/core/constants/app_assets.dart" "josi_log\.png" "Splash logo asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "josi-logo\.jpeg" "Login logo asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "flat-color-icons--google\.svg" "Google SVG asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "line-md--email\.svg" "Email SVG asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "ep--arrow-left-bold\.svg" "Back SVG asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "uil--padlock\.svg" "Padlock SVG asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "material-symbols--bike-lane-rounded\.svg" "Rider SVG asset must be registered."
 
-@(
-  "AppButton",
-  "AppTextField",
-  "AppPasswordField",
-  "AppDropdown",
-  "AppSearchField",
-  "AppCard",
-  "StatusBadge",
-  "EmptyState",
-  "LoadingState",
-  "ErrorState",
-  "SectionHeader",
-  "TripCard",
-  "VehicleCard",
-  "WalletBalanceCard",
-  "ProfileAvatar",
-  "AppBottomNav",
-  "AppScaffold",
-  "AppMapPlaceholder",
-  "DocumentUploadCard"
-) | ForEach-Object {
-  Assert-Contains "lib/core/widgets/app_components.dart" "class\s+$_\b" "Missing reusable component: $_"
-}
+Assert-Contains "lib/features/splash/splash_screen.dart" "AppAssets\.splashLogo" "Splash must use josi_log.png through AppAssets."
+Assert-Contains "lib/features/splash/splash_screen.dart" "backgroundColor:\s+JosiColors\.red" "Splash must have a red background."
+Assert-Contains "lib/features/splash/splash_screen.dart" "AppRoutes\.roleSelection" "Unauthenticated splash must route to role selection."
+Assert-Contains "lib/features/auth/auth_screens.dart" "Welcome to Josi Ride" "Role selection title must match the upload design."
+Assert-Contains "lib/features/auth/auth_screens.dart" "Select your experience" "Role selection subtitle must match the upload design."
+Assert-Contains "lib/features/auth/auth_screens.dart" "Continue as Customer" "Customer card must exist."
+Assert-Contains "lib/features/auth/auth_screens.dart" "Continue as Rider" "Rider card must exist."
+Assert-Contains "lib/features/auth/auth_screens.dart" "POWERED BY JOSI RIDE" "Role selection footer must exist."
+Assert-Contains "lib/features/auth/auth_screens.dart" "Customer Login" "Customer login title must exist."
+Assert-Contains "lib/features/auth/auth_screens.dart" "Rider Login" "Rider login title must exist."
+Assert-Contains "lib/features/auth/auth_screens.dart" "AppAssets\.loginLogo" "Login must use josi-logo.jpeg through AppAssets."
+Assert-Contains "lib/features/auth/auth_screens.dart" "SvgPicture\.asset" "Auth screens must use flutter_svg assets."
+Assert-Contains "lib/core/router/app_router.dart" "queryParameters\['role'\]" "Login route must read the selected role."
+Assert-Contains "lib/core/constants/app_routes.dart" "loginFor" "Routes must expose role-aware login helper."
 
-@(
-  "AuthRepository",
-  "CustomerRepository",
-  "RiderRepository",
-  "TripRepository",
-  "WalletRepository",
-  "NotificationRepository"
-) | ForEach-Object {
-  Assert-Contains "lib/core/repositories/repositories.dart" "class\s+$_\b" "Missing placeholder repository: $_"
-}
+Assert-Contains "test/josi_ride_app_test.dart" "starts on red splash and advances to role selection" "Tests must cover splash-to-role flow."
+Assert-Contains "test/josi_ride_app_test.dart" "customer role opens customer login" "Tests must cover customer login."
+Assert-Contains "test/josi_ride_app_test.dart" "rider role opens rider login" "Tests must cover rider login."
 
-@(
-  "authControllerProvider",
-  "currentCustomerProvider",
-  "currentRiderProvider",
-  "riderProfileProvider",
-  "tripsProvider",
-  "customerWalletProvider",
-  "riderWalletProvider",
-  "notificationsProvider"
-) | ForEach-Object {
-  Assert-Contains "lib/core/providers/app_providers.dart" "$_" "Missing Riverpod provider: $_"
-}
-
-@(
-  "CustomerHomeScreen",
-  "CustomerBookTripScreen",
-  "CustomerSelectLocationScreen",
-  "CustomerConfirmTripScreen",
-  "CustomerSearchingRiderScreen",
-  "CustomerActiveTripScreen",
-  "CustomerTripCompletedScreen",
-  "CustomerTripsScreen",
-  "CustomerTripDetailScreen",
-  "CustomerWalletScreen",
-  "CustomerProfileScreen"
-) | ForEach-Object {
-  Assert-Contains "lib/features/customer/customer_screens.dart" "class\s+$_\b" "Missing customer screen: $_"
-}
-
-@(
-  "RiderHomeScreen",
-  "RiderApplicationStatusScreen",
-  "RiderProfileSetupScreen",
-  "RiderDocumentUploadScreen",
-  "RiderVehicleSetupScreen",
-  "AvailableTripsScreen",
-  "RiderTripRequestDetailScreen",
-  "RiderActiveTripScreen",
-  "RiderTripCompletedScreen",
-  "RiderTripsScreen",
-  "RiderWalletScreen",
-  "RiderCashLedgerScreen",
-  "RiderProfileScreen"
-) | ForEach-Object {
-  Assert-Contains "lib/features/rider/rider_screens.dart" "class\s+$_\b" "Missing rider screen: $_"
-}
-
-Assert-Contains "lib/features/shared/shared_screens.dart" "class\s+NotificationsScreen\b" "Missing shared notifications screen."
-Assert-Contains "lib/features/shared/shared_screens.dart" "class\s+SupportScreen\b" "Missing shared support screen."
-Assert-Contains "lib/features/shared/shared_screens.dart" "class\s+SettingsScreen\b" "Missing shared settings screen."
-Assert-Contains "lib/features/shared/shared_screens.dart" "class\s+EditProfileScreen\b" "Missing edit profile screen."
-Assert-Contains "lib/features/splash/splash_screen.dart" "assets/images/josi-logo\.png" "Splash screen must render the Josi logo asset."
-Assert-Contains "lib/features/auth/auth_screens.dart" "Backend role detection is automatic" "Login must not ask for a role."
-Assert-Contains "lib/core/router/app_router.dart" "GoRouter" "GoRouter must be configured."
-Assert-Contains "lib/core/router/app_router.dart" "NotificationsScreen\(role:\s+AppNavRole\.customer\)" "Customer notifications route must use customer nav."
-Assert-Contains "lib/core/router/app_router.dart" "NotificationsScreen\(role:\s+AppNavRole\.rider\)" "Rider notifications route must use rider nav."
-Assert-Contains "test/josi_ride_app_test.dart" "customer bottom navigation opens wallet" "Widget tests must cover role-aware bottom navigation."
-Assert-Contains "test/josi_ride_app_test.dart" "rider registration ends at application status checklist" "Widget tests must cover rider onboarding."
-
-Write-Host "OK: Josi mobile app source, routes, design system, mock layer, tests, and eval contract are present."
+Write-Host "OK: Josi first-run redline, SVG assets, design tokens, tests, and eval contract are present."

@@ -8,9 +8,9 @@ class JosiTheme {
   static ThemeData get light {
     final TextTheme textTheme = const TextTheme(
       displayLarge:
-          TextStyle(fontSize: 40, fontWeight: FontWeight.w800, height: 1.05),
+          TextStyle(fontSize: 48, fontWeight: FontWeight.w800, height: 1.1),
       headlineLarge:
-          TextStyle(fontSize: 30, fontWeight: FontWeight.w800, height: 1.12),
+          TextStyle(fontSize: 32, fontWeight: FontWeight.w800, height: 1.2),
       headlineMedium:
           TextStyle(fontSize: 24, fontWeight: FontWeight.w800, height: 1.18),
       titleLarge:
@@ -63,22 +63,25 @@ class JosiTheme {
         filled: true,
         fillColor: JosiColors.white,
         hintStyle: textTheme.bodyMedium?.copyWith(color: JosiColors.softMuted),
-        labelStyle: textTheme.labelMedium?.copyWith(color: JosiColors.muted),
+        labelStyle: textTheme.labelMedium?.copyWith(
+          color: JosiColors.softMuted,
+          letterSpacing: 0.7,
+        ),
         border: OutlineInputBorder(
           borderSide: const BorderSide(color: JosiColors.line),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(4),
         ),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: JosiColors.line),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(4),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: JosiColors.red, width: 1.5),
-          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: JosiColors.charcoal, width: 1.5),
+          borderRadius: BorderRadius.circular(4),
         ),
         errorBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: JosiColors.redDark, width: 1.5),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(4),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -92,8 +95,7 @@ class JosiTheme {
           disabledBackgroundColor: JosiColors.surfaceStrong,
           disabledForegroundColor: JosiColors.muted,
           textStyle: textTheme.labelLarge,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -102,8 +104,7 @@ class JosiTheme {
           foregroundColor: JosiColors.ink,
           side: const BorderSide(color: JosiColors.line),
           textStyle: textTheme.labelLarge,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(

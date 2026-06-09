@@ -45,6 +45,8 @@ class AppRoutes {
   static const String riderSupport = '/rider/support';
   static const String riderSettings = '/rider/settings';
 
+  static String loginFor(String role) => '$login?role=$role';
+
   static String customerTripDetailPath(String id) =>
       '/customer/trip-detail/$id';
 

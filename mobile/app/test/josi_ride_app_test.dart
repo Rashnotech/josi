@@ -6,33 +6,45 @@ import 'package:josi_ride/core/theme/josi_theme.dart';
 import 'package:josi_ride/main.dart';
 
 void main() {
-  testWidgets('starts on splash and advances to onboarding',
+  testWidgets('starts on red splash and advances to role selection',
       (WidgetTester tester) async {
     await _pumpApp(tester);
 
     expect(find.byKey(const ValueKey<String>('splash-screen')), findsOneWidget);
-    expect(find.bySemanticsLabel('Josi logo'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('splash-logo')), findsOneWidget);
+    expect(find.bySemanticsLabel('Josi splash logo'), findsOneWidget);
 
     await _finishSplash(tester);
 
-    expect(find.byKey(const ValueKey<String>('onboarding-screen')),
+    expect(find.byKey(const ValueKey<String>('role-selection-screen')),
         findsOneWidget);
-    expect(find.text('Fast city rides and deliveries'), findsOneWidget);
+    expect(find.text('Welcome to Josi Ride'), findsOneWidget);
+    expect(find.text('Continue as Customer'), findsOneWidget);
+    expect(find.text('Continue as Rider'), findsOneWidget);
   });
 
-  testWidgets('role selection opens login and customer home after mock auth',
+  testWidgets('customer role opens customer login and signs into customer home',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
 
-    await tester.tap(find.text('Log in'));
+    await tester.ensureVisible(find.text('Get Started'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Access Josi'), findsOneWidget);
+    expect(find.text('Customer Login'), findsOneWidget);
+    expect(find.text('Secure your ride. Enter your details below.'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('login-logo')), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('login-identity-field')),
         findsOneWidget);
     expect(find.byKey(const ValueKey<String>('login-password-field')),
         findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
 
+    await tester
+        .ensureVisible(find.byKey(const ValueKey<String>('login-button')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey<String>('login-button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 650));
@@ -43,23 +55,22 @@ void main() {
     expect(find.text('Book Ride'), findsOneWidget);
   });
 
-  testWidgets('customer bottom navigation opens wallet',
-      (WidgetTester tester) async {
-    await _loginAsCustomer(tester);
-
-    await tester.tap(find.text('Wallet').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Payments and transactions'), findsOneWidget);
-    expect(find.text('Available balance'), findsOneWidget);
-    expect(find.text('Add money'), findsOneWidget);
-  });
-
-  testWidgets('rider registration ends at application status checklist',
+  testWidgets(
+      'rider role opens rider login and create account reaches rider registration',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
 
-    await tester.tap(find.text('Continue as Rider'));
+    await tester.ensureVisible(find.text('Drive with Us'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Drive with Us'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rider Login'), findsOneWidget);
+    expect(find.text('Rider Dashboard Access'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Create account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 
     expect(find.text('Rider registration'), findsOneWidget);
@@ -78,11 +89,24 @@ void main() {
     expect(find.text('Admin approval'), findsOneWidget);
   });
 
-  test('theme uses Josi red, Material 3, and Inter typography', () {
+  testWidgets('customer bottom navigation opens wallet',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Wallet').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Payments and transactions'), findsOneWidget);
+    expect(find.text('Available balance'), findsOneWidget);
+    expect(find.text('Add money'), findsOneWidget);
+  });
+
+  test('theme follows the Josi light redline', () {
     final ThemeData theme = JosiTheme.light;
 
     expect(theme.useMaterial3, isTrue);
     expect(theme.colorScheme.primary, JosiColors.red);
+    expect(JosiColors.red, const Color(0xFFE31837));
     expect(theme.colorScheme.secondary, JosiColors.charcoal);
     expect(theme.scaffoldBackgroundColor, JosiColors.surface);
     expect(theme.textTheme.bodyMedium?.fontFamily, 'Inter');
@@ -90,6 +114,12 @@ void main() {
 }
 
 Future<void> _pumpApp(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(430, 932);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
   await tester.pumpWidget(const ProviderScope(child: JosiApp()));
 }
 
@@ -101,13 +131,16 @@ Future<void> _finishSplash(WidgetTester tester) async {
 Future<void> _pumpToRoleSelection(WidgetTester tester) async {
   await _pumpApp(tester);
   await _finishSplash(tester);
-  await tester.tap(find.text('Skip'));
-  await tester.pumpAndSettle();
 }
 
 Future<void> _loginAsCustomer(WidgetTester tester) async {
   await _pumpToRoleSelection(tester);
-  await tester.tap(find.text('Log in'));
+  await tester.ensureVisible(find.text('Get Started'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Get Started'));
+  await tester.pumpAndSettle();
+  await tester
+      .ensureVisible(find.byKey(const ValueKey<String>('login-button')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey<String>('login-button')));
   await tester.pump();
