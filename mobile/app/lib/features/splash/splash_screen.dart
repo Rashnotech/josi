@@ -12,7 +12,7 @@ import '../../core/theme/josi_colors.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen(
-      {super.key, this.duration = const Duration(milliseconds: 1600)});
+      {super.key, this.duration = const Duration(milliseconds: 2000)});
 
   final Duration duration;
 
@@ -62,17 +62,49 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return Scaffold(
       key: const ValueKey<String>('splash-screen'),
       backgroundColor: JosiColors.red,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 34),
-          child: Semantics(
-            label: 'Josi splash logo',
-            image: true,
-            child: Image.asset(
-              AppAssets.splashLogo,
-              key: const ValueKey<String>('splash-logo'),
-              width: 330,
-              fit: BoxFit.contain,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 34),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Semantics(
+                  label: 'Josi splash logo',
+                  image: true,
+                  child: Image.asset(
+                    AppAssets.splashLogo,
+                    key: const ValueKey<String>('splash-logo'),
+                    width: 260,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'Fast city rides. Trusted riders.',
+                  key: const ValueKey<String>('splash-tagline'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.white.withValues(alpha: 0.92),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  key: const ValueKey<String>('splash-loader'),
+                  width: 112,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      minHeight: 4,
+                      backgroundColor: JosiColors.white.withValues(alpha: 0.26),
+                      color: JosiColors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

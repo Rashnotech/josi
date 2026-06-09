@@ -46,17 +46,20 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (BuildContext context, GoRouterState state) =>
-            const ForgotPasswordScreen(),
+            ForgotPasswordScreen(
+                role: state.uri.queryParameters['role'] ?? 'customer'),
       ),
       GoRoute(
         path: AppRoutes.verifyResetCode,
         builder: (BuildContext context, GoRouterState state) =>
-            const VerifyResetCodeScreen(),
+            VerifyResetCodeScreen(
+                role: state.uri.queryParameters['role'] ?? 'customer'),
       ),
       GoRoute(
         path: AppRoutes.resetPassword,
         builder: (BuildContext context, GoRouterState state) =>
-            const ResetPasswordScreen(),
+            ResetPasswordScreen(
+                role: state.uri.queryParameters['role'] ?? 'customer'),
       ),
       GoRoute(
         path: AppRoutes.editProfile,

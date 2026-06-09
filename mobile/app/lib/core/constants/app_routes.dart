@@ -47,6 +47,13 @@ class AppRoutes {
 
   static String loginFor(String role) => '$login?role=$role';
 
+  static String forgotPasswordFor(String role) => '$forgotPassword?role=$role';
+
+  static String verifyResetCodeFor(String role) =>
+      '$verifyResetCode?role=$role';
+
+  static String resetPasswordFor(String role) => '$resetPassword?role=$role';
+
   static String customerTripDetailPath(String id) =>
       '/customer/trip-detail/$id';
 

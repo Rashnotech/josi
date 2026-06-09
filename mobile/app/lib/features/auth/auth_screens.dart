@@ -216,7 +216,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     svgAsset: AppAssets.padlock,
                     obscureText: true,
                     trailingLabel: 'Forgot Password?',
-                    onTrailingTap: () => context.go(AppRoutes.forgotPassword),
+                    onTrailingTap: () =>
+                        context.go(AppRoutes.forgotPasswordFor(widget.role)),
                     textInputAction: TextInputAction.done,
                   ),
                   if (session.errorMessage != null) ...<Widget>[
@@ -993,168 +994,434 @@ class _SignupLoginLink extends StatelessWidget {
 }
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  const ForgotPasswordScreen({
+    super.key,
+    this.role = 'customer',
+  });
+
+  final String role;
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final TextEditingController _identityController = TextEditingController();
   bool _sent = false;
 
   @override
+  void dispose() {
+    _identityController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Forgot password',
+    return _RecoveryScaffold(
+      screenKey: const ValueKey<String>('forgot-password-screen'),
+      title: 'Forgot Password',
       subtitle: 'Reset access safely',
-      child: AppScreenBody(
-        children: <Widget>[
-          Text(
-            'Enter your email or phone number and Josi will send a 6-digit reset code.',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: JosiColors.muted),
-          ),
-          const SizedBox(height: 20),
-          const AppTextField(
-              label: 'Email or phone',
-              hintText: 'rik@josi.ng',
-              icon: Icons.alternate_email_rounded),
-          const SizedBox(height: 16),
-          AppButton(
-            label: 'Send reset code',
-            icon: Icons.send_rounded,
-            onPressed: () => setState(() => _sent = true),
-          ),
-          if (_sent) ...<Widget>[
-            const SizedBox(height: 16),
-            AppCard(
-              color: JosiColors.successSoft,
-              child: Text(
-                'If this account exists, a reset code has been sent.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: JosiColors.success),
+      onBack: () => context.go(AppRoutes.loginFor(widget.role)),
+      children: <Widget>[
+        Text(
+          'Enter your email or phone number and Josi will send a 6-digit reset code.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: JosiColors.muted,
+                fontSize: 15,
+                height: 1.45,
               ),
-            ),
-            const SizedBox(height: 10),
-            AppButton(
-              label: 'Enter code',
-              variant: AppButtonVariant.secondary,
-              onPressed: () => context.go(AppRoutes.verifyResetCode),
-            ),
-          ],
+        ),
+        const SizedBox(height: 20),
+        _RedlineTextField(
+          key: const ValueKey<String>('forgot-identity-field'),
+          label: 'EMAIL OR PHONE',
+          hintText: 'name@example.com',
+          controller: _identityController,
+          svgAsset: AppAssets.email,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: 24),
+        _RecoveryButton(
+          key: const ValueKey<String>('send-reset-code-button'),
+          label: 'SEND CODE',
+          onPressed: () => setState(() => _sent = true),
+        ),
+        if (_sent) ...<Widget>[
+          const SizedBox(height: 16),
+          const _RecoveryStatusCard(
+            message: 'If this account exists, a reset code has been sent.',
+          ),
+          const SizedBox(height: 12),
+          _RecoveryButton(
+            label: 'ENTER CODE',
+            isPrimary: false,
+            onPressed: () =>
+                context.go(AppRoutes.verifyResetCodeFor(widget.role)),
+          ),
         ],
-      ),
+      ],
     );
   }
 }
 
 class VerifyResetCodeScreen extends StatelessWidget {
-  const VerifyResetCodeScreen({super.key});
+  const VerifyResetCodeScreen({
+    super.key,
+    this.role = 'customer',
+  });
+
+  final String role;
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Verify code',
-      subtitle: 'Code expires in 02:00',
-      child: AppScreenBody(
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              for (int index = 0; index < 6; index++) ...<Widget>[
-                Expanded(
-                  child: TextField(
-                    key: ValueKey<String>('otp-$index'),
-                    textAlign: TextAlign.center,
-                    maxLength: 1,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: <TextInputFormatter>[
-                      FilteringTextInputFormatter.digitsOnly
-                    ],
-                    decoration: const InputDecoration(counterText: ''),
-                  ),
-                ),
-                if (index < 5) const SizedBox(width: 8),
-              ],
+    return _RecoveryScaffold(
+      screenKey: const ValueKey<String>('verify-reset-code-screen'),
+      title: 'Verify Code',
+      subtitle: 'Enter the 6-digit code sent to your account.',
+      onBack: () => context.go(AppRoutes.forgotPasswordFor(role)),
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            for (int index = 0; index < 6; index++) ...<Widget>[
+              Expanded(child: _OtpCodeField(index: index)),
+              if (index < 5) const SizedBox(width: 8),
             ],
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                'Code expires in 02:00',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: JosiColors.muted,
+                      fontSize: 14,
+                    ),
+              ),
+            ),
+            TextButton(
               onPressed: () {},
               child: const Text('Resend code'),
             ),
-          ),
-          const SizedBox(height: 16),
-          AppButton(
-            label: 'Verify',
-            icon: Icons.verified_rounded,
-            onPressed: () => context.go(AppRoutes.resetPassword),
-          ),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        _RecoveryButton(
+          key: const ValueKey<String>('verify-reset-code-button'),
+          label: 'VERIFY',
+          onPressed: () => context.go(AppRoutes.resetPasswordFor(role)),
+        ),
+      ],
     );
   }
 }
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  const ResetPasswordScreen({
+    super.key,
+    this.role = 'customer',
+  });
+
+  final String role;
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   bool _reset = false;
 
   @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Reset password',
-      subtitle: 'Choose a stronger password',
-      child: AppScreenBody(
-        children: <Widget>[
-          const AppPasswordField(
-              label: 'New password', hintText: 'Enter password'),
-          const SizedBox(height: 12),
-          const AppPasswordField(
-              label: 'Confirm password', hintText: 'Repeat password'),
-          const SizedBox(height: 12),
-          AppCard(
-            color: JosiColors.warningSoft,
-            child: Text(
-              'Use at least 8 characters with a mix of letters, numbers, and symbols.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: JosiColors.warning),
-            ),
-          ),
+    return _RecoveryScaffold(
+      screenKey: const ValueKey<String>('reset-password-screen'),
+      title: 'Reset Password',
+      subtitle: 'Choose a new secure password.',
+      onBack: () => context.go(AppRoutes.verifyResetCodeFor(widget.role)),
+      children: <Widget>[
+        _RedlineTextField(
+          key: const ValueKey<String>('new-password-field'),
+          label: 'NEW PASSWORD',
+          hintText: '••••••••',
+          controller: _passwordController,
+          svgAsset: AppAssets.padlock,
+          obscureText: true,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 16),
+        _RedlineTextField(
+          key: const ValueKey<String>('confirm-password-field'),
+          label: 'CONFIRM PASSWORD',
+          hintText: '••••••••',
+          controller: _confirmPasswordController,
+          svgAsset: AppAssets.padlock,
+          obscureText: true,
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: 16),
+        const _RecoveryStatusCard(
+          message:
+              'Use at least 8 characters with letters, numbers, and symbols.',
+          icon: Icons.info_outline_rounded,
+          foregroundColor: JosiColors.warning,
+          backgroundColor: JosiColors.warningSoft,
+        ),
+        const SizedBox(height: 22),
+        _RecoveryButton(
+          key: const ValueKey<String>('reset-password-button'),
+          label: 'RESET PASSWORD',
+          onPressed: () => setState(() => _reset = true),
+        ),
+        if (_reset) ...<Widget>[
           const SizedBox(height: 16),
-          AppButton(
-            label: 'Reset password',
-            icon: Icons.lock_reset_rounded,
-            onPressed: () => setState(() => _reset = true),
+          const _RecoveryStatusCard(
+            message: 'Password reset. You can now log in securely.',
           ),
-          if (_reset) ...<Widget>[
-            const SizedBox(height: 16),
-            const EmptyState(
-              title: 'Password reset',
-              message: 'You can now log in with your new password.',
-              icon: Icons.check_circle_rounded,
-            ),
-            const SizedBox(height: 12),
-            AppButton(
-              label: 'Back to login',
-              variant: AppButtonVariant.secondary,
-              onPressed: () => context.go(AppRoutes.login),
-            ),
-          ],
+          const SizedBox(height: 12),
+          _RecoveryButton(
+            label: 'BACK TO LOGIN',
+            isPrimary: false,
+            onPressed: () => context.go(AppRoutes.loginFor(widget.role)),
+          ),
         ],
+      ],
+    );
+  }
+}
+
+class _RecoveryScaffold extends StatelessWidget {
+  const _RecoveryScaffold({
+    required this.title,
+    required this.subtitle,
+    required this.children,
+    required this.onBack,
+    required this.screenKey,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+  final VoidCallback onBack;
+  final Key screenKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: screenKey,
+      backgroundColor: JosiColors.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(29, 24, 29, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _BackSquareButton(
+                      outlined: true,
+                      onPressed: onBack,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Center(
+                    child: _LogoCard(
+                      size: 76,
+                      innerSize: 70,
+                      framed: false,
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 31,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: JosiColors.softMuted,
+                          fontSize: 16,
+                          height: 1.22,
+                        ),
+                  ),
+                  const SizedBox(height: 30),
+                  ...children,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecoveryButton extends StatelessWidget {
+  const _RecoveryButton({
+    required this.label,
+    required this.onPressed,
+    super.key,
+    this.isPrimary = true,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final bool isPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 56,
+      child: isPrimary
+          ? ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: JosiColors.redDark,
+                foregroundColor: JosiColors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
+                textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: JosiColors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Text(label),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.arrow_forward_rounded, size: 24),
+                ],
+              ),
+            )
+          : OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                backgroundColor: JosiColors.white,
+                foregroundColor: JosiColors.ink,
+                side: const BorderSide(color: JosiColors.outline),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
+                textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+              ),
+              child: Text(label),
+            ),
+    );
+  }
+}
+
+class _RecoveryStatusCard extends StatelessWidget {
+  const _RecoveryStatusCard({
+    required this.message,
+    this.icon = Icons.check_circle_outline_rounded,
+    this.foregroundColor = JosiColors.success,
+    this.backgroundColor = JosiColors.successSoft,
+  });
+
+  final String message;
+  final IconData icon;
+  final Color foregroundColor;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: foregroundColor.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, color: foregroundColor, size: 21),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: foregroundColor,
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OtpCodeField extends StatelessWidget {
+  const _OtpCodeField({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 56,
+      child: TextField(
+        key: ValueKey<String>('otp-$index'),
+        textAlign: TextAlign.center,
+        maxLength: 1,
+        keyboardType: TextInputType.number,
+        inputFormatters: <TextInputFormatter>[
+          FilteringTextInputFormatter.digitsOnly,
+        ],
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: JosiColors.ink,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+        decoration: InputDecoration(
+          counterText: '',
+          filled: true,
+          fillColor: JosiColors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: const BorderSide(color: JosiColors.outlineVariant),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: const BorderSide(color: JosiColors.outlineVariant),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: const BorderSide(color: JosiColors.redDark, width: 1.3),
+          ),
+        ),
       ),
     );
   }

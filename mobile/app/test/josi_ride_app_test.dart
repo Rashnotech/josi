@@ -12,6 +12,9 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('splash-screen')), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('splash-logo')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('splash-tagline')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('splash-loader')), findsOneWidget);
     expect(find.bySemanticsLabel('Josi splash logo'), findsOneWidget);
 
     await _finishSplash(tester);
@@ -129,6 +132,67 @@ void main() {
     expect(find.text('Ready for your next city move?'), findsOneWidget);
   });
 
+  testWidgets('forgot password flow uses redline recovery screens',
+      (WidgetTester tester) async {
+    await _pumpToRoleSelection(tester);
+
+    _expectVisibleInViewport(tester, find.text('Get Started'));
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+
+    _expectVisibleInViewport(tester, find.text('Forgot Password?'));
+    await tester.tap(find.text('Forgot Password?'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('forgot-password-screen')),
+        findsOneWidget);
+    expect(find.text('Forgot Password'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('forgot-identity-field')),
+        findsOneWidget);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('send-reset-code-button')));
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('send-reset-code-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('If this account exists, a reset code has been sent.'),
+        findsOneWidget);
+    _expectVisibleInViewport(tester, find.text('ENTER CODE'));
+
+    await tester.tap(find.text('ENTER CODE'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('verify-reset-code-screen')),
+        findsOneWidget);
+    expect(find.text('Verify Code'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('otp-0')), findsOneWidget);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('verify-reset-code-button')));
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('verify-reset-code-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('reset-password-screen')),
+        findsOneWidget);
+    expect(find.text('Reset Password'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('new-password-field')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('confirm-password-field')),
+        findsOneWidget);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('reset-password-button')));
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('reset-password-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Password reset. You can now log in securely.'),
+        findsOneWidget);
+    _expectVisibleInViewport(tester, find.text('BACK TO LOGIN'));
+  });
+
   testWidgets('customer bottom navigation opens wallet',
       (WidgetTester tester) async {
     await _loginAsCustomer(tester);
@@ -164,7 +228,7 @@ Future<void> _pumpApp(WidgetTester tester) async {
 }
 
 Future<void> _finishSplash(WidgetTester tester) async {
-  await tester.pump(const Duration(milliseconds: 1800));
+  await tester.pump(const Duration(milliseconds: 2200));
   await tester.pumpAndSettle();
 }
 
