@@ -16,4 +16,6 @@ class AppAssets {
   static const String card = 'assets/images/solar--card-bold.svg';
   static const String location = 'assets/images/boxicons--location-filled.svg';
   static const String padlock = 'assets/images/uil--padlock.svg';
+  static const String locationSearch =
+      'assets/images/undraw_location-search_9mdg.svg';
 }

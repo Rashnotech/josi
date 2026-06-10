@@ -370,7 +370,7 @@ class CustomerSelectLocationScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: _DestinationBottomBar(
-        onConfirm: () => context.go(AppRoutes.customerConfirmTrip),
+        onConfirm: () => context.go(AppRoutes.customerSearchingRider),
       ),
     );
   }
@@ -1075,68 +1075,845 @@ class _CustomerConfirmTripScreenState extends State<CustomerConfirmTripScreen> {
   }
 }
 
-class CustomerSearchingRiderScreen extends StatelessWidget {
-  const CustomerSearchingRiderScreen({super.key});
+enum _RideSearchStage { searching, found, notFound }
+
+class CustomerSearchingRiderScreen extends StatefulWidget {
+  const CustomerSearchingRiderScreen({
+    super.key,
+    this.showNotFound = false,
+  });
+
+  final bool showNotFound;
+
+  @override
+  State<CustomerSearchingRiderScreen> createState() =>
+      _CustomerSearchingRiderScreenState();
+}
+
+class _CustomerSearchingRiderScreenState
+    extends State<CustomerSearchingRiderScreen> {
+  late _RideSearchStage _stage = widget.showNotFound
+      ? _RideSearchStage.notFound
+      : _RideSearchStage.searching;
+
+  @override
+  void didUpdateWidget(covariant CustomerSearchingRiderScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.showNotFound != widget.showNotFound) {
+      _stage = widget.showNotFound
+          ? _RideSearchStage.notFound
+          : _RideSearchStage.searching;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Finding rider',
-      subtitle: 'Matching nearby verified riders',
-      child: AppScreenBody(
+    switch (_stage) {
+      case _RideSearchStage.searching:
+        return _SearchingRideView(
+          onBack: () => context.go(AppRoutes.customerSelectLocation),
+          onBookMini: () => setState(() => _stage = _RideSearchStage.found),
+        );
+      case _RideSearchStage.found:
+        return _RideFoundView(
+          onBack: () => setState(() => _stage = _RideSearchStage.searching),
+          onRequestRide: () => context.go(AppRoutes.customerTripActive),
+        );
+      case _RideSearchStage.notFound:
+        return _RideNotFoundView(
+          onBack: () => context.go(AppRoutes.customerSelectLocation),
+          onTryAgain: () {
+            context.go(AppRoutes.customerSearchingRider);
+            setState(() => _stage = _RideSearchStage.searching);
+          },
+        );
+    }
+  }
+}
+
+class _SearchingRideView extends StatelessWidget {
+  const _SearchingRideView({
+    required this.onBack,
+    required this.onBookMini,
+  });
+
+  final VoidCallback onBack;
+  final VoidCallback onBookMini;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-searching-rider-screen'),
+      backgroundColor: JosiColors.white,
+      body: Stack(
         children: <Widget>[
-          AppCard(
+          const Positioned.fill(
+            child: _RideMapBackdrop(
+              showCars: true,
+              showRoute: false,
+            ),
+          ),
+          Positioned(
+            left: 24,
+            top: MediaQuery.paddingOf(context).top + 26,
+            child: _FloatingBackButton(onTap: onBack),
+          ),
+          Positioned(
+            left: 24,
+            right: 24,
+            top: MediaQuery.paddingOf(context).top + 150,
             child: Column(
               children: <Widget>[
-                TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0.78, end: 1),
-                  duration: const Duration(milliseconds: 900),
-                  curve: Curves.easeInOut,
-                  builder: (BuildContext context, double scale, Widget? child) {
-                    return Transform.scale(scale: scale, child: child);
-                  },
-                  child: Container(
-                    width: 108,
-                    height: 108,
-                    decoration: const BoxDecoration(
-                        color: JosiColors.redSoft, shape: BoxShape.circle),
-                    child: const Icon(Icons.radar_rounded,
-                        color: JosiColors.red, size: 54),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('Searching for the best rider',
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 6),
+                const _SearchingRideBadge(),
+                const SizedBox(height: 26),
                 Text(
-                  'This usually takes a few seconds.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: JosiColors.muted),
+                  'Searching Ride...',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This may take a few seconds...',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 18,
+                      ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          TripCard(
-              trip: JosiMockData.trips[0],
-              trailing: const StatusBadge(label: 'Cash')),
-          const SizedBox(height: 18),
-          AppButton(
-            label: 'Preview active trip',
-            icon: Icons.arrow_forward_rounded,
-            onPressed: () => context.go(AppRoutes.customerTripActive),
+        ],
+      ),
+      bottomNavigationBar: _RideBottomAction(
+        label: 'Book Mini',
+        onPressed: onBookMini,
+      ),
+    );
+  }
+}
+
+class _RideFoundView extends StatelessWidget {
+  const _RideFoundView({
+    required this.onBack,
+    required this.onRequestRide,
+  });
+
+  final VoidCallback onBack;
+  final VoidCallback onRequestRide;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-ride-found-screen'),
+      backgroundColor: JosiColors.white,
+      body: Stack(
+        children: <Widget>[
+          const Positioned.fill(child: _RideMapBackdrop(showRoute: true)),
+          Positioned(
+            left: 24,
+            top: MediaQuery.paddingOf(context).top + 26,
+            child: _FloatingBackButton(onTap: onBack),
           ),
-          const SizedBox(height: 10),
-          AppButton(
-            label: 'Cancel request',
-            variant: AppButtonVariant.secondary,
-            onPressed: () => context.go(AppRoutes.customerHome),
+          Positioned(
+            right: 24,
+            bottom: 308,
+            child: _LocateMeButton(onTap: () {}),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _RideFoundSheet(onRequestRide: onRequestRide),
           ),
         ],
       ),
     );
+  }
+}
+
+class _RideNotFoundView extends StatelessWidget {
+  const _RideNotFoundView({
+    required this.onBack,
+    required this.onTryAgain,
+  });
+
+  final VoidCallback onBack;
+  final VoidCallback onTryAgain;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-ride-not-found-screen'),
+      backgroundColor: JosiColors.white,
+      body: Stack(
+        children: <Widget>[
+          const Positioned.fill(child: _RideMapBackdrop(showRoute: true)),
+          Positioned(
+            left: 24,
+            top: MediaQuery.paddingOf(context).top + 26,
+            child: _FloatingBackButton(onTap: onBack),
+          ),
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + 48,
+            left: 0,
+            right: 0,
+            child: Text(
+              'Book Ride',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _RideNotFoundSheet(onTryAgain: onTryAgain),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchingRideBadge extends StatelessWidget {
+  const _SearchingRideBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.05, end: 1),
+      duration: const Duration(milliseconds: 1100),
+      curve: Curves.easeInOut,
+      builder: (BuildContext context, double value, Widget? child) {
+        return Stack(
+          alignment: Alignment.center,
+          children: <Widget>[
+            SizedBox.square(
+              dimension: 112,
+              child: CircularProgressIndicator(
+                value: value,
+                strokeWidth: 5,
+                strokeCap: StrokeCap.round,
+                backgroundColor: JosiColors.redSoft,
+                color: JosiColors.red,
+              ),
+            ),
+            child!,
+          ],
+        );
+      },
+      child: Container(
+        width: 92,
+        height: 92,
+        decoration: const BoxDecoration(
+          color: JosiColors.white,
+          shape: BoxShape.circle,
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 22,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.local_taxi_rounded,
+            color: JosiColors.red, size: 48),
+      ),
+    );
+  }
+}
+
+class _RideFoundSheet extends StatelessWidget {
+  const _RideFoundSheet({required this.onRequestRide});
+
+  final VoidCallback onRequestRide;
+
+  @override
+  Widget build(BuildContext context) {
+    return _RideSheet(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'Ride Founded',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              Text(
+                '5 min Away',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: JosiColors.softMuted,
+                      fontSize: 17,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Divider(color: JosiColors.line),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const _DriverAvatar(name: 'Jenny Wilson', size: 62),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Jenny Wilson',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: JosiColors.ink,
+                            fontSize: 23,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sedan (4 Seater)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: JosiColors.softMuted,
+                            fontSize: 16,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Text.rich(
+                    TextSpan(
+                      text: '\$1.25',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: JosiColors.ink,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                      children: <InlineSpan>[
+                        TextSpan(
+                          text: '/ per mile',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: JosiColors.softMuted,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'GR 678-UVWX',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: JosiColors.softMuted,
+                          fontSize: 15,
+                        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _RidePrimaryButton(
+            key: const ValueKey<String>('request-ride-button'),
+            label: 'Request Ride',
+            onPressed: onRequestRide,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideNotFoundSheet extends StatelessWidget {
+  const _RideNotFoundSheet({required this.onTryAgain});
+
+  final VoidCallback onTryAgain;
+
+  @override
+  Widget build(BuildContext context) {
+    return _RideSheet(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          SvgPicture.asset(
+            AppAssets.locationSearch,
+            key: const ValueKey<String>('ride-not-found-illustration'),
+            height: 178,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Ride Not Found',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 27,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'please try again in a few minutes',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.softMuted,
+                  fontSize: 18,
+                ),
+          ),
+          const SizedBox(height: 28),
+          _RidePrimaryButton(
+            key: const ValueKey<String>('try-again-ride-button'),
+            label: 'Try Again',
+            onPressed: onTryAgain,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideSheet extends StatelessWidget {
+  const _RideSheet({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 24,
+            offset: Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 96,
+              height: 4,
+              decoration: BoxDecoration(
+                color: JosiColors.line,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 22),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RideBottomAction extends StatelessWidget {
+  const _RideBottomAction({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 18,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(30, 18, 30, 20),
+          child: _RidePrimaryButton(
+            key: const ValueKey<String>('book-mini-button'),
+            label: label,
+            onPressed: onPressed,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RidePrimaryButton extends StatelessWidget {
+  const _RidePrimaryButton({
+    required this.label,
+    required this.onPressed,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 62,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: JosiColors.red,
+          foregroundColor: JosiColors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: JosiColors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        child: Text(label),
+      ),
+    );
+  }
+}
+
+class _FloatingBackButton extends StatelessWidget {
+  const _FloatingBackButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      shape: const CircleBorder(),
+      elevation: 3,
+      shadowColor: const Color(0x18000000),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: const SizedBox.square(
+          dimension: 54,
+          child: Center(
+            child: _AssetIcon(
+              asset: AppAssets.arrowLeft,
+              color: JosiColors.ink,
+              size: 25,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LocateMeButton extends StatelessWidget {
+  const _LocateMeButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      shape: const CircleBorder(),
+      elevation: 4,
+      shadowColor: const Color(0x18000000),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: const SizedBox.square(
+          dimension: 54,
+          child:
+              Icon(Icons.my_location_rounded, color: JosiColors.red, size: 28),
+        ),
+      ),
+    );
+  }
+}
+
+class _DriverAvatar extends StatelessWidget {
+  const _DriverAvatar({
+    required this.name,
+    required this.size,
+  });
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: JosiColors.redSoft,
+        border: Border.all(color: JosiColors.white, width: 3),
+      ),
+      child: Text(
+        name
+            .split(' ')
+            .take(2)
+            .map((String part) => part.isEmpty ? '' : part[0])
+            .join(),
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: JosiColors.red,
+              fontWeight: FontWeight.w800,
+            ),
+      ),
+    );
+  }
+}
+
+class _RideMapBackdrop extends StatelessWidget {
+  const _RideMapBackdrop({
+    this.showCars = false,
+    this.showRoute = true,
+  });
+
+  final bool showCars;
+  final bool showRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _RideMapPainter(showCars: showCars, showRoute: showRoute),
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+class _RideMapPainter extends CustomPainter {
+  const _RideMapPainter({
+    required this.showCars,
+    required this.showRoute,
+  });
+
+  final bool showCars;
+  final bool showRoute;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+        Offset.zero & size, Paint()..color = const Color(0xFFF5F6F7));
+
+    final Paint roadPaint = Paint()
+      ..color = JosiColors.white
+      ..strokeWidth = 11
+      ..strokeCap = StrokeCap.round;
+    final Paint minorRoadPaint = Paint()
+      ..color = const Color(0xFFE8EAED)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final Paint arrowPaint = Paint()
+      ..color = const Color(0xFFC9CDD2)
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round;
+
+    for (final double x in <double>[0.12, 0.34, 0.57, 0.82]) {
+      canvas.drawLine(
+        Offset(size.width * x, -size.height * 0.1),
+        Offset(size.width * (x - 0.24), size.height * 1.1),
+        roadPaint,
+      );
+    }
+    for (final double y in <double>[0.12, 0.28, 0.45, 0.66, 0.84]) {
+      canvas.drawLine(
+        Offset(-size.width * 0.1, size.height * y),
+        Offset(size.width * 1.1, size.height * (y + 0.16)),
+        roadPaint,
+      );
+    }
+    for (final double x in <double>[0.2, 0.46, 0.71]) {
+      canvas.drawLine(
+        Offset(size.width * x, 0),
+        Offset(size.width * (x + 0.12), size.height),
+        minorRoadPaint,
+      );
+    }
+    for (final double y in <double>[0.2, 0.38, 0.58, 0.76]) {
+      canvas.drawLine(
+        Offset(0, size.height * y),
+        Offset(size.width, size.height * (y - 0.08)),
+        minorRoadPaint,
+      );
+    }
+
+    _drawStreetLabel(canvas, size, 'Worth St', const Offset(0.36, 0.08), -0.6);
+    _drawStreetLabel(canvas, size, 'Broadway', const Offset(0.70, 0.29), -1.05);
+    _drawStreetLabel(canvas, size, 'Reade St', const Offset(0.37, 0.41), 0.28);
+    _drawStreetLabel(canvas, size, 'Park Row', const Offset(0.35, 0.70), -0.18);
+    _drawStreetLabel(canvas, size, 'Warren St', const Offset(0.24, 0.58), 0.38);
+
+    for (final Offset point in <Offset>[
+      const Offset(0.22, 0.52),
+      const Offset(0.38, 0.74),
+      const Offset(0.63, 0.46),
+      const Offset(0.72, 0.68),
+    ]) {
+      final Offset center =
+          Offset(size.width * point.dx, size.height * point.dy);
+      canvas.drawLine(center.translate(-8, -8), center, arrowPaint);
+      canvas.drawLine(center, center.translate(-4, 8), arrowPaint);
+    }
+
+    if (showRoute) {
+      final Paint routePaint = Paint()
+        ..color = const Color(0xFF4A4A4A)
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      final Path route = Path()
+        ..moveTo(size.width * 0.34, size.height * 0.22)
+        ..lineTo(size.width * 0.60, size.height * 0.34)
+        ..lineTo(size.width * 0.48, size.height * 0.48)
+        ..lineTo(size.width * 0.78, size.height * 0.62);
+      canvas.drawPath(route, routePaint);
+      _drawMapPin(canvas, size, const Offset(0.34, 0.22), isPickup: true);
+      _drawDestinationPulse(canvas, size, const Offset(0.78, 0.62));
+    }
+
+    if (showCars) {
+      for (final Offset point in <Offset>[
+        const Offset(0.22, 0.44),
+        const Offset(0.75, 0.45),
+        const Offset(0.52, 0.64),
+        const Offset(0.22, 0.72),
+        const Offset(0.78, 0.71),
+        const Offset(0.42, 0.90),
+      ]) {
+        _drawCar(canvas, size, point);
+      }
+    }
+
+    final Rect fadeRect = Offset.zero & size;
+    canvas.drawRect(
+      fadeRect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0x55FFFFFF),
+            Color(0x00FFFFFF),
+            Color(0xB8FFFFFF),
+          ],
+          stops: <double>[0, 0.45, 1],
+        ).createShader(fadeRect),
+    );
+  }
+
+  void _drawStreetLabel(
+    Canvas canvas,
+    Size size,
+    String text,
+    Offset fractionalOffset,
+    double rotation,
+  ) {
+    canvas.save();
+    canvas.translate(
+        size.width * fractionalOffset.dx, size.height * fractionalOffset.dy);
+    canvas.rotate(rotation);
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          color: Color(0xFFB8BCC2),
+          fontSize: 28,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, Offset.zero);
+    canvas.restore();
+  }
+
+  void _drawMapPin(Canvas canvas, Size size, Offset point,
+      {required bool isPickup}) {
+    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
+    final Paint paint = Paint()..color = JosiColors.red;
+    canvas.drawLine(center, center.translate(0, 48), paint..strokeWidth = 4);
+    canvas.drawCircle(center, 24, Paint()..color = JosiColors.white);
+    canvas.drawCircle(center, 19, paint);
+    canvas.drawCircle(center, 10, Paint()..color = JosiColors.white);
+  }
+
+  void _drawDestinationPulse(Canvas canvas, Size size, Offset point) {
+    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
+    canvas.drawCircle(
+        center, 54, Paint()..color = JosiColors.red.withValues(alpha: 0.16));
+    canvas.drawCircle(
+        center, 38, Paint()..color = JosiColors.red.withValues(alpha: 0.22));
+    canvas.drawCircle(center, 28, Paint()..color = JosiColors.red);
+    final Path arrow = Path()
+      ..moveTo(center.dx - 10, center.dy - 7)
+      ..lineTo(center.dx + 11, center.dy)
+      ..lineTo(center.dx - 10, center.dy + 7)
+      ..close();
+    canvas.drawPath(arrow, Paint()..color = JosiColors.white);
+  }
+
+  void _drawCar(Canvas canvas, Size size, Offset point) {
+    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(-0.62);
+    final RRect shadow = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(-19, 4, 42, 21),
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(shadow, Paint()..color = const Color(0x25000000));
+    final RRect body = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(-18, -10, 36, 20),
+      const Radius.circular(7),
+    );
+    canvas.drawRRect(body, Paint()..color = const Color(0xFF222629));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-8, -8, 16, 16),
+        const Radius.circular(5),
+      ),
+      Paint()..color = const Color(0xFF3D4348),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _RideMapPainter oldDelegate) {
+    return oldDelegate.showCars != showCars ||
+        oldDelegate.showRoute != showRoute;
   }
 }
 

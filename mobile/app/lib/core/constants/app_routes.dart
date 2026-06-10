@@ -18,6 +18,8 @@ class AppRoutes {
   static const String customerSelectLocation = '/customer/select-location';
   static const String customerConfirmTrip = '/customer/confirm-trip';
   static const String customerSearchingRider = '/customer/searching-rider';
+  static const String customerRideNotFound =
+      '/customer/searching-rider?empty=true';
   static const String customerTripActive = '/customer/trip-active';
   static const String customerTripCompleted = '/customer/trip-completed';
   static const String customerTrips = '/customer/trips';

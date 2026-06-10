@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:josi_ride/core/constants/app_routes.dart';
 import 'package:josi_ride/core/theme/josi_colors.dart';
 import 'package:josi_ride/core/theme/josi_theme.dart';
 import 'package:josi_ride/main.dart';
@@ -222,8 +224,50 @@ void main() {
         .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Confirm trip'), findsOneWidget);
-    expect(find.text('Fare estimate and payment'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
+        findsOneWidget);
+    expect(find.text('Searching Ride...'), findsOneWidget);
+    expect(find.text('Book Mini'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('book-mini-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
+        findsOneWidget);
+    expect(find.text('Ride Founded'), findsOneWidget);
+    expect(find.text('Request Ride'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('request-ride-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Active trip'), findsOneWidget);
+    expect(find.text('Rider is en route'), findsOneWidget);
+  });
+
+  testWidgets('customer ride search can show a not found state',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('home-destination-tile')));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
+    await tester.pumpAndSettle();
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
+    );
+    context.go(AppRoutes.customerRideNotFound);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-ride-not-found-screen')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('ride-not-found-illustration')),
+        findsOneWidget);
+    expect(find.text('Ride Not Found'), findsOneWidget);
+    expect(find.text('Try Again'), findsOneWidget);
   });
 
   testWidgets('customer fixed bottom navigation opens activity',
