@@ -237,6 +237,33 @@ void main() {
     expect(find.text('History and active requests'), findsOneWidget);
   });
 
+  testWidgets('customer profile opens editable profile form',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Profile').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-profile-screen')),
+        findsOneWidget);
+    expect(find.text('Your profile'), findsOneWidget);
+    expect(find.text('Manage Address'), findsOneWidget);
+    expect(find.text('Payment Methods'), findsOneWidget);
+
+    await tester.tap(find.text('Your profile'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('edit-profile-screen')),
+        findsOneWidget);
+    expect(find.text('Your Profile'), findsOneWidget);
+    expect(find.text('Name'), findsOneWidget);
+    expect(find.text('Phone Number'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Gender'), findsOneWidget);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('profile-update-button')));
+  });
+
   test('theme follows the Josi light redline', () {
     final ThemeData theme = JosiTheme.light;
 

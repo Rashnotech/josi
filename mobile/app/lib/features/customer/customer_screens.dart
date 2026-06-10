@@ -1486,82 +1486,287 @@ class CustomerProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<JosiUser> user = ref.watch(currentCustomerProvider);
 
-    return AppScaffold(
-      title: 'Profile',
-      subtitle: 'Customer account',
-      navRole: AppNavRole.customer,
-      selectedTab: 'profile',
-      child: AppScreenBody(
-        children: <Widget>[
-          user.when(
-            data: (JosiUser value) => AppCard(
-              child: Row(
-                children: <Widget>[
-                  ProfileAvatar(name: value.name, showEdit: true),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(value.name,
-                            style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 4),
-                        Text(value.email,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: JosiColors.muted)),
-                        Text(value.phone,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: JosiColors.muted)),
-                      ],
+    return Scaffold(
+      key: const ValueKey<String>('customer-profile-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: user.when(
+              data: (JosiUser value) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _ProfileHeader(
+                      title: 'Profile',
+                      onBack: () => context.go(AppRoutes.customerHome),
                     ),
+                    const SizedBox(height: 30),
+                    Center(
+                      child: _CustomerProfilePhoto(name: value.name, size: 118),
+                    ),
+                    const SizedBox(height: 22),
+                    Text(
+                      value.name,
+                      textAlign: TextAlign.center,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: JosiColors.ink,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                              ),
+                    ),
+                    const SizedBox(height: 36),
+                    _CustomerProfileMenuItem(
+                      label: 'Your profile',
+                      asset: AppAssets.profile,
+                      onTap: () => context.go(AppRoutes.editProfile),
+                    ),
+                    _CustomerProfileMenuItem(
+                      label: 'Manage Address',
+                      asset: AppAssets.location,
+                      onTap: () => context.go(AppRoutes.customerSelectLocation),
+                    ),
+                    _CustomerProfileMenuItem(
+                      label: 'Notification',
+                      asset: AppAssets.notification,
+                      onTap: () => context.go(AppRoutes.customerNotifications),
+                    ),
+                    _CustomerProfileMenuItem(
+                      label: 'Payment Methods',
+                      asset: AppAssets.card,
+                      onTap: () => context.go(AppRoutes.customerWallet),
+                    ),
+                    _CustomerProfileMenuItem(
+                      label: 'Pre-Booked Rides',
+                      asset: AppAssets.bikeLane,
+                      onTap: () => context.go(AppRoutes.customerTrips),
+                    ),
+                    _CustomerProfileMenuItem(
+                      label: 'Settings',
+                      icon: Icons.settings_outlined,
+                      onTap: () => context.go(AppRoutes.customerSettings),
+                    ),
+                    _CustomerProfileMenuItem(
+                      label: 'Emergency Contact',
+                      icon: Icons.emergency_outlined,
+                      onTap: () => context.go(AppRoutes.customerSupport),
+                    ),
+                    _CustomerProfileMenuItem(
+                      label: 'Help Center',
+                      icon: Icons.help_outline_rounded,
+                      onTap: () => context.go(AppRoutes.customerSupport),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () async {
+                        await ref
+                            .read(authControllerProvider.notifier)
+                            .signOut();
+                        if (context.mounted) {
+                          context.go(AppRoutes.login);
+                        }
+                      },
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              ),
+              error: (Object error, StackTrace stackTrace) =>
+                  const AppScreenBody(
+                children: <Widget>[
+                  ErrorState(
+                    title: 'Profile unavailable',
+                    message: 'Customer profile could not be loaded.',
                   ),
                 ],
               ),
+              loading: () => const SizedBox(
+                  height: 220, child: LoadingState(label: 'Loading profile')),
             ),
-            error: (Object error, StackTrace stackTrace) => const ErrorState(
-                title: 'Profile unavailable',
-                message: 'Customer profile could not be loaded.'),
-            loading: () => const SizedBox(
-                height: 120, child: LoadingState(label: 'Loading profile')),
           ),
-          const SizedBox(height: 16),
-          const _ProfileMenuItem(
-              icon: Icons.edit_rounded,
-              label: 'Edit profile',
-              route: AppRoutes.editProfile),
-          const _ProfileMenuItem(
-              icon: Icons.bookmark_rounded,
-              label: 'Saved addresses',
-              route: AppRoutes.customerSelectLocation),
-          const _ProfileMenuItem(
-              icon: Icons.security_rounded,
-              label: 'Security',
-              route: AppRoutes.customerSettings),
-          const _ProfileMenuItem(
-              icon: Icons.support_agent_rounded,
-              label: 'Support',
-              route: AppRoutes.customerSupport),
-          const _ProfileMenuItem(
-              icon: Icons.settings_rounded,
-              label: 'Settings',
-              route: AppRoutes.customerSettings),
-          const SizedBox(height: 10),
-          AppButton(
-            label: 'Logout',
-            icon: Icons.logout_rounded,
-            variant: AppButtonVariant.danger,
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).signOut();
-              if (context.mounted) {
-                context.go(AppRoutes.login);
-              }
-            },
+        ),
+      ),
+      bottomNavigationBar:
+          const AppBottomNav(role: AppNavRole.customer, selectedTab: 'profile'),
+    );
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
+    required this.title,
+    required this.onBack,
+  });
+
+  final String title;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Material(
+          color: JosiColors.white,
+          shape: const CircleBorder(
+            side: BorderSide(color: JosiColors.line),
           ),
-        ],
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onBack,
+            child: const SizedBox.square(
+              dimension: 48,
+              child: Center(
+                child: _AssetIcon(
+                  asset: AppAssets.arrowLeft,
+                  color: JosiColors.ink,
+                  size: 23,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+        const SizedBox(width: 48),
+      ],
+    );
+  }
+}
+
+class _CustomerProfilePhoto extends StatelessWidget {
+  const _CustomerProfilePhoto({
+    required this.name,
+    required this.size,
+  });
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final String initials = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .take(2)
+        .map((String part) => part.isEmpty ? '' : part[0].toUpperCase())
+        .join();
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: <Color>[Color(0xFFFFDAD8), Color(0xFFFFFFFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: JosiColors.white, width: 4),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Text(
+            initials,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: JosiColors.red,
+                  fontSize: size * 0.28,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+        Positioned(
+          right: -2,
+          bottom: 8,
+          child: Container(
+            width: size * 0.33,
+            height: size * 0.33,
+            decoration: BoxDecoration(
+              color: JosiColors.red,
+              shape: BoxShape.circle,
+              border: Border.all(color: JosiColors.white, width: 3),
+            ),
+            child: Icon(Icons.edit_outlined,
+                color: JosiColors.white, size: size * 0.18),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomerProfileMenuItem extends StatelessWidget {
+  const _CustomerProfileMenuItem({
+    required this.label,
+    required this.onTap,
+    this.asset,
+    this.icon,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final String? asset;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 64,
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: JosiColors.line)),
+        ),
+        child: Row(
+          children: <Widget>[
+            SizedBox(
+              width: 38,
+              child: asset == null
+                  ? Icon(icon, color: JosiColors.red, size: 28)
+                  : _AssetIcon(
+                      asset: asset!,
+                      color: JosiColors.red,
+                      size: 28,
+                    ),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: JosiColors.red, size: 34),
+          ],
+        ),
       ),
     );
   }
@@ -1748,38 +1953,6 @@ class _TransactionCard extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ProfileMenuItem extends StatelessWidget {
-  const _ProfileMenuItem({
-    required this.icon,
-    required this.label,
-    required this.route,
-  });
-
-  final IconData icon;
-  final String label;
-  final String route;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: AppCard(
-        onTap: () => context.go(route),
-        child: Row(
-          children: <Widget>[
-            Icon(icon, color: JosiColors.muted),
-            const SizedBox(width: 12),
-            Expanded(
-                child:
-                    Text(label, style: Theme.of(context).textTheme.titleSmall)),
-            const Icon(Icons.chevron_right_rounded, color: JosiColors.muted),
-          ],
-        ),
       ),
     );
   }

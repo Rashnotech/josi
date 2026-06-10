@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
@@ -238,43 +240,395 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class EditProfileScreen extends StatelessWidget {
+class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
   @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  final TextEditingController _nameController =
+      TextEditingController(text: 'Rik Space');
+  final TextEditingController _phoneController =
+      TextEditingController(text: '+234 801 234 5678');
+  final TextEditingController _emailController =
+      TextEditingController(text: 'rik@josi.ng');
+  String _gender = 'Select';
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Edit profile',
-      subtitle: 'Update account details',
-      child: AppScreenBody(
-        children: <Widget>[
-          const Center(
-              child:
-                  ProfileAvatar(name: 'Rik Space', size: 92, showEdit: true)),
-          const SizedBox(height: 22),
-          const AppTextField(
-              label: 'Name',
-              hintText: 'Rik Space',
-              icon: Icons.person_outline_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Phone',
-              hintText: '+234 801 234 5678',
-              icon: Icons.phone_outlined),
-          const SizedBox(height: 12),
-          const AppTextField(
-            label: 'Email',
-            hintText: 'rik@josi.ng',
-            icon: Icons.email_outlined,
-            readOnly: true,
+    return Scaffold(
+      key: const ValueKey<String>('edit-profile-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(28, 18, 28, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _EditProfileHeader(
+                    onBack: () {
+                      if (GoRouter.of(context).canPop()) {
+                        context.pop();
+                        return;
+                      }
+                      context.go(AppRoutes.customerProfile);
+                    },
+                  ),
+                  const SizedBox(height: 38),
+                  const Center(
+                    child: _EditProfilePhoto(name: 'Rik Space', size: 132),
+                  ),
+                  const SizedBox(height: 44),
+                  _EditProfileField(
+                    label: 'Name',
+                    controller: _nameController,
+                  ),
+                  const SizedBox(height: 22),
+                  _EditProfileField(
+                    label: 'Phone Number',
+                    controller: _phoneController,
+                    trailing: TextButton(
+                      onPressed: () {},
+                      child: const Text('Change'),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  _EditProfileField(
+                    label: 'Email',
+                    controller: _emailController,
+                    readOnly: true,
+                  ),
+                  const SizedBox(height: 22),
+                  _EditGenderField(
+                    value: _gender,
+                    onChanged: (String? value) =>
+                        setState(() => _gender = value ?? _gender),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 18),
-          AppButton(
-              label: 'Save changes',
-              icon: Icons.save_rounded,
-              onPressed: () {}),
-        ],
+        ),
       ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 12, 28, 24),
+          child: SizedBox(
+            height: 62,
+            child: ElevatedButton(
+              key: const ValueKey<String>('profile-update-button'),
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: JosiColors.red,
+                foregroundColor: JosiColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: JosiColors.white,
+                      fontSize: 23,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              child: const Text('Update'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EditProfileHeader extends StatelessWidget {
+  const _EditProfileHeader({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Material(
+          color: JosiColors.white,
+          shape: const CircleBorder(
+            side: BorderSide(color: JosiColors.line),
+          ),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onBack,
+            child: const SizedBox.square(
+              dimension: 50,
+              child: Center(
+                child: _SharedAssetIcon(
+                  asset: AppAssets.arrowLeft,
+                  color: JosiColors.ink,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            'Your Profile',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+        const SizedBox(width: 50),
+      ],
+    );
+  }
+}
+
+class _EditProfilePhoto extends StatelessWidget {
+  const _EditProfilePhoto({
+    required this.name,
+    required this.size,
+  });
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final String initials = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .take(2)
+        .map((String part) => part.isEmpty ? '' : part[0].toUpperCase())
+        .join();
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: <Color>[Color(0xFFFFDAD8), Color(0xFFFFFFFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: JosiColors.white, width: 4),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Text(
+            initials,
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  color: JosiColors.red,
+                  fontSize: size * 0.28,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+        Positioned(
+          right: -4,
+          bottom: 8,
+          child: Container(
+            width: size * 0.34,
+            height: size * 0.34,
+            decoration: BoxDecoration(
+              color: JosiColors.red,
+              shape: BoxShape.circle,
+              border: Border.all(color: JosiColors.white, width: 3),
+            ),
+            child: Icon(Icons.edit_outlined,
+                color: JosiColors.white, size: size * 0.18),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditProfileField extends StatelessWidget {
+  const _EditProfileField({
+    required this.label,
+    required this.controller,
+    this.trailing,
+    this.readOnly = false,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final Widget? trailing;
+  final bool readOnly;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 58,
+          child: TextField(
+            controller: controller,
+            readOnly: readOnly,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: readOnly ? JosiColors.softMuted : JosiColors.ink,
+                  fontSize: 18,
+                ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: JosiColors.white,
+              suffixIcon: trailing == null
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Center(
+                        widthFactor: 1,
+                        child: trailing,
+                      ),
+                    ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.line),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.red, width: 1.3),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditGenderField extends StatelessWidget {
+  const _EditGenderField({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          'Gender',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 58,
+          child: DropdownButtonFormField<String>(
+            initialValue: value,
+            isExpanded: true,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                color: JosiColors.red, size: 34),
+            items: const <String>[
+              'Select',
+              'Female',
+              'Male',
+              'Prefer not to say'
+            ]
+                .map(
+                  (String item) =>
+                      DropdownMenuItem<String>(value: item, child: Text(item)),
+                )
+                .toList(),
+            onChanged: onChanged,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color:
+                      value == 'Select' ? JosiColors.softMuted : JosiColors.ink,
+                  fontSize: 18,
+                ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: JosiColors.white,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.line),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.red, width: 1.3),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SharedAssetIcon extends StatelessWidget {
+  const _SharedAssetIcon({
+    required this.asset,
+    required this.color,
+    required this.size,
+  });
+
+  final String asset;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      asset,
+      width: size,
+      height: size,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
     );
   }
 }
