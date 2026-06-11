@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
@@ -150,6 +152,7 @@ class RiderApplicationStatusScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      key: const ValueKey<String>('rider-application-status-screen'),
       title: 'Application status',
       subtitle: 'Approval checklist',
       child: AppScreenBody(
@@ -206,7 +209,9 @@ class RiderApplicationStatusScreen extends StatelessWidget {
           const AppCard(
             child: Column(
               children: <Widget>[
-                _ChecklistRow(label: 'Profile completed', done: true),
+                _ChecklistRow(label: 'Profile completed', done: false),
+                _ChecklistRow(label: 'Profile picture uploaded', done: false),
+                _ChecklistRow(label: 'Bank account added', done: false),
                 _ChecklistRow(label: 'Documents uploaded', done: false),
                 _ChecklistRow(label: 'Vehicle added', done: true),
                 _ChecklistRow(label: 'Admin approval', done: false),
@@ -215,8 +220,15 @@ class RiderApplicationStatusScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           AppButton(
-            label: 'Continue documents',
+            label: 'Complete profile',
+            icon: Icons.person_add_alt_1_rounded,
+            onPressed: () => context.go(AppRoutes.riderProfileSetup),
+          ),
+          const SizedBox(height: 10),
+          AppButton(
+            label: 'Upload documents',
             icon: Icons.upload_file_rounded,
+            variant: AppButtonVariant.secondary,
             onPressed: () => context.go(AppRoutes.riderDocumentUpload),
           ),
         ],
@@ -234,67 +246,193 @@ class RiderProfileSetupScreen extends StatefulWidget {
 }
 
 class _RiderProfileSetupScreenState extends State<RiderProfileSetupScreen> {
-  String _gender = 'Female';
+  String _gender = 'Select';
+  String _city = 'Jersey City, New Jersey';
+  bool _acceptedTerms = true;
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Profile setup',
-      subtitle: '60% complete',
-      child: AppScreenBody(
+    return _RiderFlowScaffold(
+      key: const ValueKey<String>('rider-profile-setup-screen'),
+      fallbackRoute: AppRoutes.riderApplicationStatus,
+      headline: 'Complete Your Profile',
+      subtitle:
+          "Don't worry, only you can see your personal data. No one else will be able to see it.",
+      bottomLabel: 'Continue',
+      onBottomPressed: () => context.go(AppRoutes.riderProfilePicture),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          LinearProgressIndicator(
-            value: 0.6,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(999),
-            color: JosiColors.red,
-            backgroundColor: JosiColors.line,
-          ),
-          const SizedBox(height: 18),
-          const Center(
-              child:
-                  ProfileAvatar(name: 'Amina Yusuf', size: 86, showEdit: true)),
-          const SizedBox(height: 18),
-          const AppTextField(
-              label: 'Full name',
-              hintText: 'Amina Yusuf',
-              icon: Icons.person_outline_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Phone',
-              hintText: '+234 802 345 6789',
-              icon: Icons.phone_outlined),
-          const SizedBox(height: 12),
-          AppDropdown(
+          const _RiderFormField(label: 'Name', hintText: 'Jenny Wilson'),
+          const SizedBox(height: 14),
+          const _RiderFormField(label: 'Email', hintText: 'example@gmail.com'),
+          const SizedBox(height: 14),
+          const _RiderPhoneField(),
+          const SizedBox(height: 14),
+          _RiderSelectField(
             label: 'Gender',
             value: _gender,
-            items: const <String>['Female', 'Male', 'Prefer not to say'],
+            items: const <String>['Select', 'Female', 'Male'],
             onChanged: (String? value) =>
                 setState(() => _gender = value ?? _gender),
           ),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Date of birth',
-              hintText: '12 Aug 1994',
-              icon: Icons.calendar_month_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Address',
-              hintText: '22 Adetokunbo Ademola Crescent',
-              icon: Icons.home_outlined),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'City',
-              hintText: 'Abuja',
-              icon: Icons.location_city_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'State', hintText: 'FCT', icon: Icons.map_outlined),
-          const SizedBox(height: 18),
-          AppButton(
-              label: 'Save profile',
-              icon: Icons.save_rounded,
-              onPressed: () {}),
+          const SizedBox(height: 14),
+          _RiderSelectField(
+            label: 'City You Drive In',
+            value: _city,
+            items: const <String>[
+              'Jersey City, New Jersey',
+              'Abuja, FCT',
+              'Lagos, Lagos',
+            ],
+            onChanged: (String? value) =>
+                setState(() => _city = value ?? _city),
+          ),
+          const SizedBox(height: 22),
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: _acceptedTerms ? JosiColors.red : JosiColors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color:
+                            _acceptedTerms ? JosiColors.red : JosiColors.line),
+                  ),
+                  child: _acceptedTerms
+                      ? const Icon(Icons.check_rounded,
+                          color: JosiColors.white, size: 24)
+                      : null,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'By Accept, you agree to Company ',
+                      children: <InlineSpan>[
+                        TextSpan(
+                          text: 'Terms & Condition',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: JosiColors.red,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: JosiColors.red,
+                                  ),
+                        ),
+                      ],
+                    ),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 17,
+                          height: 1.35,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class RiderProfilePictureScreen extends StatelessWidget {
+  const RiderProfilePictureScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _RiderFlowScaffold(
+      key: const ValueKey<String>('rider-profile-picture-screen'),
+      fallbackRoute: AppRoutes.riderProfileSetup,
+      appBarTitle: 'Profile Picture',
+      bottomLabel: 'Done',
+      onBottomPressed: () => context.go(AppRoutes.riderBankAccountDetails),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _UploadRequirement('Please Upload a Clear Selfie'),
+          SizedBox(height: 16),
+          _UploadRequirement(
+              'The Selfie Should have the applicants face alone'),
+          SizedBox(height: 16),
+          _UploadRequirement('Upload PDF / JPEG / PNG'),
+          SizedBox(height: 26),
+          Divider(color: JosiColors.line),
+          SizedBox(height: 28),
+          Text('Profile Picture',
+              style: TextStyle(
+                  color: JosiColors.ink,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800)),
+          SizedBox(height: 16),
+          _DashedUploadBox(),
+          SizedBox(height: 26),
+          _AttachedFilePreview(
+            title: 'Profile',
+            meta: 'JPG',
+            sizeLabel: '250 kb',
+            icon: Icons.person_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class RiderBankAccountDetailsScreen extends StatelessWidget {
+  const RiderBankAccountDetailsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _RiderFlowScaffold(
+      key: const ValueKey<String>('rider-bank-account-details-screen'),
+      fallbackRoute: AppRoutes.riderProfilePicture,
+      appBarTitle: 'Bank Account Details',
+      bottomLabel: 'Done',
+      onBottomPressed: () => context.go(AppRoutes.riderDocumentUpload),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _UploadRequirement(
+              'Upload Bank Document (Passbook, Cancelled Cheque, Bank Statement, or Digital Account Screenshot)'),
+          SizedBox(height: 18),
+          _UploadRequirement('Upload PDF / JPEG / PNG'),
+          SizedBox(height: 26),
+          Divider(color: JosiColors.line),
+          SizedBox(height: 24),
+          _RiderFormField(
+            label: 'Account Number',
+            hintText: '0123456789',
+            keyboardType: TextInputType.number,
+          ),
+          SizedBox(height: 14),
+          _RiderFormField(
+              label: 'Bank Name', hintText: 'Josi Microfinance Bank'),
+          SizedBox(height: 14),
+          _RiderFormField(label: 'Account Name', hintText: 'Jenny Wilson'),
+          SizedBox(height: 26),
+          Text('Attach Bank Account Details',
+              style: TextStyle(
+                  color: JosiColors.ink,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800)),
+          SizedBox(height: 16),
+          _DashedUploadBox(),
+          SizedBox(height: 26),
+          _AttachedFilePreview(
+            title: 'Bank Cheque',
+            meta: 'PNG',
+            sizeLabel: '460 KB',
+            icon: Icons.description_rounded,
+          ),
         ],
       ),
     );
@@ -530,88 +668,58 @@ class _RiderActiveTripScreenState extends State<RiderActiveTripScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> actions = <String>[
-      'Arrived at pickup',
-      'Start trip',
-      'Complete trip'
+    final Trip trip = JosiMockData.trips.firstWhere(
+      (Trip value) => value.id == widget.tripId,
+      orElse: () => JosiMockData.trips.first,
+    );
+    final List<String> titles = <String>[
+      'Customer Location',
+      'Start Trip',
+      'Complete Trip',
     ];
-    final bool isCashTrip =
-        JosiMockData.trips.first.paymentMethod == PaymentMethod.cash;
+    final int stageIndex = _stage.clamp(0, titles.length - 1).toInt();
+    final String title = titles[stageIndex];
 
-    return AppScaffold(
-      title: 'Active trip',
-      subtitle: widget.tripId,
-      child: AppScreenBody(
+    return Scaffold(
+      key: const ValueKey<String>('rider-active-trip-screen'),
+      backgroundColor: JosiColors.white,
+      body: Stack(
         children: <Widget>[
-          const AppMapPlaceholder(
-              height: 300, title: 'Route guidance placeholder'),
-          const SizedBox(height: 16),
-          AppCard(
-            child: Row(
-              children: <Widget>[
-                const ProfileAvatar(name: 'Rik Space'),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text('Rik Space',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 4),
-                      Text('Customer • 5.00 rating',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: JosiColors.muted)),
-                    ],
+          const Positioned.fill(child: _RiderMapBackdrop()),
+          Positioned(
+            left: 26,
+            top: MediaQuery.paddingOf(context).top + 26,
+            child: const _RiderCircleBackButton(
+              fallbackRoute: AppRoutes.riderHome,
+            ),
+          ),
+          Positioned(
+            left: 96,
+            right: 96,
+            top: MediaQuery.paddingOf(context).top + 48,
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
                   ),
-                ),
-                IconButton(
-                    onPressed: () {}, icon: const Icon(Icons.call_rounded)),
-              ],
             ),
           ),
-          const SizedBox(height: 16),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                for (int index = 0; index < actions.length; index++)
-                  _ActionStep(
-                      label: actions[index],
-                      active: index == _stage,
-                      done: index < _stage),
-                if (isCashTrip) ...<Widget>[
-                  const SizedBox(height: 10),
-                  const StatusBadge(
-                      label: 'Collect Cash',
-                      color: JosiColors.warning,
-                      softColor: JosiColors.warningSoft),
-                ],
-                const SizedBox(height: 14),
-                AppButton(
-                  label: _stage == actions.length - 1
-                      ? 'Complete trip'
-                      : actions[_stage],
-                  icon: Icons.arrow_forward_rounded,
-                  onPressed: () {
-                    if (_stage == actions.length - 1) {
-                      context
-                          .go(AppRoutes.riderTripCompletedPath(widget.tripId));
-                      return;
-                    }
-                    setState(() => _stage += 1);
-                  },
-                ),
-              ],
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _RiderCustomerLocationSheet(
+              title: title,
+              trip: trip,
+              onContinue: () {
+                if (_stage == titles.length - 1) {
+                  context.go(AppRoutes.riderTripCompletedPath(widget.tripId));
+                  return;
+                }
+                setState(() => _stage += 1);
+              },
             ),
-          ),
-          const SizedBox(height: 12),
-          AppButton(
-            label: 'Emergency support',
-            icon: Icons.emergency_rounded,
-            variant: AppButtonVariant.danger,
-            onPressed: () {},
           ),
         ],
       ),
@@ -920,6 +1028,14 @@ class RiderProfileScreen extends ConsumerWidget {
               label: 'Profile setup',
               route: AppRoutes.riderProfileSetup),
           const _ProfileMenuItem(
+              icon: Icons.photo_camera_rounded,
+              label: 'Profile picture',
+              route: AppRoutes.riderProfilePicture),
+          const _ProfileMenuItem(
+              icon: Icons.account_balance_rounded,
+              label: 'Bank Account Details',
+              route: AppRoutes.riderBankAccountDetails),
+          const _ProfileMenuItem(
               icon: Icons.upload_file_rounded,
               label: 'Documents',
               route: AppRoutes.riderDocumentUpload),
@@ -953,6 +1069,912 @@ class RiderProfileScreen extends ConsumerWidget {
   }
 }
 
+class _RiderFlowScaffold extends StatelessWidget {
+  const _RiderFlowScaffold({
+    required this.fallbackRoute,
+    required this.child,
+    super.key,
+    this.appBarTitle,
+    this.headline,
+    this.subtitle,
+    this.bottomLabel,
+    this.onBottomPressed,
+  });
+
+  final String fallbackRoute;
+  final String? appBarTitle;
+  final String? headline;
+  final String? subtitle;
+  final String? bottomLabel;
+  final VoidCallback? onBottomPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Column(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                  child: Row(
+                    children: <Widget>[
+                      _RiderCircleBackButton(fallbackRoute: fallbackRoute),
+                      Expanded(
+                        child: Text(
+                          appBarTitle ?? '',
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: JosiColors.ink,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                        ),
+                      ),
+                      const SizedBox(width: 54),
+                    ],
+                  ),
+                ),
+                if (headline != null) ...<Widget>[
+                  const SizedBox(height: 40),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: Text(
+                      headline!,
+                      textAlign: TextAlign.center,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: JosiColors.ink,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                              ),
+                    ),
+                  ),
+                  if (subtitle != null) ...<Widget>[
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 34),
+                      child: Text(
+                        subtitle!,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 17,
+                              height: 1.25,
+                            ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 42),
+                ] else
+                  const SizedBox(height: 34),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(30, 0, 30, 24),
+                    child: child,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: bottomLabel == null
+          ? null
+          : _RiderFixedBottomAction(
+              label: bottomLabel!,
+              onPressed: onBottomPressed,
+            ),
+    );
+  }
+}
+
+class _RiderCircleBackButton extends StatelessWidget {
+  const _RiderCircleBackButton({
+    required this.fallbackRoute,
+  });
+
+  final String fallbackRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      shape: const CircleBorder(),
+      elevation: 2.5,
+      shadowColor: const Color(0x18000000),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () {
+          final GoRouter router = GoRouter.of(context);
+          if (router.canPop()) {
+            context.pop();
+          } else {
+            context.go(fallbackRoute);
+          }
+        },
+        child: SizedBox.square(
+          dimension: 54,
+          child: Center(
+            child: SvgPicture.asset(
+              AppAssets.arrowLeft,
+              width: 24,
+              height: 24,
+              colorFilter:
+                  const ColorFilter.mode(JosiColors.ink, BlendMode.srcIn),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RiderFixedBottomAction extends StatelessWidget {
+  const _RiderFixedBottomAction({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 18,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(30, 18, 30, 18),
+          child: SizedBox(
+            height: 60,
+            child: ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: JosiColors.red,
+                foregroundColor: JosiColors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999)),
+                textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: JosiColors.white,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              child: Text(label),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RiderFormField extends StatelessWidget {
+  const _RiderFormField({
+    required this.label,
+    required this.hintText,
+    this.keyboardType,
+  });
+
+  final String label;
+  final String hintText;
+  final TextInputType? keyboardType;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          initialValue: hintText,
+          keyboardType: keyboardType,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: JosiColors.softMuted,
+                fontSize: 17,
+              ),
+          decoration: InputDecoration(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            filled: true,
+            fillColor: JosiColors.white,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: JosiColors.line),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: JosiColors.red, width: 1.4),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RiderPhoneField extends StatelessWidget {
+  const _RiderPhoneField();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Phone Number',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 58,
+          decoration: BoxDecoration(
+            color: JosiColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: JosiColors.line),
+          ),
+          child: Row(
+            children: <Widget>[
+              const SizedBox(width: 16),
+              Text('+1',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: JosiColors.ink, fontWeight: FontWeight.w700)),
+              const SizedBox(width: 4),
+              const Icon(Icons.keyboard_arrow_down_rounded,
+                  color: JosiColors.red, size: 22),
+              Container(
+                  width: 1,
+                  height: 28,
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  color: JosiColors.line),
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    hintText: 'Enter Phone Number',
+                    border: InputBorder.none,
+                    isCollapsed: true,
+                  ),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 17,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RiderSelectField extends StatelessWidget {
+  const _RiderSelectField({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: value,
+          isExpanded: true,
+          items: items
+              .map((String item) =>
+                  DropdownMenuItem<String>(value: item, child: Text(item)))
+              .toList(),
+          onChanged: onChanged,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: JosiColors.red, size: 26),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: JosiColors.softMuted,
+                fontSize: 17,
+              ),
+          decoration: InputDecoration(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            filled: true,
+            fillColor: JosiColors.white,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: JosiColors.line),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: JosiColors.red, width: 1.4),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UploadRequirement extends StatelessWidget {
+  const _UploadRequirement(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            color: JosiColors.red,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.check_rounded,
+              color: JosiColors.white, size: 20),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.softMuted,
+                  fontSize: 18,
+                  height: 1.45,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashedUploadBox extends StatelessWidget {
+  const _DashedUploadBox();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 146,
+      child: CustomPaint(
+        painter: _DashedBorderPainter(),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6A6A6A),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.upload_file_rounded,
+                    color: JosiColors.white, size: 34),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Upload Documents',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: JosiColors.softMuted,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = const Color(0xFF8D8D8D)
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke;
+    const double dash = 10;
+    const double gap = 10;
+
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset((x + dash).clamp(0, size.width), 0),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(x, size.height),
+        Offset((x + dash).clamp(0, size.width), size.height),
+        paint,
+      );
+      x += dash + gap;
+    }
+
+    double y = 0;
+    while (y < size.height) {
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(0, (y + dash).clamp(0, size.height)),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(size.width, y),
+        Offset(size.width, (y + dash).clamp(0, size.height)),
+        paint,
+      );
+      y += dash + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _AttachedFilePreview extends StatelessWidget {
+  const _AttachedFilePreview({
+    required this.title,
+    required this.meta,
+    required this.sizeLabel,
+    required this.icon,
+  });
+
+  final String title;
+  final String meta;
+  final String sizeLabel;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 150,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              Container(
+                width: 136,
+                height: 136,
+                decoration: BoxDecoration(
+                  color: JosiColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: JosiColors.red, size: 52),
+              ),
+              Positioned(
+                right: -8,
+                top: -8,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: JosiColors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: JosiColors.white, width: 3),
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      color: JosiColors.white, size: 18),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text.rich(
+            TextSpan(
+              text: meta,
+              children: <InlineSpan>[
+                const TextSpan(
+                  text: '  -  ',
+                  style: TextStyle(color: JosiColors.red),
+                ),
+                TextSpan(text: sizeLabel),
+              ],
+            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: JosiColors.softMuted,
+                  fontSize: 14,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiderCustomerLocationSheet extends StatelessWidget {
+  const _RiderCustomerLocationSheet({
+    required this.title,
+    required this.trip,
+    required this.onContinue,
+  });
+
+  final String title;
+  final Trip trip;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(28, 14, 28, 20),
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 24,
+            offset: Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Align(
+              child: Container(
+                width: 100,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: JosiColors.line,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                Text(
+                  '5 mins Away',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 17,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Divider(color: JosiColors.line),
+            const SizedBox(height: 22),
+            Row(
+              children: <Widget>[
+                const ProfileAvatar(name: 'Esther Howard', size: 62),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Esther Howard',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: JosiColors.ink,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '${_paymentLabel(trip.paymentMethod)} Payment',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 17,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                _RiderContactButton(
+                  icon: Icons.chat_bubble_rounded,
+                  onTap: () {},
+                ),
+                const SizedBox(width: 12),
+                _RiderContactButton(
+                  icon: Icons.call_rounded,
+                  onTap: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              height: 62,
+              child: ElevatedButton(
+                key: const ValueKey<String>('rider-active-trip-continue'),
+                onPressed: onContinue,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: JosiColors.red,
+                  foregroundColor: JosiColors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999)),
+                  textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: JosiColors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                child: const Text('Continue'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RiderContactButton extends StatelessWidget {
+  const _RiderContactButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      customBorder: const CircleBorder(),
+      onTap: onTap,
+      child: Container(
+        width: 54,
+        height: 54,
+        decoration: const BoxDecoration(
+          color: JosiColors.redSoft,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: JosiColors.red, size: 26),
+      ),
+    );
+  }
+}
+
+class _RiderMapBackdrop extends StatelessWidget {
+  const _RiderMapBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _RiderMapPainter(),
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+class _RiderMapPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+        Offset.zero & size, Paint()..color = const Color(0xFFF5F6F7));
+
+    final Paint roadPaint = Paint()
+      ..color = JosiColors.white
+      ..strokeWidth = 13
+      ..strokeCap = StrokeCap.round;
+    final Paint minorRoadPaint = Paint()
+      ..color = const Color(0xFFE7EAEE)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final Paint arrowPaint = Paint()
+      ..color = const Color(0xFFBFC4CB)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    for (final double x in <double>[0.10, 0.34, 0.58, 0.84]) {
+      canvas.drawLine(
+        Offset(size.width * x, -size.height * 0.05),
+        Offset(size.width * (x - 0.26), size.height * 1.05),
+        roadPaint,
+      );
+    }
+    for (final double y in <double>[0.12, 0.30, 0.48, 0.68, 0.86]) {
+      canvas.drawLine(
+        Offset(-size.width * 0.1, size.height * y),
+        Offset(size.width * 1.1, size.height * (y + 0.18)),
+        roadPaint,
+      );
+    }
+    for (final double x in <double>[0.21, 0.47, 0.70]) {
+      canvas.drawLine(
+        Offset(size.width * x, 0),
+        Offset(size.width * (x + 0.10), size.height),
+        minorRoadPaint,
+      );
+    }
+    for (final double y in <double>[0.22, 0.38, 0.58, 0.76]) {
+      canvas.drawLine(
+        Offset(0, size.height * y),
+        Offset(size.width, size.height * (y - 0.08)),
+        minorRoadPaint,
+      );
+    }
+
+    _drawStreetLabel(canvas, size, 'Reade St', const Offset(0.36, 0.27), 0.34);
+    _drawStreetLabel(canvas, size, 'Broadway', const Offset(0.66, 0.18), -1.02);
+    _drawStreetLabel(canvas, size, 'Warren St', const Offset(0.20, 0.39), 0.36);
+    _drawStreetLabel(canvas, size, 'Park Row', const Offset(0.28, 0.58), -0.2);
+
+    for (final Offset point in <Offset>[
+      const Offset(0.26, 0.34),
+      const Offset(0.52, 0.24),
+      const Offset(0.70, 0.40),
+      const Offset(0.32, 0.62),
+    ]) {
+      final Offset center =
+          Offset(size.width * point.dx, size.height * point.dy);
+      canvas.drawLine(center.translate(-8, -8), center, arrowPaint);
+      canvas.drawLine(center, center.translate(-4, 8), arrowPaint);
+    }
+
+    final Paint routePaint = Paint()
+      ..color = const Color(0xFF2D2D2D)
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final Path route = Path()
+      ..moveTo(size.width * 0.43, size.height * 0.45)
+      ..lineTo(size.width * 0.58, size.height * 0.35)
+      ..lineTo(size.width * 0.74, size.height * 0.42);
+    canvas.drawPath(route, routePaint);
+    _drawCar(canvas, size, const Offset(0.38, 0.48));
+    _drawCustomerPin(canvas, size, const Offset(0.74, 0.42));
+
+    final Rect fadeRect = Offset.zero & size;
+    canvas.drawRect(
+      fadeRect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0x30FFFFFF),
+            Color(0x00FFFFFF),
+            Color(0x99FFFFFF),
+          ],
+          stops: <double>[0, 0.52, 1],
+        ).createShader(fadeRect),
+    );
+  }
+
+  void _drawStreetLabel(
+    Canvas canvas,
+    Size size,
+    String text,
+    Offset offset,
+    double rotation,
+  ) {
+    canvas.save();
+    canvas.translate(size.width * offset.dx, size.height * offset.dy);
+    canvas.rotate(rotation);
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          color: Color(0xFFB8BCC2),
+          fontSize: 25,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, Offset.zero);
+    canvas.restore();
+  }
+
+  void _drawCustomerPin(Canvas canvas, Size size, Offset point) {
+    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
+    final Paint redPaint = Paint()..color = JosiColors.red;
+    canvas.drawCircle(center.translate(0, 22), 22,
+        Paint()..color = JosiColors.red.withValues(alpha: 0.12));
+    canvas.drawLine(center, center.translate(0, 46), redPaint..strokeWidth = 4);
+    canvas.drawCircle(center, 24, Paint()..color = JosiColors.white);
+    canvas.drawCircle(center, 18, redPaint);
+    canvas.drawCircle(center, 8, Paint()..color = JosiColors.white);
+  }
+
+  void _drawCar(Canvas canvas, Size size, Offset point) {
+    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(-0.70);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-20, 4, 44, 22),
+        const Radius.circular(8),
+      ),
+      Paint()..color = const Color(0x24000000),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-18, -11, 36, 22),
+        const Radius.circular(7),
+      ),
+      Paint()..color = const Color(0xFF222629),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-8, -9, 16, 18),
+        const Radius.circular(5),
+      ),
+      Paint()..color = const Color(0xFF3E454A),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class _ChecklistRow extends StatelessWidget {
   const _ChecklistRow({
     required this.label,
@@ -977,49 +1999,6 @@ class _ChecklistRow extends StatelessWidget {
           Expanded(
               child:
                   Text(label, style: Theme.of(context).textTheme.bodyMedium)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionStep extends StatelessWidget {
-  const _ActionStep({
-    required this.label,
-    required this.active,
-    required this.done,
-  });
-
-  final String label;
-  final bool active;
-  final bool done;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color color = done
-        ? JosiColors.success
-        : active
-            ? JosiColors.red
-            : JosiColors.muted;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: <Widget>[
-          Icon(
-              done
-                  ? Icons.check_circle_rounded
-                  : Icons.radio_button_checked_rounded,
-              color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: active ? JosiColors.ink : JosiColors.muted),
-            ),
-          ),
         ],
       ),
     );

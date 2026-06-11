@@ -33,6 +33,8 @@ class AppRoutes {
   static const String riderHome = '/rider/home';
   static const String riderApplicationStatus = '/rider/application-status';
   static const String riderProfileSetup = '/rider/profile-setup';
+  static const String riderProfilePicture = '/rider/profile-picture';
+  static const String riderBankAccountDetails = '/rider/bank-account-details';
   static const String riderDocumentUpload = '/rider/document-upload';
   static const String riderVehicleSetup = '/rider/vehicle-setup';
   static const String riderAvailableTrips = '/rider/available-trips';

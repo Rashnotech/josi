@@ -161,6 +161,16 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const RiderProfileSetupScreen(),
       ),
       GoRoute(
+        path: AppRoutes.riderProfilePicture,
+        builder: (BuildContext context, GoRouterState state) =>
+            const RiderProfilePictureScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.riderBankAccountDetails,
+        builder: (BuildContext context, GoRouterState state) =>
+            const RiderBankAccountDetailsScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.riderDocumentUpload,
         builder: (BuildContext context, GoRouterState state) =>
             const RiderDocumentUploadScreen(),

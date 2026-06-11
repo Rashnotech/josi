@@ -106,6 +106,76 @@ void main() {
     expect(find.text('Admin approval'), findsOneWidget);
   });
 
+  testWidgets('rider account completion flow includes bank details',
+      (WidgetTester tester) async {
+    await _loginAsRider(tester);
+
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsOneWidget);
+    await tester.tap(find.text('Complete profile'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-profile-setup-screen')),
+        findsOneWidget);
+    expect(find.text('Complete Your Profile'), findsOneWidget);
+    expect(find.text('Name'), findsOneWidget);
+    expect(find.text('Phone Number'), findsOneWidget);
+    expect(find.text('City You Drive In'), findsOneWidget);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-profile-picture-screen')),
+        findsOneWidget);
+    expect(find.text('Profile Picture'), findsWidgets);
+    expect(find.text('Please Upload a Clear Selfie'), findsOneWidget);
+    expect(find.text('Upload Documents'), findsOneWidget);
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('rider-bank-account-details-screen')),
+        findsOneWidget);
+    expect(find.text('Bank Account Details'), findsOneWidget);
+    expect(find.text('Account Number'), findsOneWidget);
+    expect(find.text('Bank Name'), findsOneWidget);
+    expect(find.text('Account Name'), findsOneWidget);
+    expect(find.text('Attach Bank Account Details'), findsOneWidget);
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Documents'), findsOneWidget);
+    expect(find.text('KYC upload checklist'), findsOneWidget);
+  });
+
+  testWidgets('rider active trip opens customer location interface',
+      (WidgetTester tester) async {
+    await _loginAsRider(tester);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderActiveTripPath('TRP-2408'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-active-trip-screen')),
+        findsOneWidget);
+    expect(find.text('Customer Location'), findsWidgets);
+    expect(find.text('Esther Howard'), findsOneWidget);
+    expect(find.text('Cash Payment'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('rider-active-trip-continue')),
+        findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-active-trip-continue')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Start Trip'), findsWidgets);
+  });
+
   testWidgets('customer create account opens customer signup and submits',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
@@ -344,6 +414,19 @@ Future<void> _loginAsCustomer(WidgetTester tester) async {
   await _pumpToRoleSelection(tester);
   _expectVisibleInViewport(tester, find.text('Get Started'));
   await tester.tap(find.text('Get Started'));
+  await tester.pumpAndSettle();
+  _expectVisibleInViewport(
+      tester, find.byKey(const ValueKey<String>('login-button')));
+  await tester.tap(find.byKey(const ValueKey<String>('login-button')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 650));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _loginAsRider(WidgetTester tester) async {
+  await _pumpToRoleSelection(tester);
+  _expectVisibleInViewport(tester, find.text('Drive with Us'));
+  await tester.tap(find.text('Drive with Us'));
   await tester.pumpAndSettle();
   _expectVisibleInViewport(
       tester, find.byKey(const ValueKey<String>('login-button')));
