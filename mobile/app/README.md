@@ -8,10 +8,10 @@ Included:
 - `mobile/DESIGN.md` light redline applied to the first-run splash, role selection, and login screens.
 - GoRouter route map for splash, onboarding, auth/reset, customer flows, rider flows, and shared profile/support/settings surfaces.
 - `flutter_svg` support for SVG icons in `assets/images`.
-- Riverpod providers for auth, users, rider application data, trips, wallet, cash ledger, and notifications.
+- Riverpod providers for auth, users, rider application data, trips, rider wallet, cash ledger, and notifications.
 - Mock data and placeholder repositories ready to swap for Laravel API calls.
-- Reusable UI components for forms, cards, status badges, bottom navigation, map placeholders, trip cards, wallet cards, vehicle cards, document upload cards, and empty/loading/error states.
-- Customer screens for booking, trip status, history/detail, wallet, notifications, support, settings, and profile.
+- Reusable UI components for forms, cards, status badges, bottom navigation, map placeholders, trip cards, rider wallet cards, vehicle cards, document upload cards, and empty/loading/error states.
+- Customer screens for destination entry, payment methods, trip status, history/detail, notifications, support, settings, and profile.
 - Rider screens for onboarding approval, KYC documents, vehicle setup, available requests, active trip actions, earnings, cash ledger, notifications, support, settings, and profile.
 - Widget tests and deterministic source eval.
 

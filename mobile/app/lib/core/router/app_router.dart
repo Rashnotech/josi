@@ -84,7 +84,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.customerConfirmTrip,
         builder: (BuildContext context, GoRouterState state) =>
-            const CustomerConfirmTripScreen(),
+            const CustomerPaymentMethodsScreen(
+                confirmRoute: AppRoutes.customerSearchingRider),
       ),
       GoRoute(
         path: AppRoutes.customerSearchingRider,
@@ -115,9 +116,10 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         },
       ),
       GoRoute(
-        path: AppRoutes.customerWallet,
+        path: AppRoutes.customerPaymentMethods,
         builder: (BuildContext context, GoRouterState state) =>
-            const CustomerWalletScreen(),
+            const CustomerPaymentMethodsScreen(
+                confirmRoute: AppRoutes.customerProfile),
       ),
       GoRoute(
         path: AppRoutes.customerNotifications,

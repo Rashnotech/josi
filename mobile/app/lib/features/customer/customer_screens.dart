@@ -88,7 +88,7 @@ class CustomerHomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: const _CustomerFixedBottomNav(selectedTab: 'home'),
+      bottomNavigationBar: const CustomerBottomNav(selectedTab: 'home'),
     );
   }
 }
@@ -1191,107 +1191,8 @@ class _DestinationBottomBar extends StatelessWidget {
               ),
             ),
           ),
-          const _CustomerFixedBottomNav(selectedTab: 'activity'),
+          const CustomerBottomNav(selectedTab: 'rides'),
         ],
-      ),
-    );
-  }
-}
-
-class _CustomerFixedBottomNav extends StatelessWidget {
-  const _CustomerFixedBottomNav({required this.selectedTab});
-
-  final String selectedTab;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: JosiColors.white,
-        border: Border(top: BorderSide(color: JosiColors.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 66,
-          child: Row(
-            children: <Widget>[
-              _CustomerNavItem(
-                tab: 'home',
-                label: 'Home',
-                asset: AppAssets.home,
-                route: AppRoutes.customerHome,
-                selectedTab: selectedTab,
-              ),
-              _CustomerNavItem(
-                tab: 'activity',
-                label: 'Activity',
-                asset: AppAssets.history,
-                route: AppRoutes.customerTrips,
-                selectedTab: selectedTab,
-              ),
-              _CustomerNavItem(
-                tab: 'rides',
-                label: 'Rides',
-                asset: AppAssets.bikeLane,
-                route: AppRoutes.customerSelectLocation,
-                selectedTab: selectedTab,
-              ),
-              _CustomerNavItem(
-                tab: 'profile',
-                label: 'Profile',
-                asset: AppAssets.profile,
-                route: AppRoutes.customerProfile,
-                selectedTab: selectedTab,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CustomerNavItem extends StatelessWidget {
-  const _CustomerNavItem({
-    required this.tab,
-    required this.label,
-    required this.asset,
-    required this.route,
-    required this.selectedTab,
-  });
-
-  final String tab;
-  final String label;
-  final String asset;
-  final String route;
-  final String selectedTab;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isSelected = tab == selectedTab;
-    final Color color = isSelected ? JosiColors.red : JosiColors.softMuted;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => context.go(route),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _AssetIcon(asset: asset, color: color, size: 22),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1370,77 +1271,497 @@ class _DashedLinePainter extends CustomPainter {
   }
 }
 
-class CustomerConfirmTripScreen extends StatefulWidget {
-  const CustomerConfirmTripScreen({super.key});
+enum _CustomerPaymentOption { cash, wallet, paypal, applePay, googlePay }
+
+class CustomerPaymentMethodsScreen extends StatefulWidget {
+  const CustomerPaymentMethodsScreen({
+    required this.confirmRoute,
+    super.key,
+    this.backRoute = AppRoutes.customerProfile,
+  });
+
+  final String confirmRoute;
+  final String backRoute;
 
   @override
-  State<CustomerConfirmTripScreen> createState() =>
-      _CustomerConfirmTripScreenState();
+  State<CustomerPaymentMethodsScreen> createState() =>
+      _CustomerPaymentMethodsScreenState();
 }
 
-class _CustomerConfirmTripScreenState extends State<CustomerConfirmTripScreen> {
-  PaymentMethod _paymentMethod = PaymentMethod.cash;
-  String _tripType = 'Ride';
+class _CustomerPaymentMethodsScreenState
+    extends State<CustomerPaymentMethodsScreen> {
+  _CustomerPaymentOption _selectedOption = _CustomerPaymentOption.cash;
+
+  void _select(_CustomerPaymentOption option) {
+    setState(() {
+      _selectedOption = option;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
+    return Scaffold(
       key: const ValueKey<String>('customer-payment-methods-screen'),
-      title: 'Payment Methods',
-      subtitle: 'Fare estimate and trip type',
-      child: AppScreenBody(
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+              child: Column(
+                children: <Widget>[
+                  _PaymentMethodsHeader(
+                    onBack: () => context.go(widget.backRoute),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(0, 22, 0, 24),
+                      children: <Widget>[
+                        const _PaymentSectionTitle('Cash'),
+                        const SizedBox(height: 10),
+                        _PaymentOptionTile(
+                          key: const ValueKey<String>('payment-cash-option'),
+                          icon: const _PaymentMaterialIcon(
+                            icon: Icons.payments_rounded,
+                            color: JosiColors.red,
+                          ),
+                          label: 'Cash',
+                          selected:
+                              _selectedOption == _CustomerPaymentOption.cash,
+                          onTap: () => _select(_CustomerPaymentOption.cash),
+                        ),
+                        const SizedBox(height: 28),
+                        const _PaymentSectionTitle('Wallet'),
+                        const SizedBox(height: 10),
+                        _PaymentOptionTile(
+                          key: const ValueKey<String>('payment-wallet-option'),
+                          icon: const _PaymentMaterialIcon(
+                            icon: Icons.account_balance_wallet_rounded,
+                            color: JosiColors.red,
+                          ),
+                          label: 'Wallet',
+                          selected:
+                              _selectedOption == _CustomerPaymentOption.wallet,
+                          onTap: () => _select(_CustomerPaymentOption.wallet),
+                        ),
+                        const SizedBox(height: 28),
+                        const _PaymentSectionTitle('Credit & Debit Card'),
+                        const SizedBox(height: 10),
+                        _PaymentActionTile(
+                          key: const ValueKey<String>('payment-add-card'),
+                          icon: const _PaymentMaterialIcon(
+                            icon: Icons.credit_card_rounded,
+                            color: JosiColors.red,
+                          ),
+                          label: 'Add Card',
+                          onTap: () {},
+                        ),
+                        const SizedBox(height: 28),
+                        const _PaymentSectionTitle('More Payment Options'),
+                        const SizedBox(height: 10),
+                        _MorePaymentOptionsCard(
+                          selectedOption: _selectedOption,
+                          onSelected: _select,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 18),
+              child: SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton(
+                  key: const ValueKey<String>('confirm-payment-button'),
+                  onPressed: () => context.go(widget.confirmRoute),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: JosiColors.red,
+                    foregroundColor: JosiColors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    textStyle:
+                        Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: JosiColors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
+                  ),
+                  child: const Text('Confirm Payment'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMethodsHeader extends StatelessWidget {
+  const _PaymentMethodsHeader({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 54,
+      child: Row(
         children: <Widget>[
-          TripCard(trip: JosiMockData.trips[0]),
-          const SizedBox(height: 16),
-          const SectionHeader(title: 'Zone pricing'),
-          AppCard(
-            child: Column(
+          Material(
+            color: JosiColors.white,
+            shape: const CircleBorder(
+              side: BorderSide(color: JosiColors.line),
+            ),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onBack,
+              child: const SizedBox.square(
+                dimension: 48,
+                child: Icon(Icons.arrow_back_rounded,
+                    color: JosiColors.black, size: 27),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              'Payment Methods',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: JosiColors.black,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          const SizedBox(width: 48),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentSectionTitle extends StatelessWidget {
+  const _PaymentSectionTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: JosiColors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+    );
+  }
+}
+
+class _PaymentOptionTile extends StatelessWidget {
+  const _PaymentOptionTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final Widget icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PaymentTileFrame(
+      onTap: onTap,
+      child: Row(
+        children: <Widget>[
+          icon,
+          const SizedBox(width: 18),
+          Expanded(child: _PaymentTileLabel(label)),
+          _PaymentRadio(selected: selected),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentActionTile extends StatelessWidget {
+  const _PaymentActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    super.key,
+  });
+
+  final Widget icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PaymentTileFrame(
+      onTap: onTap,
+      child: Row(
+        children: <Widget>[
+          icon,
+          const SizedBox(width: 18),
+          Expanded(child: _PaymentTileLabel(label)),
+          const Icon(Icons.chevron_right_rounded,
+              color: JosiColors.red, size: 36),
+        ],
+      ),
+    );
+  }
+}
+
+class _MorePaymentOptionsCard extends StatelessWidget {
+  const _MorePaymentOptionsCard({
+    required this.selectedOption,
+    required this.onSelected,
+  });
+
+  final _CustomerPaymentOption selectedOption;
+  final ValueChanged<_CustomerPaymentOption> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: JosiColors.line),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: <Widget>[
+          _GroupedPaymentOption(
+            key: const ValueKey<String>('payment-paypal-option'),
+            icon: const _PaypalMark(),
+            label: 'Paypal',
+            selected: selectedOption == _CustomerPaymentOption.paypal,
+            onTap: () => onSelected(_CustomerPaymentOption.paypal),
+          ),
+          const Divider(height: 1, color: JosiColors.line),
+          _GroupedPaymentOption(
+            key: const ValueKey<String>('payment-apple-pay-option'),
+            icon: const _PaymentMaterialIcon(
+              icon: Icons.apple,
+              color: JosiColors.black,
+            ),
+            label: 'Apple Pay',
+            selected: selectedOption == _CustomerPaymentOption.applePay,
+            onTap: () => onSelected(_CustomerPaymentOption.applePay),
+          ),
+          const Divider(height: 1, color: JosiColors.line),
+          _GroupedPaymentOption(
+            key: const ValueKey<String>('payment-google-pay-option'),
+            icon: SizedBox.square(
+              dimension: 36,
+              child: Center(
+                child:
+                    SvgPicture.asset(AppAssets.google, width: 30, height: 30),
+              ),
+            ),
+            label: 'Google Pay',
+            selected: selectedOption == _CustomerPaymentOption.googlePay,
+            onTap: () => onSelected(_CustomerPaymentOption.googlePay),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupedPaymentOption extends StatelessWidget {
+  const _GroupedPaymentOption({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final Widget icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 58,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
               children: <Widget>[
-                for (final MapEntry<String, String> entry
-                    in JosiMockData.zonePricing.entries)
-                  _SummaryRow(label: entry.key, value: entry.value),
+                icon,
+                const SizedBox(width: 18),
+                Expanded(child: _PaymentTileLabel(label)),
+                _PaymentRadio(selected: selected),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          const SectionHeader(title: 'Payment method'),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              _PaymentChoiceChip(
-                label: 'Cash',
-                selected: _paymentMethod == PaymentMethod.cash,
-                onSelected: () =>
-                    setState(() => _paymentMethod = PaymentMethod.cash),
-              ),
-              _PaymentChoiceChip(
-                label: 'Online payment',
-                selected: _paymentMethod == PaymentMethod.online,
-                onSelected: () =>
-                    setState(() => _paymentMethod = PaymentMethod.online),
-              ),
-              _PaymentChoiceChip(
-                label: 'Wallet',
-                selected: _paymentMethod == PaymentMethod.wallet,
-                onSelected: () =>
-                    setState(() => _paymentMethod = PaymentMethod.wallet),
-              ),
-            ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentTileFrame extends StatelessWidget {
+  const _PaymentTileFrame({
+    required this.child,
+    required this.onTap,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            border: Border.all(color: JosiColors.line),
+            borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(height: 16),
-          AppDropdown(
-            label: 'Trip type',
-            value: _tripType,
-            items: const <String>['Ride', 'Package delivery'],
-            onChanged: (String? value) =>
-                setState(() => _tripType = value ?? _tripType),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentTileLabel extends StatelessWidget {
+  const _PaymentTileLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: JosiColors.softMuted,
+            fontSize: 20,
+            fontWeight: FontWeight.w400,
           ),
-          const SizedBox(height: 18),
-          AppButton(
-            label: 'Confirm request',
-            icon: Icons.pedal_bike_rounded,
-            onPressed: () => context.go(AppRoutes.customerSearchingRider),
+    );
+  }
+}
+
+class _PaymentRadio extends StatelessWidget {
+  const _PaymentRadio({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? JosiColors.red : JosiColors.line,
+          width: selected ? 2.4 : 1.6,
+        ),
+      ),
+      child: selected
+          ? Container(
+              width: 16,
+              height: 16,
+              decoration: const BoxDecoration(
+                color: JosiColors.red,
+                shape: BoxShape.circle,
+              ),
+            )
+          : null,
+    );
+  }
+}
+
+class _PaymentMaterialIcon extends StatelessWidget {
+  const _PaymentMaterialIcon({
+    required this.icon,
+    required this.color,
+  });
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 36,
+      child: Center(child: Icon(icon, color: color, size: 30)),
+    );
+  }
+}
+
+class _PaypalMark extends StatelessWidget {
+  const _PaypalMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          Transform.translate(
+            offset: const Offset(5, 2),
+            child: Text(
+              'P',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: const Color(0xFF179BD7),
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(-1, -1),
+            child: Text(
+              'P',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: const Color(0xFF003087),
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
           ),
         ],
       ),
@@ -2585,7 +2906,7 @@ class CustomerTripsScreen extends ConsumerWidget {
       title: 'Trips',
       subtitle: 'History and active requests',
       navRole: AppNavRole.customer,
-      selectedTab: 'trips',
+      selectedTab: 'activity',
       child: AppScreenBody(
         children: <Widget>[
           const _FilterRow(
@@ -2690,75 +3011,6 @@ class CustomerTripDetailScreen extends ConsumerWidget {
   }
 }
 
-class CustomerWalletScreen extends ConsumerWidget {
-  const CustomerWalletScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<WalletSummary> summary = ref.watch(customerWalletProvider);
-    final AsyncValue<List<WalletTransaction>> transactions =
-        ref.watch(walletTransactionsProvider);
-
-    return AppScaffold(
-      title: 'Wallet',
-      subtitle: 'Payments and transactions',
-      navRole: AppNavRole.customer,
-      selectedTab: 'wallet',
-      child: AppScreenBody(
-        children: <Widget>[
-          summary.when(
-            data: (WalletSummary wallet) => WalletBalanceCard(
-              title: 'Available balance',
-              balance: wallet.balance,
-              subtitle: 'Cash payment stays available for every route.',
-            ),
-            error: (Object error, StackTrace stackTrace) => const ErrorState(
-                title: 'Wallet unavailable',
-                message: 'Balance could not be loaded.'),
-            loading: () => const SizedBox(
-                height: 190, child: LoadingState(label: 'Loading wallet')),
-          ),
-          const SizedBox(height: 16),
-          AppButton(
-            label: 'Add money',
-            icon: Icons.add_card_rounded,
-            onPressed: () {},
-          ),
-          const SizedBox(height: 16),
-          const SectionHeader(title: 'Payment methods'),
-          const AppCard(
-            child: Column(
-              children: <Widget>[
-                _SummaryRow(label: 'Cash', value: 'Available'),
-                _SummaryRow(label: 'Wallet', value: 'Active'),
-                _SummaryRow(label: 'Online payment', value: 'Placeholder'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          const SectionHeader(title: 'Transactions'),
-          transactions.when(
-            data: (List<WalletTransaction> values) => Column(
-              children: values.map((WalletTransaction transaction) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _TransactionCard(transaction: transaction),
-                );
-              }).toList(),
-            ),
-            error: (Object error, StackTrace stackTrace) => const ErrorState(
-                title: 'Transactions unavailable',
-                message: 'Please try again later.'),
-            loading: () => const SizedBox(
-                height: 160,
-                child: LoadingState(label: 'Loading transactions')),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class CustomerProfileScreen extends ConsumerWidget {
   const CustomerProfileScreen({super.key});
 
@@ -2775,7 +3027,7 @@ class CustomerProfileScreen extends ConsumerWidget {
             constraints: const BoxConstraints(maxWidth: 430),
             child: user.when(
               data: (JosiUser value) => SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
@@ -2783,22 +3035,22 @@ class CustomerProfileScreen extends ConsumerWidget {
                       title: 'Profile',
                       onBack: () => context.go(AppRoutes.customerHome),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 18),
                     Center(
-                      child: _CustomerProfilePhoto(name: value.name, size: 118),
+                      child: _CustomerProfilePhoto(name: value.name, size: 104),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 16),
                     Text(
                       value.name,
                       textAlign: TextAlign.center,
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 color: JosiColors.ink,
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
                               ),
                     ),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 22),
                     _CustomerProfileMenuItem(
                       label: 'Your profile',
                       asset: AppAssets.profile,
@@ -2817,7 +3069,7 @@ class CustomerProfileScreen extends ConsumerWidget {
                     _CustomerProfileMenuItem(
                       label: 'Payment Methods',
                       asset: AppAssets.card,
-                      onTap: () => context.go(AppRoutes.customerWallet),
+                      onTap: () => context.go(AppRoutes.customerPaymentMethods),
                     ),
                     _CustomerProfileMenuItem(
                       label: 'Pre-Booked Rides',
@@ -2870,8 +3122,7 @@ class CustomerProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
-      bottomNavigationBar:
-          const AppBottomNav(role: AppNavRole.customer, selectedTab: 'profile'),
+      bottomNavigationBar: const CustomerBottomNav(selectedTab: 'profile'),
     );
   }
 }
@@ -3021,16 +3272,16 @@ class _CustomerProfileMenuItem extends StatelessWidget {
         child: Row(
           children: <Widget>[
             SizedBox(
-              width: 38,
+              width: 34,
               child: asset == null
-                  ? Icon(icon, color: JosiColors.red, size: 28)
+                  ? Icon(icon, color: JosiColors.red, size: 24)
                   : _AssetIcon(
                       asset: asset!,
                       color: JosiColors.red,
-                      size: 28,
+                      size: 24,
                     ),
             ),
-            const SizedBox(width: 18),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 label,
@@ -3038,42 +3289,16 @@ class _CustomerProfileMenuItem extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: JosiColors.ink,
-                      fontSize: 24,
+                      fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
               ),
             ),
             const Icon(Icons.chevron_right_rounded,
-                color: JosiColors.red, size: 34),
+                color: JosiColors.red, size: 28),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _PaymentChoiceChip extends StatelessWidget {
-  const _PaymentChoiceChip({
-    required this.label,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (bool value) => onSelected(),
-      selectedColor: JosiColors.redSoft,
-      checkmarkColor: JosiColors.red,
-      labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: selected ? JosiColors.red : JosiColors.ink,
-          ),
     );
   }
 }
@@ -3180,57 +3405,6 @@ class _SummaryRow extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
               overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TransactionCard extends StatelessWidget {
-  const _TransactionCard({required this.transaction});
-
-  final WalletTransaction transaction;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Row(
-        children: <Widget>[
-          Icon(
-            transaction.isCredit
-                ? Icons.arrow_downward_rounded
-                : Icons.arrow_upward_rounded,
-            color: transaction.isCredit ? JosiColors.success : JosiColors.red,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(transaction.title,
-                    style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 3),
-                Text(transaction.subtitle,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: JosiColors.muted)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              Text(transaction.amount,
-                  style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 3),
-              Text(transaction.status,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: JosiColors.muted)),
-            ],
           ),
         ],
       ),

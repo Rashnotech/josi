@@ -211,9 +211,9 @@ class JosiMockData {
         icon: Icons.history_rounded,
         route: AppRoutes.customerTrips),
     QuickAction(
-        label: 'Wallet',
-        icon: Icons.account_balance_wallet_rounded,
-        route: AppRoutes.customerWallet),
+        label: 'Payment Methods',
+        icon: Icons.credit_card_rounded,
+        route: AppRoutes.customerPaymentMethods),
   ];
 
   static const List<String> recentLocations = <String>[

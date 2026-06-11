@@ -472,7 +472,8 @@ void main() {
 
     _expectVisibleInViewport(tester,
         find.byKey(const ValueKey<String>('destination-confirm-button')));
-    _expectVisibleInViewport(tester, find.text('Activity'));
+    _expectVisibleInViewport(tester, find.text('Rides'));
+    _expectCustomerNavLabelColor(tester, 'Rides', JosiColors.red);
 
     await tester
         .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
@@ -482,10 +483,20 @@ void main() {
         find.byKey(const ValueKey<String>('customer-payment-methods-screen')),
         findsOneWidget);
     expect(find.text('Payment Methods'), findsOneWidget);
-    expect(find.text('Payment method'), findsOneWidget);
-    expect(find.text('Confirm request'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('payment-cash-option')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('payment-wallet-option')),
+        findsOneWidget);
+    expect(find.text('Credit & Debit Card'), findsOneWidget);
+    expect(find.text('Add Card'), findsOneWidget);
+    expect(find.text('More Payment Options'), findsOneWidget);
+    expect(find.text('Paypal'), findsOneWidget);
+    expect(find.text('Apple Pay'), findsOneWidget);
+    expect(find.text('Google Pay'), findsOneWidget);
+    expect(find.text('Confirm Payment'), findsOneWidget);
 
-    await tester.tap(find.text('Confirm request'));
+    await tester
+        .tap(find.byKey(const ValueKey<String>('confirm-payment-button')));
     await tester.pumpAndSettle();
 
     expect(
@@ -534,7 +545,8 @@ void main() {
     await tester
         .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirm request'));
+    await tester
+        .tap(find.byKey(const ValueKey<String>('confirm-payment-button')));
     await tester.pumpAndSettle();
 
     final BuildContext context = tester.element(
@@ -574,6 +586,7 @@ void main() {
         findsOneWidget);
     expect(find.text('Destination'), findsOneWidget);
     expect(find.text('Book a trip'), findsNothing);
+    _expectCustomerNavLabelColor(tester, 'Rides', JosiColors.red);
   });
 
   testWidgets('customer profile opens editable profile form',
@@ -588,6 +601,10 @@ void main() {
     expect(find.text('Your profile'), findsOneWidget);
     expect(find.text('Manage Address'), findsOneWidget);
     expect(find.text('Payment Methods'), findsOneWidget);
+    expect(find.text('Activity'), findsOneWidget);
+    expect(find.text('Rides'), findsOneWidget);
+    expect(find.text('Wallet'), findsNothing);
+    _expectCustomerNavLabelColor(tester, 'Profile', JosiColors.red);
 
     await tester.tap(find.text('Your profile'));
     await tester.pumpAndSettle();
@@ -601,6 +618,28 @@ void main() {
     expect(find.text('Gender'), findsOneWidget);
     _expectVisibleInViewport(
         tester, find.byKey(const ValueKey<String>('profile-update-button')));
+  });
+
+  testWidgets('customer profile opens payment methods instead of wallet',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Profile').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Payment Methods'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('customer-payment-methods-screen')),
+        findsOneWidget);
+    expect(find.text('Cash'), findsWidgets);
+    expect(find.text('Wallet'), findsWidgets);
+    expect(find.text('Credit & Debit Card'), findsOneWidget);
+    expect(find.text('More Payment Options'), findsOneWidget);
+    expect(find.text('Confirm Payment'), findsOneWidget);
+    expect(find.text('Available balance'), findsNothing);
+    expect(find.text('Add money'), findsNothing);
+    expect(find.text('Transactions'), findsNothing);
   });
 
   test('theme follows the Josi light redline', () {
@@ -698,4 +737,13 @@ void _expectVisibleInViewport(WidgetTester tester, Finder finder) {
   expect(rect.top, greaterThanOrEqualTo(0));
   expect(rect.right, lessThanOrEqualTo(viewportSize.width));
   expect(rect.bottom, lessThanOrEqualTo(viewportSize.height));
+}
+
+void _expectCustomerNavLabelColor(
+  WidgetTester tester,
+  String label,
+  Color color,
+) {
+  final Text text = tester.widget<Text>(find.text(label).last);
+  expect(text.style?.color, color);
 }

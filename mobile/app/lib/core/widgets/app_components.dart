@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../constants/app_assets.dart';
 import '../constants/app_routes.dart';
 import '../mock/josi_models.dart';
 import '../theme/josi_colors.dart';
@@ -754,35 +756,21 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<_NavDestination> destinations = role == AppNavRole.customer
-        ? const <_NavDestination>[
-            _NavDestination(
-                'home', 'Home', Icons.home_rounded, AppRoutes.customerHome),
-            _NavDestination(
-                'trips', 'Trips', Icons.route_rounded, AppRoutes.customerTrips),
-            _NavDestination('wallet', 'Wallet',
-                Icons.account_balance_wallet_rounded, AppRoutes.customerWallet),
-            _NavDestination(
-              'notifications',
-              'Alerts',
-              Icons.notifications_rounded,
-              AppRoutes.customerNotifications,
-            ),
-            _NavDestination('profile', 'Profile', Icons.person_rounded,
-                AppRoutes.customerProfile),
-          ]
-        : const <_NavDestination>[
-            _NavDestination(
-                'home', 'Home', Icons.home_rounded, AppRoutes.riderHome),
-            _NavDestination(
-                'trips', 'Trips', Icons.route_rounded, AppRoutes.riderTrips),
-            _NavDestination('wallet', 'Wallet',
-                Icons.account_balance_wallet_rounded, AppRoutes.riderWallet),
-            _NavDestination('notifications', 'Alerts',
-                Icons.notifications_rounded, AppRoutes.riderNotifications),
-            _NavDestination('profile', 'Profile', Icons.person_rounded,
-                AppRoutes.riderProfile),
-          ];
+    if (role == AppNavRole.customer) {
+      return CustomerBottomNav(selectedTab: selectedTab);
+    }
+
+    const List<_NavDestination> destinations = <_NavDestination>[
+      _NavDestination('home', 'Home', Icons.home_rounded, AppRoutes.riderHome),
+      _NavDestination(
+          'trips', 'Trips', Icons.route_rounded, AppRoutes.riderTrips),
+      _NavDestination('wallet', 'Wallet', Icons.account_balance_wallet_rounded,
+          AppRoutes.riderWallet),
+      _NavDestination('notifications', 'Alerts', Icons.notifications_rounded,
+          AppRoutes.riderNotifications),
+      _NavDestination(
+          'profile', 'Profile', Icons.person_rounded, AppRoutes.riderProfile),
+    ];
     final int selectedIndex = destinations
         .indexWhere((_NavDestination item) => item.key == selectedTab);
 
@@ -798,6 +786,69 @@ class AppBottomNav extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+class CustomerBottomNav extends StatelessWidget {
+  const CustomerBottomNav({
+    required this.selectedTab,
+    super.key,
+  });
+
+  final String selectedTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final String activeTab = switch (selectedTab) {
+      'trips' => 'activity',
+      'ride' => 'rides',
+      _ => selectedTab,
+    };
+
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        border: Border(top: BorderSide(color: JosiColors.line)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 66,
+          child: Row(
+            children: <Widget>[
+              _CustomerNavItem(
+                tab: 'home',
+                label: 'Home',
+                asset: AppAssets.home,
+                route: AppRoutes.customerHome,
+                selectedTab: activeTab,
+              ),
+              _CustomerNavItem(
+                tab: 'activity',
+                label: 'Activity',
+                asset: AppAssets.history,
+                route: AppRoutes.customerTrips,
+                selectedTab: activeTab,
+              ),
+              _CustomerNavItem(
+                tab: 'rides',
+                label: 'Rides',
+                asset: AppAssets.bikeLane,
+                route: AppRoutes.customerSelectLocation,
+                selectedTab: activeTab,
+              ),
+              _CustomerNavItem(
+                tab: 'profile',
+                label: 'Profile',
+                asset: AppAssets.profile,
+                route: AppRoutes.customerProfile,
+                selectedTab: activeTab,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1080,6 +1131,56 @@ class _NavDestination {
   final String label;
   final IconData icon;
   final String route;
+}
+
+class _CustomerNavItem extends StatelessWidget {
+  const _CustomerNavItem({
+    required this.tab,
+    required this.label,
+    required this.asset,
+    required this.route,
+    required this.selectedTab,
+  });
+
+  final String tab;
+  final String label;
+  final String asset;
+  final String route;
+  final String selectedTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isSelected = tab == selectedTab;
+    final Color color = isSelected ? JosiColors.red : JosiColors.softMuted;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => context.go(route),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            SvgPicture.asset(
+              asset,
+              width: 22,
+              height: 22,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _MapMarker extends StatelessWidget {
