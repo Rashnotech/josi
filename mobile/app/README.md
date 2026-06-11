@@ -12,7 +12,7 @@ Included:
 - Riverpod providers for auth, users, rider application data, trips, rider wallet, cash ledger, and notifications.
 - Mock data and placeholder repositories ready to swap for Laravel API calls.
 - Reusable UI components for forms, cards, status badges, bottom navigation, map placeholders, trip cards, rider wallet cards, vehicle cards, document upload cards, and empty/loading/error states.
-- Customer screens for destination entry, payment methods, driver-arrived active trip, trip status, history/detail, notifications, support, settings, and profile.
+- Customer screens for destination entry, payment methods, driver-arrived active trip, rate-driver completed trip, trip history/detail, notifications, support, settings, and profile.
 - Rider screens for onboarding approval, KYC documents, vehicle setup, available requests, active trip actions, earnings, cash ledger, notifications, support, settings, and profile.
 - Widget tests and deterministic source eval.
 

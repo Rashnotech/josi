@@ -541,6 +541,31 @@ void main() {
     expect(find.text('GR 678-UVWX'), findsOneWidget);
     expect(find.text('Trip preview'), findsOneWidget);
     expect(find.text('Cancel Ride'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey<String>('trip-preview-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-trip-completed-screen')),
+        findsOneWidget);
+    expect(find.text('Rate Driver'), findsOneWidget);
+    expect(find.text('Jenny Wilson'), findsOneWidget);
+    expect(find.text('Hyundai Verna'), findsOneWidget);
+    expect(find.text('OR 678-UVWX'), findsOneWidget);
+    expect(find.text('NGN 3,500 cash payment recorded for this trip.'),
+        findsOneWidget);
+    expect(find.text('How was your trip with\nJenny Wilson'), findsOneWidget);
+    expect(find.text('Your overall rating'), findsOneWidget);
+    expect(find.byIcon(Icons.star_rounded), findsNWidgets(5));
+    expect(find.byKey(const ValueKey<String>('trip-rating-review-field')),
+        findsOneWidget);
+    expect(find.text('Submit'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('submit-trip-rating-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-home-screen')),
+        findsOneWidget);
   });
 
   testWidgets('customer ride search can show a not found state',

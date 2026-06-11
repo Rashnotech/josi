@@ -18,8 +18,9 @@ Gate rubric:
 12. Destination flow: the destination title sits at normal header size with compact top spacing, current location can fill from device GPS, the destination field remains editable before confirmation, confirmation opens the uploaded payment methods step before rider search, and the Rides tab stays visibly selected on the destination screen. The obsolete Book a trip screen and `/customer/book-trip` route are not present.
 13. Ride search flow: searching and found states render a full-screen street map, use the humbleicons bike SVG instead of car/taxi imagery, and show the request ride details in a shorter draggable bottom sheet with normal-size fitting text and no empty bottom space.
 14. Active trip flow: the customer active trip screen matches the uploaded Driver Arrived map layout, uses compact back controls, shows Jenny Wilson, Sedan, pickup/drop-off, OTP, rate, car number, seats, and uses a `Trip preview` action instead of `Cancel Ride`.
-15. Rider flow: home, application status, profile setup, documents, vehicle setup, available trips, trip request, active trip, completed trip, trips, wallet, cash ledger, notifications, profile, support, and settings are routed.
-16. MVP constraints: no backend, payment processor, map SDK, WebSockets, API keys, or network runtime dependency is required for the UI.
+15. Completed trip flow: the customer completed trip screen matches the uploaded Rate Driver layout, shows Jenny Wilson, vehicle details, star rating, detailed review input, submit action, and keeps the `{amount} cash payment recorded for this trip` message visible.
+16. Rider flow: home, application status, profile setup, documents, vehicle setup, available trips, trip request, active trip, completed trip, trips, wallet, cash ledger, notifications, profile, support, and settings are routed.
+17. MVP constraints: no backend, payment processor, map SDK, WebSockets, API keys, or network runtime dependency is required for the UI.
 
 Run the deterministic source eval:
 

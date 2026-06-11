@@ -3252,54 +3252,232 @@ class CustomerTripCompletedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Trip completed',
-      subtitle: 'Receipt and rating',
-      child: AppScreenBody(
-        children: <Widget>[
-          const EmptyState(
-            title: 'You arrived safely',
-            message: 'NGN 3,500 cash payment recorded for this trip.',
-            icon: Icons.check_circle_rounded,
-          ),
-          const SizedBox(height: 16),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    const String amount = 'NGN 3,500';
+
+    return Scaffold(
+      key: const ValueKey<String>('customer-trip-completed-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
               children: <Widget>[
-                Text('Rate Amina',
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 10),
+                _RateDriverHeader(
+                  onBack: () => context.go(AppRoutes.customerTripActive),
+                ),
+                const SizedBox(height: 34),
+                const Center(
+                  child: _DriverAvatar(name: 'Jenny Wilson', size: 96),
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'Jenny Wilson',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 8),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    for (int index = 0; index < 5; index++)
-                      const Icon(Icons.star_rate_rounded,
-                          color: JosiColors.warning, size: 34),
+                    Flexible(
+                      child: Text(
+                        'Hyundai Verna',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 16,
+                            ),
+                      ),
+                    ),
+                    Container(
+                      width: 7,
+                      height: 7,
+                      margin: const EdgeInsets.symmetric(horizontal: 11),
+                      decoration: const BoxDecoration(
+                        color: JosiColors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Flexible(
+                      child: Text(
+                        'OR 678-UVWX',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 16,
+                            ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                const AppTextField(
-                    label: 'Leave review',
-                    hintText: 'Smooth ride and polite rider',
-                    maxLines: 3),
-                const SizedBox(height: 12),
-                AppButton(
-                  label: 'Download receipt',
-                  icon: Icons.receipt_long_rounded,
-                  variant: AppButtonVariant.secondary,
-                  onPressed: () {},
+                const SizedBox(height: 10),
+                Text(
+                  '$amount cash payment recorded for this trip.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 14,
+                      ),
                 ),
+                const SizedBox(height: 34),
+                Text(
+                  'How was your trip with\nJenny Wilson',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: JosiColors.black,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        height: 1.28,
+                      ),
+                ),
+                const SizedBox(height: 28),
+                const Divider(color: JosiColors.line),
+                const SizedBox(height: 26),
+                Text(
+                  'Your overall rating',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 16,
+                      ),
+                ),
+                const SizedBox(height: 24),
+                const _RateDriverStars(),
+                const SizedBox(height: 28),
+                const Divider(color: JosiColors.line),
+                const SizedBox(height: 24),
+                Text(
+                  'Add detailed review',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: JosiColors.black,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                const _RateDriverReviewField(),
+                const SizedBox(height: 120),
               ],
             ),
           ),
-          const SizedBox(height: 18),
-          AppButton(
-            label: 'Back to home',
-            icon: Icons.home_rounded,
-            onPressed: () => context.go(AppRoutes.customerHome),
-          ),
-        ],
+        ),
       ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
+              child: _RidePrimaryButton(
+                key: const ValueKey<String>('submit-trip-rating-button'),
+                label: 'Submit',
+                onPressed: () => context.go(AppRoutes.customerHome),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RateDriverHeader extends StatelessWidget {
+  const _RateDriverHeader({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Material(
+          color: JosiColors.white,
+          shape: const CircleBorder(
+            side: BorderSide(color: JosiColors.line),
+          ),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onBack,
+            child: const SizedBox.square(
+              dimension: 46,
+              child: Center(
+                child: _AssetIcon(
+                  asset: AppAssets.arrowLeft,
+                  color: JosiColors.ink,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            'Rate Driver',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: JosiColors.black,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+        const SizedBox(width: 46),
+      ],
+    );
+  }
+}
+
+class _RateDriverStars extends StatelessWidget {
+  const _RateDriverStars();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        for (int index = 0; index < 5; index += 1)
+          const Icon(
+            Icons.star_rounded,
+            color: JosiColors.red,
+            size: 48,
+          ),
+      ],
+    );
+  }
+}
+
+class _RateDriverReviewField extends StatelessWidget {
+  const _RateDriverReviewField();
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      key: const ValueKey<String>('trip-rating-review-field'),
+      minLines: 5,
+      maxLines: 5,
+      textInputAction: TextInputAction.newline,
+      decoration: InputDecoration(
+        hintText: 'Enter here',
+        hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: JosiColors.softMuted,
+              fontSize: 16,
+            ),
+        contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      ),
+      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: JosiColors.ink,
+            fontSize: 16,
+          ),
     );
   }
 }
