@@ -31,39 +31,61 @@ class CustomerHomeScreen extends ConsumerWidget {
     return Scaffold(
       key: const ValueKey<String>('customer-home-screen'),
       backgroundColor: JosiColors.surface,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final double mapHeight = (constraints.maxHeight * 0.32)
-                    .clamp(226.0, 292.0)
-                    .toDouble();
-
-                return SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
+      body: Stack(
+        children: <Widget>[
+          const Positioned.fill(
+            child: _CustomerHomeMap(
+              key: ValueKey<String>('customer-home-map'),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       _HomeHeader(
                         firstName: firstName,
                         onNotifications: () =>
                             context.go(AppRoutes.customerNotifications),
                       ),
-                      const SizedBox(height: 8),
-                      _HomeMapSection(
-                        mapHeight: mapHeight,
-                        lastTrip: lastTrip,
-                      ),
+                      const SizedBox(height: 10),
+                      const _CurrentLocationBar(),
                     ],
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ),
-        ),
+          DraggableScrollableSheet(
+            initialChildSize: 0.34,
+            minChildSize: 0.24,
+            maxChildSize: 0.82,
+            snap: true,
+            snapSizes: const <double>[0.34, 0.82],
+            builder: (BuildContext context, ScrollController scrollController) {
+              return LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  return Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      width: constraints.maxWidth.clamp(0.0, 430.0).toDouble(),
+                      height: constraints.maxHeight,
+                      child: _WhereToPanel(
+                        lastTrip: lastTrip,
+                        scrollController: scrollController,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
       bottomNavigationBar: const _CustomerFixedBottomNav(selectedTab: 'home'),
     );
@@ -114,47 +136,164 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-class _HomeMapSection extends StatelessWidget {
-  const _HomeMapSection({
-    required this.mapHeight,
-    required this.lastTrip,
-  });
-
-  final double mapHeight;
-  final Trip lastTrip;
+class _CustomerHomeMap extends StatelessWidget {
+  const _CustomerHomeMap({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: mapHeight + 258,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: AppMapPlaceholder(
-              height: mapHeight,
-              title: 'City route preview',
-            ),
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: CustomPaint(painter: _CustomerHomeMapPainter()),
+        ),
+        const Positioned(
+          right: 32,
+          top: 178,
+          child: _MapActionButton(icon: Icons.my_location_rounded),
+        ),
+        const Positioned(
+          right: 28,
+          top: 278,
+          child: _HomeMapMarker(
+            icon: Icons.directions_car_filled_rounded,
+            color: JosiColors.charcoal,
           ),
-          const Positioned(
-            left: 10,
-            right: 10,
-            top: 10,
-            child: _CurrentLocationBar(),
+        ),
+        const Positioned(
+          left: 74,
+          bottom: 260,
+          child: _HomeMapMarker(
+            icon: Icons.person_pin_circle_rounded,
+            color: JosiColors.red,
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: mapHeight - 28,
-            child: _WhereToPanel(lastTrip: lastTrip),
-          ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MapActionButton extends StatelessWidget {
+  const _MapActionButton({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      elevation: 4,
+      shadowColor: JosiColors.charcoal.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox.square(
+        dimension: 42,
+        child: Icon(icon, color: JosiColors.ink, size: 21),
       ),
     );
   }
+}
+
+class _HomeMapMarker extends StatelessWidget {
+  const _HomeMapMarker({
+    required this.icon,
+    required this.color,
+  });
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: color.withValues(alpha: 0.12)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: JosiColors.charcoal.withValues(alpha: 0.14),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: color, size: 30),
+    );
+  }
+}
+
+class _CustomerHomeMapPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawColor(const Color(0xFFEAF2EE), BlendMode.src);
+
+    final Paint district = Paint()..color = const Color(0xFFDCEED8);
+    final Paint water = Paint()..color = const Color(0xFFD8EAF7);
+    final Paint road = Paint()
+      ..color = JosiColors.white
+      ..strokeWidth = 22
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final Paint roadLine = Paint()
+      ..color = JosiColors.mapLine
+      ..strokeWidth = 1.3
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final Paint minorRoad = Paint()
+      ..color = const Color(0xFFF7F8F7)
+      ..strokeWidth = 10
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final Paint route = Paint()
+      ..color = JosiColors.red
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * 0.58, size.height * 0.06, size.width * 0.34,
+            size.height * 0.22),
+        const Radius.circular(26),
+      ),
+      district,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(-size.width * 0.08, size.height * 0.54, size.width * 0.42,
+            size.height * 0.18),
+        const Radius.circular(42),
+      ),
+      water,
+    );
+
+    for (int index = 0; index < 8; index++) {
+      final double y = size.height * (0.1 + index * 0.12);
+      canvas.drawLine(Offset(-28, y), Offset(size.width + 28, y + 58), road);
+      canvas.drawLine(
+          Offset(-28, y), Offset(size.width + 28, y + 58), roadLine);
+    }
+
+    for (int index = 0; index < 5; index++) {
+      final double x = size.width * (0.08 + index * 0.22);
+      canvas.drawLine(
+          Offset(x, -28), Offset(x + 92, size.height + 28), minorRoad);
+      canvas.drawLine(
+          Offset(x, -28), Offset(x + 92, size.height + 28), roadLine);
+    }
+
+    final Path routePath = Path()
+      ..moveTo(size.width * 0.2, size.height * 0.72)
+      ..quadraticBezierTo(size.width * 0.33, size.height * 0.52,
+          size.width * 0.52, size.height * 0.58)
+      ..quadraticBezierTo(size.width * 0.72, size.height * 0.64,
+          size.width * 0.78, size.height * 0.37);
+    canvas.drawPath(routePath, route);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _CurrentLocationBar extends StatelessWidget {
@@ -200,26 +339,32 @@ class _CurrentLocationBar extends StatelessWidget {
 }
 
 class _WhereToPanel extends StatelessWidget {
-  const _WhereToPanel({required this.lastTrip});
+  const _WhereToPanel({
+    required this.lastTrip,
+    required this.scrollController,
+  });
 
   final Trip lastTrip;
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      decoration: BoxDecoration(
-        color: JosiColors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-        border: Border.all(color: JosiColors.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Material(
+      key: const ValueKey<String>('customer-where-to-sheet'),
+      color: JosiColors.white,
+      elevation: 18,
+      shadowColor: JosiColors.charcoal.withValues(alpha: 0.16),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+      clipBehavior: Clip.antiAlias,
+      child: ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 22),
+        physics: const ClampingScrollPhysics(),
         children: <Widget>[
           Center(
             child: Container(
-              width: 30,
-              height: 3,
+              width: 34,
+              height: 4,
               decoration: BoxDecoration(
                 color: JosiColors.line,
                 borderRadius: BorderRadius.circular(999),
@@ -271,7 +416,116 @@ class _WhereToPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _LastTripTile(trip: lastTrip),
+          const SizedBox(height: 18),
+          Text(
+            'Saved Places',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 10),
+          _SavedPlaceButton(
+            icon: Icons.home_rounded,
+            title: 'Home address',
+            subtitle: '2715 Ash Dr. San Jose',
+            onTap: () => context.go(AppRoutes.customerSelectLocation),
+          ),
+          const SizedBox(height: 10),
+          _SavedPlaceButton(
+            icon: Icons.work_rounded,
+            title: 'Work',
+            subtitle: 'Central Business District',
+            onTap: () => context.go(AppRoutes.customerSelectLocation),
+          ),
+          const SizedBox(height: 10),
+          _SavedPlaceButton(
+            icon: Icons.add_location_alt_rounded,
+            title: 'Add a new stop',
+            subtitle: 'Save another frequent destination',
+            onTap: () => context.go(AppRoutes.customerSelectLocation),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SavedPlaceButton extends StatelessWidget {
+  const _SavedPlaceButton({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.surface,
+      borderRadius: BorderRadius.circular(4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          height: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: JosiColors.line),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: JosiColors.white,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, color: JosiColors.red, size: 18),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: JosiColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: JosiColors.muted,
+                            fontSize: 10,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: JosiColors.muted, size: 20),
+            ],
+          ),
+        ),
       ),
     );
   }

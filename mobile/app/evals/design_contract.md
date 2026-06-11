@@ -14,7 +14,7 @@ Gate rubric:
 8. SVG assets: `flutter_svg` is installed and the auth flow uses SVG icons from `assets/images`.
 9. Login flow: selecting customer or rider opens the uploaded role-specific login design and uses `josi-logo.jpeg`.
 10. Signup flow: customer signup uses the uploaded `Create Account` layout; rider signup uses the uploaded `Drive with Josi Ride` layout with vehicle type selection.
-11. Customer flow: home, book trip, select location, confirm trip, searching rider, active trip, completed trip, trips, trip detail, wallet, profile, notifications, support, and settings are routed.
+11. Customer flow: home, book trip, select location, confirm trip, searching rider, active trip, completed trip, trips, trip detail, wallet, profile, notifications, support, and settings are routed. Customer home is map-first, fills the body from the top edge, and uses a draggable where-to bottom sheet for destination entry.
 12. Rider flow: home, application status, profile setup, documents, vehicle setup, available trips, trip request, active trip, completed trip, trips, wallet, cash ledger, notifications, profile, support, and settings are routed.
 13. MVP constraints: no backend, payment processor, map SDK, WebSockets, API keys, or network runtime dependency is required for the UI.
 

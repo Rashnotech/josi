@@ -67,6 +67,34 @@ void main() {
     _expectVisibleInViewport(tester, find.text('Activity'));
   });
 
+  testWidgets('customer home map fills screen and where to sheet drags up',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    final Finder map = find.byKey(const ValueKey<String>('customer-home-map'));
+    final Finder sheet =
+        find.byKey(const ValueKey<String>('customer-where-to-sheet'));
+    final Size viewportSize =
+        tester.view.physicalSize / tester.view.devicePixelRatio;
+
+    expect(map, findsOneWidget);
+    final Rect mapRect = tester.getRect(map);
+    expect(mapRect.left, 0);
+    expect(mapRect.top, 0);
+    expect(mapRect.right, viewportSize.width);
+    expect(mapRect.height, greaterThan(viewportSize.height * 0.82));
+
+    expect(sheet, findsOneWidget);
+    final double collapsedTop = tester.getTopLeft(sheet).dy;
+
+    await tester.drag(sheet, const Offset(0, -300));
+    await tester.pumpAndSettle();
+
+    final double expandedTop = tester.getTopLeft(sheet).dy;
+    expect(expandedTop, lessThan(collapsedTop - 180));
+    _expectVisibleInViewport(tester, find.text('Where to?'));
+  });
+
   testWidgets(
       'rider role opens rider login and create account reaches rider signup',
       (WidgetTester tester) async {
