@@ -11,6 +11,9 @@ class AppAssets {
       'assets/images/material-symbols--bike-lane-rounded.svg';
   static const String home =
       'assets/images/material-symbols--home-outline-rounded.svg';
+  static const String history =
+      'assets/images/material-symbols--history-rounded.svg';
+  static const String office = 'assets/images/hugeicons--office.svg';
   static const String notification =
       'assets/images/mingcute--notification-fill.svg';
   static const String card = 'assets/images/solar--card-bold.svg';

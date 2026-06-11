@@ -53,16 +53,21 @@ $requiredFiles = @(
   "lib/core/constants/app_assets.dart",
   "lib/core/constants/app_routes.dart",
   "lib/core/router/app_router.dart",
+  "lib/core/services/device_location_service.dart",
   "lib/core/theme/josi_colors.dart",
   "lib/core/theme/josi_theme.dart",
   "lib/features/auth/auth_screens.dart",
   "lib/features/splash/splash_screen.dart",
+  "android/app/src/main/AndroidManifest.xml",
+  "android/app/src/main/kotlin/com/example/josi_ride/MainActivity.kt",
   "assets/images/josi_log.png",
   "assets/images/josi-logo.jpeg",
   "assets/images/ep--arrow-left-bold.svg",
   "assets/images/flat-color-icons--google.svg",
+  "assets/images/hugeicons--office.svg",
   "assets/images/iconamoon--profile.svg",
   "assets/images/line-md--email.svg",
+  "assets/images/material-symbols--history-rounded.svg",
   "assets/images/material-symbols--bike-lane-rounded.svg",
   "assets/images/uil--padlock.svg",
   "assets/fonts/Inter-Regular.ttf",
@@ -112,6 +117,12 @@ Assert-Contains "lib/core/constants/app_assets.dart" "line-md--email\.svg" "Emai
 Assert-Contains "lib/core/constants/app_assets.dart" "ep--arrow-left-bold\.svg" "Back SVG asset must be registered."
 Assert-Contains "lib/core/constants/app_assets.dart" "uil--padlock\.svg" "Padlock SVG asset must be registered."
 Assert-Contains "lib/core/constants/app_assets.dart" "material-symbols--bike-lane-rounded\.svg" "Rider SVG asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "material-symbols--history-rounded\.svg" "Activity history SVG asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "hugeicons--office\.svg" "Office SVG asset must be registered."
+Assert-Contains "lib/core/services/device_location_service.dart" "josi_ride/device_location" "Device location service must use the native GPS channel."
+Assert-Contains "android/app/src/main/AndroidManifest.xml" "ACCESS_FINE_LOCATION" "Android manifest must request fine location permission."
+Assert-Contains "android/app/src/main/AndroidManifest.xml" "ACCESS_COARSE_LOCATION" "Android manifest must request coarse location permission."
+Assert-Contains "android/app/src/main/kotlin/com/example/josi_ride/MainActivity.kt" "LocationManager" "Android activity must resolve phone GPS location."
 
 Assert-Contains "lib/features/splash/splash_screen.dart" "AppAssets\.splashLogo" "Splash must use josi_log.png through AppAssets."
 Assert-Contains "lib/features/splash/splash_screen.dart" "backgroundColor:\s+JosiColors\.red" "Splash must have a red background."
@@ -139,13 +150,21 @@ Assert-Contains "lib/core/constants/app_routes.dart" "loginFor" "Routes must exp
 Assert-Contains "lib/features/customer/customer_screens.dart" "customer-home-map" "Customer home must expose the full-screen map key."
 Assert-Contains "lib/features/customer/customer_screens.dart" "DraggableScrollableSheet" "Customer home where-to panel must be draggable."
 Assert-Contains "lib/features/customer/customer_screens.dart" "customer-where-to-sheet" "Customer home must expose the draggable where-to sheet key."
+Assert-Contains "lib/features/customer/customer_screens.dart" "home-current-location-button" "Customer home current location must trigger GPS."
+Assert-Contains "lib/features/customer/customer_screens.dart" "destination-location-field" "Destination field must be editable and testable."
+Assert-Contains "lib/features/customer/customer_screens.dart" "destination-current-location-field" "Destination current location must trigger GPS."
+Assert-Contains "lib/features/customer/customer_screens.dart" "AppAssets\.history" "Customer Activity navigation must use the history SVG."
+Assert-Contains "lib/features/customer/customer_screens.dart" "AppAssets\.office" "Customer Office tile must use the office SVG."
 
 Assert-Contains "test/josi_ride_app_test.dart" "starts on red splash and advances to role selection" "Tests must cover splash-to-role flow."
 Assert-Contains "test/josi_ride_app_test.dart" "customer role opens customer login" "Tests must cover customer login."
 Assert-Contains "test/josi_ride_app_test.dart" "customer home map fills screen and where to sheet drags up" "Tests must cover the customer home full-screen map and draggable where-to sheet."
+Assert-Contains "test/josi_ride_app_test.dart" "destination-location-field" "Tests must cover editable destination input."
+Assert-Contains "test/josi_ride_app_test.dart" "josi_ride/device_location" "Tests must mock the native GPS channel."
 Assert-Contains "test/josi_ride_app_test.dart" "rider role opens rider login" "Tests must cover rider login."
 Assert-Contains "test/josi_ride_app_test.dart" "customer create account opens customer signup" "Tests must cover customer signup."
 Assert-Contains "test/josi_ride_app_test.dart" "rider role opens rider login and create account reaches rider signup" "Tests must cover rider signup."
 Assert-Contains "evals/design_contract.md" "draggable where-to bottom sheet" "Design eval must include the customer home map and draggable sheet contract."
+Assert-Contains "evals/design_contract.md" "current location can fill from device GPS" "Design eval must include destination GPS behavior."
 
 Write-Host "OK: Josi first-run redline, SVG assets, design tokens, tests, and eval contract are present."

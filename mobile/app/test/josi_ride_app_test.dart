@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:josi_ride/core/constants/app_routes.dart';
@@ -69,6 +70,13 @@ void main() {
 
   testWidgets('customer home map fills screen and where to sheet drags up',
       (WidgetTester tester) async {
+    int locationCalls = 0;
+    _mockDeviceLocation(
+      tester,
+      onCall: () {
+        locationCalls++;
+      },
+    );
     await _loginAsCustomer(tester);
 
     final Finder map = find.byKey(const ValueKey<String>('customer-home-map'));
@@ -93,6 +101,13 @@ void main() {
     final double expandedTop = tester.getTopLeft(sheet).dy;
     expect(expandedTop, lessThan(collapsedTop - 180));
     _expectVisibleInViewport(tester, find.text('Where to?'));
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('home-current-location-button')));
+    await tester.pumpAndSettle();
+
+    expect(locationCalls, 1);
+    expect(find.text('Lat 9.07650, Lng 7.39860'), findsOneWidget);
   });
 
   testWidgets(
@@ -418,6 +433,13 @@ void main() {
 
   testWidgets('customer destination screen confirms trip',
       (WidgetTester tester) async {
+    int locationCalls = 0;
+    _mockDeviceLocation(
+      tester,
+      onCall: () {
+        locationCalls++;
+      },
+    );
     await _loginAsCustomer(tester);
 
     _expectVisibleInViewport(
@@ -431,6 +453,23 @@ void main() {
     expect(find.text('Destination'), findsOneWidget);
     expect(find.text('Saved Places'), findsOneWidget);
     expect(find.text('Confirm'), findsOneWidget);
+    _expectVisibleInViewport(
+        tester, find.byKey(const ValueKey<String>('destination-screen-title')));
+
+    await tester.tap(find
+        .byKey(const ValueKey<String>('destination-current-location-field')));
+    await tester.pumpAndSettle();
+
+    expect(locationCalls, 1);
+    expect(find.text('Lat 9.07650, Lng 7.39860'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('destination-location-field')),
+      'Jabi Lake Mall',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Jabi Lake Mall'), findsOneWidget);
+
     _expectVisibleInViewport(tester,
         find.byKey(const ValueKey<String>('destination-confirm-button')));
     _expectVisibleInViewport(tester, find.text('Activity'));
@@ -579,6 +618,32 @@ Future<void> _loginAsRider(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 650));
   await tester.pumpAndSettle();
+}
+
+void _mockDeviceLocation(
+  WidgetTester tester, {
+  VoidCallback? onCall,
+}) {
+  const MethodChannel channel = MethodChannel('josi_ride/device_location');
+
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    channel,
+    (MethodCall methodCall) async {
+      expect(methodCall.method, 'currentPosition');
+      onCall?.call();
+      return <String, double>{
+        'latitude': 9.0765,
+        'longitude': 7.3986,
+      };
+    },
+  );
+
+  addTearDown(() {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      null,
+    );
+  });
 }
 
 void _expectVisibleInViewport(WidgetTester tester, Finder finder) {

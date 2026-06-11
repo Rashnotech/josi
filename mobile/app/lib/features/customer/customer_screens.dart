@@ -8,6 +8,7 @@ import '../../core/constants/app_routes.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/services/device_location_service.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 
@@ -296,43 +297,99 @@ class _CustomerHomeMapPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _CurrentLocationBar extends StatelessWidget {
+class _CurrentLocationBar extends StatefulWidget {
   const _CurrentLocationBar();
 
   @override
+  State<_CurrentLocationBar> createState() => _CurrentLocationBarState();
+}
+
+class _CurrentLocationBarState extends State<_CurrentLocationBar> {
+  final DeviceLocationService _locationService = const DeviceLocationService();
+  String _locationLabel = 'Current Location';
+  bool _isLocating = false;
+
+  Future<void> _useCurrentLocation() async {
+    if (_isLocating) {
+      return;
+    }
+
+    setState(() {
+      _isLocating = true;
+    });
+
+    try {
+      final DeviceLocation location = await _locationService.currentPosition();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _locationLabel = location.displayLabel;
+      });
+    } on DeviceLocationException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLocating = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: JosiColors.white,
+    return Material(
+      color: JosiColors.white,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        key: const ValueKey<String>('home-current-location-button'),
+        onTap: _useCurrentLocation,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: JosiColors.line),
-      ),
-      child: Row(
-        children: <Widget>[
-          const _AssetIcon(
-            asset: AppAssets.location,
-            color: JosiColors.red,
-            size: 16,
+        child: Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: JosiColors.line),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Current Location',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: JosiColors.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
-                  ),
-            ),
+          child: Row(
+            children: <Widget>[
+              const _AssetIcon(
+                asset: AppAssets.location,
+                color: JosiColors.red,
+                size: 16,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _isLocating ? 'Locating...' : _locationLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: JosiColors.muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
+                ),
+              ),
+              if (_isLocating)
+                const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                const Icon(Icons.my_location_rounded,
+                    color: JosiColors.red, size: 18),
+            ],
           ),
-          const Icon(Icons.bookmark_border_rounded,
-              color: JosiColors.red, size: 18),
-        ],
+        ),
       ),
     );
   }
@@ -408,7 +465,7 @@ class _WhereToPanel extends StatelessWidget {
                 child: _HomePlaceTile(
                   title: 'Office',
                   subtitle: '35 KM Away',
-                  asset: AppAssets.card,
+                  asset: AppAssets.office,
                   onTap: () => context.go(AppRoutes.customerSelectLocation),
                 ),
               ),
@@ -582,8 +639,68 @@ class CustomerBookTripScreen extends StatelessWidget {
   }
 }
 
-class CustomerSelectLocationScreen extends StatelessWidget {
+class CustomerSelectLocationScreen extends StatefulWidget {
   const CustomerSelectLocationScreen({super.key});
+
+  @override
+  State<CustomerSelectLocationScreen> createState() =>
+      _CustomerSelectLocationScreenState();
+}
+
+class _CustomerSelectLocationScreenState
+    extends State<CustomerSelectLocationScreen> {
+  final DeviceLocationService _locationService = const DeviceLocationService();
+  late final TextEditingController _pickupController;
+  late final TextEditingController _destinationController;
+  bool _isLocating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pickupController = TextEditingController(text: 'Current Location');
+    _destinationController =
+        TextEditingController(text: '1901 Thornridge Cir. Shiloh');
+  }
+
+  @override
+  void dispose() {
+    _pickupController.dispose();
+    _destinationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _useCurrentLocation() async {
+    if (_isLocating) {
+      return;
+    }
+
+    setState(() {
+      _isLocating = true;
+    });
+
+    try {
+      final DeviceLocation location = await _locationService.currentPosition();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _pickupController.text = location.displayLabel;
+      });
+    } on DeviceLocationException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLocating = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -595,15 +712,20 @@ class CustomerSelectLocationScreen extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   _DestinationHeader(
                     onBack: () => context.go(AppRoutes.customerHome),
                   ),
-                  const SizedBox(height: 42),
-                  const _DestinationRouteCard(),
+                  const SizedBox(height: 18),
+                  _DestinationRouteCard(
+                    pickupController: _pickupController,
+                    destinationController: _destinationController,
+                    isLocating: _isLocating,
+                    onUseCurrentLocation: _useCurrentLocation,
+                  ),
                   const SizedBox(height: 28),
                   _SavedPlacesCard(
                     onTap: () => context.go(AppRoutes.customerProfile),
@@ -793,11 +915,12 @@ class _DestinationHeader extends StatelessWidget {
         ),
         Expanded(
           child: Text(
+            key: const ValueKey<String>('destination-screen-title'),
             'Destination',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: JosiColors.redDark,
-                  fontSize: 26,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0,
                 ),
@@ -810,7 +933,17 @@ class _DestinationHeader extends StatelessWidget {
 }
 
 class _DestinationRouteCard extends StatelessWidget {
-  const _DestinationRouteCard();
+  const _DestinationRouteCard({
+    required this.pickupController,
+    required this.destinationController,
+    required this.isLocating,
+    required this.onUseCurrentLocation,
+  });
+
+  final TextEditingController pickupController;
+  final TextEditingController destinationController;
+  final bool isLocating;
+  final VoidCallback onUseCurrentLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -829,16 +962,23 @@ class _DestinationRouteCard extends StatelessWidget {
           Expanded(
             child: Column(
               children: <Widget>[
-                const _DestinationInputLine(
-                  text: '6391 Elgin St. Celina, Delawa...',
+                _DestinationInputLine(
+                  fieldKey: const ValueKey<String>(
+                      'destination-current-location-field'),
+                  controller: pickupController,
                   isFilled: true,
+                  readOnly: true,
+                  isLoading: isLocating,
+                  onTap: onUseCurrentLocation,
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: <Widget>[
-                    const Expanded(
+                    Expanded(
                       child: _DestinationInputLine(
-                        text: '1901 Thornridge Cir. Sh...',
+                        fieldKey: const ValueKey<String>(
+                            'destination-location-field'),
+                        controller: destinationController,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -911,12 +1051,20 @@ class _DestinationRail extends StatelessWidget {
 
 class _DestinationInputLine extends StatelessWidget {
   const _DestinationInputLine({
-    required this.text,
+    required this.controller,
+    required this.fieldKey,
     this.isFilled = false,
+    this.readOnly = false,
+    this.isLoading = false,
+    this.onTap,
   });
 
-  final String text;
+  final TextEditingController controller;
+  final Key fieldKey;
   final bool isFilled;
+  final bool readOnly;
+  final bool isLoading;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -930,15 +1078,36 @@ class _DestinationInputLine extends StatelessWidget {
           bottom: BorderSide(color: JosiColors.ink, width: 1),
         ),
       ),
-      child: Text(
-        text,
+      child: TextField(
+        key: fieldKey,
+        controller: controller,
+        readOnly: readOnly,
+        onTap: onTap,
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        showCursor: !readOnly,
+        textInputAction: readOnly ? TextInputAction.none : TextInputAction.done,
+        textAlignVertical: TextAlignVertical.center,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: JosiColors.ink,
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+          suffixIconConstraints:
+              const BoxConstraints.tightFor(width: 24, height: 24),
+          suffixIcon: readOnly
+              ? (isLoading
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location_rounded,
+                      color: JosiColors.red, size: 18))
+              : null,
+        ),
       ),
     );
   }
@@ -1108,7 +1277,7 @@ class _CustomerFixedBottomNav extends StatelessWidget {
               _CustomerNavItem(
                 tab: 'activity',
                 label: 'Activity',
-                asset: AppAssets.notification,
+                asset: AppAssets.history,
                 route: AppRoutes.customerTrips,
                 selectedTab: selectedTab,
               ),
