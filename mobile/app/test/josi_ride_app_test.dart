@@ -729,6 +729,72 @@ void main() {
     expect(find.text('Transactions'), findsNothing);
   });
 
+  testWidgets('customer settings and help center use uploaded tab layouts',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Profile').last);
+    await tester.pumpAndSettle();
+
+    final BuildContext profileContext = tester.element(
+      find.byKey(const ValueKey<String>('customer-profile-screen')),
+    );
+    profileContext.go(AppRoutes.customerSettings);
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('settings-screen')), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Notification Settings'), findsOneWidget);
+    expect(find.text('Password Manager'), findsOneWidget);
+    expect(find.text('Delete Account'), findsOneWidget);
+    expect(find.text('Account preferences'), findsNothing);
+    expect(find.text('Logout'), findsNothing);
+
+    final Text settingsTitle = tester.widget<Text>(find.text('Settings'));
+    expect(settingsTitle.style?.fontSize, 20);
+    final Text notificationLabel =
+        tester.widget<Text>(find.text('Notification Settings'));
+    expect(notificationLabel.style?.fontSize, 20);
+
+    final BuildContext settingsContext = tester.element(
+      find.byKey(const ValueKey<String>('settings-screen')),
+    );
+    settingsContext.go(AppRoutes.customerSupport);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('help-center-screen')),
+        findsOneWidget);
+    expect(find.text('Help Center'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('help-search-field')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('help-tab-faq')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('help-tab-contact-us')),
+        findsOneWidget);
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('Services'), findsOneWidget);
+    expect(find.text('General'), findsOneWidget);
+    expect(find.text('Account'), findsOneWidget);
+    expect(find.text('What if I need to cancel a booking?'), findsOneWidget);
+    expect(find.text('Is safe to use App?'), findsOneWidget);
+    expect(find.text('Contact support'), findsNothing);
+
+    final Text faqTab = tester.widget<Text>(find.text('FAQ'));
+    expect(faqTab.style?.fontSize, 17);
+
+    await tester.tap(find.byKey(const ValueKey<String>('help-tab-contact-us')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Customer Service'), findsOneWidget);
+    expect(find.text('WhatsApp'), findsOneWidget);
+    expect(find.text('(480) 555-0103'), findsOneWidget);
+    expect(find.text('Website'), findsOneWidget);
+    expect(find.text('Facebook'), findsOneWidget);
+    expect(find.text('Twitter'), findsOneWidget);
+    expect(find.text('Instagram'), findsOneWidget);
+    expect(find.text('What if I need to cancel a booking?'), findsNothing);
+  });
+
   test('theme follows the Josi light redline', () {
     final ThemeData theme = JosiTheme.light;
 
