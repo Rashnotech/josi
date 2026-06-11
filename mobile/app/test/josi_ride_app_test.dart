@@ -704,6 +704,65 @@ void main() {
         52);
   });
 
+  testWidgets('customer profile manage address opens add address flow',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Profile').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Manage Address'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-manage-address-screen')),
+        findsOneWidget);
+    expect(find.text('Manage Address'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Office'), findsOneWidget);
+    expect(find.text("Parent's House"), findsOneWidget);
+    expect(find.text("Friend's House"), findsOneWidget);
+    expect(
+        find.text('1901 Thornridge Cir. Shiloh, Hawaii 81063'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('add-new-address-button')),
+        findsOneWidget);
+    expect(find.text('Add New Address'), findsOneWidget);
+    expect(
+        tester
+            .getSize(find
+                .byKey(const ValueKey<String>('manage-address-apply-button')))
+            .height,
+        52);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('add-new-address-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-add-address-screen')),
+        findsOneWidget);
+    expect(find.text('Add Address'), findsOneWidget);
+    expect(find.text('Save address as *'), findsOneWidget);
+    expect(find.text('Complete address'), findsOneWidget);
+    expect(find.text('Enter address *'), findsOneWidget);
+    expect(find.text('Floor'), findsOneWidget);
+    expect(find.text('Landmark'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('complete-address-field')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('address-floor-field')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('address-landmark-field')),
+        findsOneWidget);
+    expect(
+        tester
+            .getSize(find.byKey(const ValueKey<String>('save-address-button')))
+            .height,
+        52);
+
+    await tester.tap(find.byKey(const ValueKey<String>('save-address-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-manage-address-screen')),
+        findsOneWidget);
+  });
+
   testWidgets('customer profile opens payment methods instead of wallet',
       (WidgetTester tester) async {
     await _loginAsCustomer(tester);

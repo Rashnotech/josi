@@ -4193,6 +4193,699 @@ class _BookingDivider extends StatelessWidget {
   }
 }
 
+class _ManagedAddress {
+  const _ManagedAddress({
+    required this.title,
+    required this.address,
+  });
+
+  final String title;
+  final String address;
+}
+
+const List<_ManagedAddress> _managedAddresses = <_ManagedAddress>[
+  _ManagedAddress(
+    title: 'Home',
+    address: '1901 Thornridge Cir. Shiloh, Hawaii 81063',
+  ),
+  _ManagedAddress(
+    title: 'Office',
+    address: '4517 Washington Ave. Manchester, Kentucky 39495',
+  ),
+  _ManagedAddress(
+    title: "Parent's House",
+    address: '8502 Preston Rd. Inglewood, Maine 98380',
+  ),
+  _ManagedAddress(
+    title: "Friend's House",
+    address: '2464 Royal Ln, Mesa, New Jersey 45463',
+  ),
+];
+
+class CustomerManageAddressScreen extends StatelessWidget {
+  const CustomerManageAddressScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-manage-address-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Column(
+              children: <Widget>[
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 26),
+                    children: <Widget>[
+                      _ProfileHeader(
+                        title: 'Manage Address',
+                        onBack: () => context.go(AppRoutes.customerProfile),
+                      ),
+                      const SizedBox(height: 40),
+                      for (int index = 0;
+                          index < _managedAddresses.length;
+                          index += 1) ...<Widget>[
+                        _ManagedAddressRow(address: _managedAddresses[index]),
+                        if (index != _managedAddresses.length - 1)
+                          const Divider(height: 30, color: JosiColors.line),
+                      ],
+                      const SizedBox(height: 42),
+                      _AddNewAddressButton(
+                        onTap: () => context.go(AppRoutes.customerAddAddress),
+                      ),
+                    ],
+                  ),
+                ),
+                _ManageAddressBottomBar(
+                  onApply: () => context.go(AppRoutes.customerProfile),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ManagedAddressRow extends StatelessWidget {
+  const _ManagedAddressRow({required this.address});
+
+  final _ManagedAddress address;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const _AddressPinIcon(),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                address.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                address.address,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: JosiColors.softMuted,
+                      fontSize: 15,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddressPinIcon extends StatelessWidget {
+  const _AddressPinIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 38,
+      height: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          const Icon(
+            Icons.location_on_outlined,
+            color: JosiColors.ink,
+            size: 38,
+          ),
+          Positioned(
+            top: 12,
+            child: Container(
+              width: 11,
+              height: 11,
+              decoration: BoxDecoration(
+                color: JosiColors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: JosiColors.red, width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddNewAddressButton extends StatelessWidget {
+  const _AddNewAddressButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        key: const ValueKey<String>('add-new-address-button'),
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: CustomPaint(
+          painter: const _DashedRoundedBorderPainter(
+            color: JosiColors.red,
+            radius: 8,
+          ),
+          child: SizedBox(
+            height: 64,
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(Icons.add_rounded,
+                      color: JosiColors.red, size: 30),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Add New Address',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: JosiColors.red,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ManageAddressBottomBar extends StatelessWidget {
+  const _ManageAddressBottomBar({required this.onApply});
+
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: JosiColors.charcoal.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 14),
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              key: const ValueKey<String>('manage-address-apply-button'),
+              onPressed: onApply,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: JosiColors.red,
+                foregroundColor: JosiColors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999)),
+                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              child: const Text('Apply'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedRoundedBorderPainter extends CustomPainter {
+  const _DashedRoundedBorderPainter({
+    required this.color,
+    required this.radius,
+  });
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final RRect border = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    ).deflate(1);
+    final Path path = Path()..addRRect(border);
+    for (final metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final double next = (distance + 8).clamp(0, metric.length).toDouble();
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance += 14;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRoundedBorderPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.radius != radius;
+  }
+}
+
+enum _AddAddressLabel {
+  home('Home'),
+  office('Office'),
+  parent('Parent\'s House'),
+  friend('Friend\'s House');
+
+  const _AddAddressLabel(this.label);
+
+  final String label;
+}
+
+class CustomerAddAddressScreen extends StatefulWidget {
+  const CustomerAddAddressScreen({super.key});
+
+  @override
+  State<CustomerAddAddressScreen> createState() =>
+      _CustomerAddAddressScreenState();
+}
+
+class _CustomerAddAddressScreenState extends State<CustomerAddAddressScreen> {
+  _AddAddressLabel _selectedLabel = _AddAddressLabel.home;
+
+  void _selectLabel(_AddAddressLabel label) {
+    setState(() {
+      _selectedLabel = label;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-add-address-screen'),
+      backgroundColor: JosiColors.white,
+      body: Stack(
+        children: <Widget>[
+          const Positioned.fill(child: _AddAddressMapBackdrop()),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                  child: _ProfileHeader(
+                    title: 'Add Address',
+                    onBack: () => context.go(AppRoutes.customerManageAddress),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Positioned.fill(child: _AddAddressMapMarker()),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: _AddAddressSheet(
+                selectedLabel: _selectedLabel,
+                onLabelSelected: _selectLabel,
+                onSave: () => context.go(AppRoutes.customerManageAddress),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddAddressMapBackdrop extends StatelessWidget {
+  const _AddAddressMapBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CustomPaint(painter: _AddAddressMapPainter());
+  }
+}
+
+class _AddAddressMapPainter extends CustomPainter {
+  const _AddAddressMapPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawColor(const Color(0xFFEDEFF1), BlendMode.src);
+
+    final Paint road = Paint()
+      ..color = JosiColors.white
+      ..strokeWidth = 24
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final Paint lane = Paint()
+      ..color = const Color(0xFFB7BDC5)
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final Paint minor = Paint()
+      ..color = const Color(0xFFF8F9FA)
+      ..strokeWidth = 9
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    for (double x = -size.width * 0.35; x < size.width * 1.2; x += 110) {
+      canvas.drawLine(Offset(x, -40), Offset(x + 220, size.height), road);
+      canvas.drawLine(Offset(x + 22, -40), Offset(x + 242, size.height), lane);
+    }
+    for (double y = -40; y < size.height * 0.8; y += 115) {
+      canvas.drawLine(Offset(-40, y), Offset(size.width + 60, y + 80), road);
+      canvas.drawLine(
+          Offset(-40, y + 18), Offset(size.width + 60, y + 98), lane);
+    }
+    for (double y = 90; y < size.height * 0.64; y += 86) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y - 70), minor);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y - 70), lane);
+    }
+
+    _drawStreetLabel(
+        canvas, 'W Broadway', size.width * 0.16, size.height * 0.12, -1.08);
+    _drawStreetLabel(
+        canvas, 'Worth St', size.width * 0.36, size.height * 0.03, 0.58);
+    _drawStreetLabel(
+        canvas, 'Leonard St', size.width * 0.63, size.height * 0.05, 0.58);
+    _drawStreetLabel(
+        canvas, 'Reade St', size.width * 0.37, size.height * 0.29, 0.38);
+    _drawStreetLabel(
+        canvas, 'Broadway', size.width * 0.70, size.height * 0.22, -0.98);
+    _drawStreetLabel(
+        canvas, 'Chambers St', size.width * 0.28, size.height * 0.42, 0.38);
+  }
+
+  void _drawStreetLabel(
+      Canvas canvas, String label, double x, double y, double angle) {
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.rotate(angle);
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(
+          color: Color(0xFF9EA3AA),
+          fontSize: 24,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, Offset.zero);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _AddAddressMapPainter oldDelegate) => false;
+}
+
+class _AddAddressMapMarker extends StatelessWidget {
+  const _AddAddressMapMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: const Alignment(0, -0.25),
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.only(top: 36),
+            child: Icon(Icons.location_on_rounded,
+                color: JosiColors.red, size: 86),
+          ),
+          Container(
+            width: 54,
+            height: 54,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: JosiColors.white,
+              border: Border.all(color: JosiColors.red, width: 5),
+            ),
+            child: Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: JosiColors.ink,
+              ),
+              child: Text(
+                'RS',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: JosiColors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddAddressSheet extends StatelessWidget {
+  const _AddAddressSheet({
+    required this.selectedLabel,
+    required this.onLabelSelected,
+    required this.onSave,
+  });
+
+  final _AddAddressLabel selectedLabel;
+  final ValueChanged<_AddAddressLabel> onLabelSelected;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(28, 28, 28, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                'Save address as *',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: JosiColors.softMuted,
+                      fontSize: 15,
+                    ),
+              ),
+              const SizedBox(height: 18),
+              _AddAddressLabelSelector(
+                selectedLabel: selectedLabel,
+                onSelected: onLabelSelected,
+              ),
+              const SizedBox(height: 22),
+              const _AddAddressField(
+                key: ValueKey<String>('complete-address-field'),
+                label: 'Complete address',
+                hintText: 'Enter address *',
+                height: 86,
+              ),
+              const SizedBox(height: 18),
+              const _AddAddressField(
+                key: ValueKey<String>('address-floor-field'),
+                label: 'Floor',
+                hintText: 'Enter Floor',
+                height: 58,
+              ),
+              const SizedBox(height: 18),
+              const _AddAddressField(
+                key: ValueKey<String>('address-landmark-field'),
+                label: 'Landmark',
+                hintText: 'Enter Landmark',
+                height: 58,
+              ),
+              const SizedBox(height: 26),
+              SizedBox(
+                height: 52,
+                width: double.infinity,
+                child: ElevatedButton(
+                  key: const ValueKey<String>('save-address-button'),
+                  onPressed: onSave,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: JosiColors.red,
+                    foregroundColor: JosiColors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999)),
+                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  child: const Text('Save address'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddAddressLabelSelector extends StatelessWidget {
+  const _AddAddressLabelSelector({
+    required this.selectedLabel,
+    required this.onSelected,
+  });
+
+  final _AddAddressLabel selectedLabel;
+  final ValueChanged<_AddAddressLabel> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: <Widget>[
+          for (final _AddAddressLabel label in _AddAddressLabel.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _AddAddressLabelChip(
+                label: label,
+                selected: label == selectedLabel,
+                onTap: () => onSelected(label),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddAddressLabelChip extends StatelessWidget {
+  const _AddAddressLabelChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _AddAddressLabel label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? JosiColors.red : const Color(0xFFF2F2F2),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        key: ValueKey<String>(
+            'address-label-${label.label.toLowerCase().replaceAll(' ', '-')}'),
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          height: 42,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            label.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: selected ? JosiColors.white : JosiColors.ink,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddAddressField extends StatelessWidget {
+  const _AddAddressField({
+    required this.label,
+    required this.hintText,
+    required this.height,
+    super.key,
+  });
+
+  final String label;
+  final String hintText;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: height,
+          child: TextField(
+            maxLines: height > 70 ? 3 : 1,
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: JosiColors.softMuted.withValues(alpha: 0.62),
+                    fontSize: 18,
+                  ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+            ),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 16,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class CustomerTripDetailScreen extends ConsumerWidget {
   const CustomerTripDetailScreen({
     required this.tripId,
@@ -4312,7 +5005,7 @@ class CustomerProfileScreen extends ConsumerWidget {
                     _CustomerProfileMenuItem(
                       label: 'Manage Address',
                       asset: AppAssets.location,
-                      onTap: () => context.go(AppRoutes.customerSelectLocation),
+                      onTap: () => context.go(AppRoutes.customerManageAddress),
                     ),
                     _CustomerProfileMenuItem(
                       label: 'Notification',

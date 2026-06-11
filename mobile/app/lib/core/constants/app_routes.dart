@@ -15,6 +15,8 @@ class AppRoutes {
 
   static const String customerHome = '/customer/home';
   static const String customerSelectLocation = '/customer/select-location';
+  static const String customerManageAddress = '/customer/manage-address';
+  static const String customerAddAddress = '/customer/add-address';
   static const String customerConfirmTrip = '/customer/confirm-trip';
   static const String customerSearchingRider = '/customer/searching-rider';
   static const String customerRideNotFound =

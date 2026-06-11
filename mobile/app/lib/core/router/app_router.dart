@@ -82,6 +82,16 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const CustomerSelectLocationScreen(),
       ),
       GoRoute(
+        path: AppRoutes.customerManageAddress,
+        builder: (BuildContext context, GoRouterState state) =>
+            const CustomerManageAddressScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.customerAddAddress,
+        builder: (BuildContext context, GoRouterState state) =>
+            const CustomerAddAddressScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.customerConfirmTrip,
         builder: (BuildContext context, GoRouterState state) =>
             const CustomerPaymentMethodsScreen(
