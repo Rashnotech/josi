@@ -104,6 +104,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
                 showNotFound: state.uri.queryParameters['empty'] == 'true'),
       ),
       GoRoute(
+        path: AppRoutes.customerDriverDetails,
+        builder: (BuildContext context, GoRouterState state) =>
+            const CustomerDriverDetailsScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.customerTripActive,
         builder: (BuildContext context, GoRouterState state) =>
             const CustomerActiveTripScreen(),

@@ -1961,40 +1961,58 @@ class _RideFoundSheet extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _DriverAvatar(name: 'Jenny Wilson', size: 52),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Jenny Wilson',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: JosiColors.ink,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Bike rider',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: JosiColors.softMuted,
-                              fontSize: 12,
-                            ),
-                      ),
-                      const SizedBox(height: 6),
-                      const _RideBikeIcon(
-                        key: ValueKey<String>('request-ride-bike-icon'),
-                        color: JosiColors.red,
-                        size: 22,
-                      ),
-                    ],
+                  child: InkWell(
+                    key: const ValueKey<String>(
+                        'request-ride-driver-details-link'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => context.push(AppRoutes.customerDriverDetails),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const _DriverAvatar(name: 'Jenny Wilson', size: 52),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                'Jenny Wilson',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      color: JosiColors.ink,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Bike rider',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: JosiColors.softMuted,
+                                      fontSize: 12,
+                                    ),
+                              ),
+                              const SizedBox(height: 6),
+                              const _RideBikeIcon(
+                                key: ValueKey<String>('request-ride-bike-icon'),
+                                color: JosiColors.red,
+                                size: 22,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -2873,33 +2891,52 @@ class _ActiveTripSheet extends StatelessWidget {
             const SizedBox(height: 14),
             Row(
               children: <Widget>[
-                const _DriverAvatar(name: 'Jenny Wilson', size: 56),
-                const SizedBox(width: 14),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Jenny Wilson',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: JosiColors.ink,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Sedan',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: JosiColors.softMuted,
-                              fontSize: 14,
-                            ),
-                      ),
-                    ],
+                  child: InkWell(
+                    key: const ValueKey<String>(
+                        'active-trip-driver-details-link'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => context.push(AppRoutes.customerDriverDetails),
+                    child: Row(
+                      children: <Widget>[
+                        const _DriverAvatar(name: 'Jenny Wilson', size: 56),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                'Jenny Wilson',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      color: JosiColors.ink,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Sedan',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: JosiColors.softMuted,
+                                      fontSize: 14,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+                const SizedBox(width: 12),
                 const _ContactRoundButton(icon: Icons.chat_bubble_rounded),
                 const SizedBox(width: 12),
                 const _ContactRoundButton(icon: Icons.call_rounded),
@@ -3125,18 +3162,31 @@ class CustomerTripCompletedScreen extends StatelessWidget {
                   onBack: () => context.go(AppRoutes.customerTripActive),
                 ),
                 const SizedBox(height: 34),
-                const Center(
-                  child: _DriverAvatar(name: 'Jenny Wilson', size: 96),
-                ),
-                const SizedBox(height: 22),
-                Text(
-                  'Jenny Wilson',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: JosiColors.ink,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
+                InkWell(
+                  key: const ValueKey<String>(
+                      'completed-trip-driver-details-link'),
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => context.push(AppRoutes.customerDriverDetails),
+                  child: Column(
+                    children: <Widget>[
+                      const Center(
+                        child: _DriverAvatar(name: 'Jenny Wilson', size: 96),
                       ),
+                      const SizedBox(height: 22),
+                      Text(
+                        'Jenny Wilson',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              color: JosiColors.ink,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -3705,33 +3755,44 @@ class _BookingDriverRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        _BookingDriverAvatar(name: item.driverName),
-        const SizedBox(width: 16),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                item.driverName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: JosiColors.ink,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${item.vehicle} ( ${item.seats})',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: JosiColors.muted,
-                      fontSize: 15,
-                    ),
-              ),
-            ],
+          child: InkWell(
+            key: ValueKey<String>('activity-driver-details-link-${item.id}'),
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => context.push(AppRoutes.customerDriverDetails),
+            child: Row(
+              children: <Widget>[
+                _BookingDriverAvatar(name: item.driverName),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        item.driverName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: JosiColors.ink,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${item.vehicle} ( ${item.seats})',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: JosiColors.muted,
+                              fontSize: 15,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -4886,6 +4947,603 @@ class _AddAddressField extends StatelessWidget {
   }
 }
 
+enum _DriverDetailsTab {
+  about('About'),
+  review('Review');
+
+  const _DriverDetailsTab(this.label);
+
+  final String label;
+
+  String get key => switch (this) {
+        _DriverDetailsTab.about => 'driver-details-tab-about',
+        _DriverDetailsTab.review => 'driver-details-tab-review',
+      };
+}
+
+class CustomerDriverDetailsScreen extends StatefulWidget {
+  const CustomerDriverDetailsScreen({super.key});
+
+  @override
+  State<CustomerDriverDetailsScreen> createState() =>
+      _CustomerDriverDetailsScreenState();
+}
+
+class _CustomerDriverDetailsScreenState
+    extends State<CustomerDriverDetailsScreen> {
+  _DriverDetailsTab _selectedTab = _DriverDetailsTab.about;
+
+  void _selectTab(_DriverDetailsTab tab) {
+    setState(() {
+      _selectedTab = tab;
+    });
+  }
+
+  void _goBack(BuildContext context) {
+    final GoRouter router = GoRouter.of(context);
+    if (router.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(AppRoutes.customerHome);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-driver-details-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
+              children: <Widget>[
+                _ProfileHeader(
+                  title: 'Driver Details',
+                  onBack: () => _goBack(context),
+                ),
+                const SizedBox(height: 30),
+                const _DriverDetailsHeader(),
+                const SizedBox(height: 28),
+                const Divider(color: JosiColors.line),
+                const SizedBox(height: 22),
+                const _DriverDetailsStats(),
+                const SizedBox(height: 24),
+                _DriverDetailsTabs(
+                  selectedTab: _selectedTab,
+                  onSelected: _selectTab,
+                ),
+                const SizedBox(height: 26),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 160),
+                  child: _selectedTab == _DriverDetailsTab.about
+                      ? const _DriverDetailsAbout(
+                          key: ValueKey<String>('driver-details-about-panel'),
+                        )
+                      : const _DriverDetailsReviews(
+                          key: ValueKey<String>('driver-details-review-panel'),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DriverDetailsHeader extends StatelessWidget {
+  const _DriverDetailsHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        const _VerifiedDriverAvatar(size: 112),
+        const SizedBox(width: 22),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Jenny Wilson',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'example@gmail.com',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: JosiColors.softMuted,
+                      fontSize: 16,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  const Icon(Icons.location_on_rounded,
+                      color: JosiColors.red, size: 28),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'New York, United Stats',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: JosiColors.softMuted,
+                            fontSize: 16,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _VerifiedDriverAvatar extends StatelessWidget {
+  const _VerifiedDriverAvatar({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        children: <Widget>[
+          Container(
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: <Color>[Color(0xFFFFECEF), Color(0xFFFFD0D7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: JosiColors.white, width: 3),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x14000000),
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Text(
+              'JW',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: JosiColors.red,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 12,
+            child: Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: JosiColors.red,
+                shape: BoxShape.circle,
+                border: Border.all(color: JosiColors.white, width: 4),
+              ),
+              child: const Icon(Icons.check_rounded,
+                  color: JosiColors.white, size: 21),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverDetailsStats extends StatelessWidget {
+  const _DriverDetailsStats();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: <Widget>[
+        Expanded(
+          child: _DriverDetailsStat(
+            icon: Icons.groups_rounded,
+            value: '7,500+',
+            label: 'Customer',
+          ),
+        ),
+        Expanded(
+          child: _DriverDetailsStat(
+            icon: Icons.business_center_rounded,
+            value: '10+',
+            label: 'Years Exp.',
+          ),
+        ),
+        Expanded(
+          child: _DriverDetailsStat(
+            icon: Icons.star_rounded,
+            value: '4.9+',
+            label: 'Rating',
+          ),
+        ),
+        Expanded(
+          child: _DriverDetailsStat(
+            icon: Icons.chat_bubble_rounded,
+            value: '4,956',
+            label: 'Review',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DriverDetailsStat extends StatelessWidget {
+  const _DriverDetailsStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Container(
+          width: 58,
+          height: 58,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Color(0xFFF5F5F5),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: JosiColors.red, size: 30),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: JosiColors.red,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: JosiColors.softMuted,
+                fontSize: 13,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DriverDetailsTabs extends StatelessWidget {
+  const _DriverDetailsTabs({
+    required this.selectedTab,
+    required this.onSelected,
+  });
+
+  final _DriverDetailsTab selectedTab;
+  final ValueChanged<_DriverDetailsTab> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: JosiColors.line)),
+      ),
+      child: Row(
+        children: <Widget>[
+          for (final _DriverDetailsTab tab in _DriverDetailsTab.values)
+            Expanded(
+              child: InkWell(
+                key: ValueKey<String>(tab.key),
+                onTap: () => onSelected(tab),
+                child: SizedBox(
+                  height: 54,
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: <Widget>[
+                      Center(
+                        child: Text(
+                          tab.label,
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: tab == selectedTab
+                                        ? JosiColors.red
+                                        : JosiColors.softMuted,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        height: 4,
+                        width: tab == selectedTab ? 180 : 0,
+                        decoration: const BoxDecoration(
+                          color: JosiColors.red,
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(4)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverDetailsAbout extends StatelessWidget {
+  const _DriverDetailsAbout({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'About',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 16),
+        RichText(
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.softMuted,
+                  fontSize: 16,
+                  height: 1.58,
+                ),
+            children: <InlineSpan>[
+              const TextSpan(
+                text:
+                    'Professional Josi driver with verified ride history, clean vehicle records, and a strong customer rating. ',
+              ),
+              TextSpan(
+                text: 'Read more',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: JosiColors.red,
+                      fontSize: 16,
+                      decoration: TextDecoration.underline,
+                      decorationColor: JosiColors.red,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 28),
+        Text(
+          'Driver Contact',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: <Widget>[
+            const _DriverAvatar(name: 'Jenny Wilson', size: 54),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Jenny Wilson',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Driver',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: JosiColors.softMuted,
+                          fontSize: 14,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const _ContactRoundButton(icon: Icons.chat_bubble_rounded),
+            const SizedBox(width: 12),
+            const _ContactRoundButton(icon: Icons.call_rounded),
+          ],
+        ),
+        const SizedBox(height: 30),
+        Text(
+          'Car Details',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 16),
+        const _DriverCarDetailRow(label: 'Car Model', value: 'Hyundai Verna'),
+        const SizedBox(height: 14),
+        const _DriverCarDetailRow(label: 'Car Number', value: 'GR 678-UVWX'),
+        const SizedBox(height: 14),
+        const _DriverCarDetailRow(label: 'Car Color', value: 'White'),
+      ],
+    );
+  }
+}
+
+class _DriverCarDetailRow extends StatelessWidget {
+  const _DriverCarDetailRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.softMuted,
+                  fontSize: 16,
+                ),
+          ),
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DriverDetailsReviews extends StatelessWidget {
+  const _DriverDetailsReviews({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Review',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 14),
+        const _DriverReviewCard(
+          name: 'Rik Space',
+          body: 'Clean car, fast pickup, and smooth driving.',
+        ),
+        const SizedBox(height: 12),
+        const _DriverReviewCard(
+          name: 'Fatima Bello',
+          body: 'Jenny was polite and easy to reach during the trip.',
+        ),
+      ],
+    );
+  }
+}
+
+class _DriverReviewCard extends StatelessWidget {
+  const _DriverReviewCard({
+    required this.name,
+    required this.body,
+  });
+
+  final String name;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        border: Border.all(color: JosiColors.line),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  name,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: JosiColors.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              const Icon(Icons.star_rounded, color: JosiColors.red, size: 20),
+              const SizedBox(width: 4),
+              Text(
+                '5.0',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: JosiColors.ink,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            body,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: JosiColors.softMuted,
+                  fontSize: 14,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class CustomerTripDetailScreen extends ConsumerWidget {
   const CustomerTripDetailScreen({
     required this.tripId,
@@ -5008,29 +5666,14 @@ class CustomerProfileScreen extends ConsumerWidget {
                       onTap: () => context.go(AppRoutes.customerManageAddress),
                     ),
                     _CustomerProfileMenuItem(
-                      label: 'Notification',
-                      asset: AppAssets.notification,
-                      onTap: () => context.go(AppRoutes.customerNotifications),
-                    ),
-                    _CustomerProfileMenuItem(
                       label: 'Payment Methods',
                       asset: AppAssets.card,
                       onTap: () => context.go(AppRoutes.customerPaymentMethods),
                     ),
                     _CustomerProfileMenuItem(
-                      label: 'Pre-Booked Rides',
-                      asset: AppAssets.bikeLane,
-                      onTap: () => context.go(AppRoutes.customerTrips),
-                    ),
-                    _CustomerProfileMenuItem(
                       label: 'Settings',
                       icon: Icons.settings_outlined,
                       onTap: () => context.go(AppRoutes.customerSettings),
-                    ),
-                    _CustomerProfileMenuItem(
-                      label: 'Emergency Contact',
-                      icon: Icons.emergency_outlined,
-                      onTap: () => context.go(AppRoutes.customerSupport),
                     ),
                     _CustomerProfileMenuItem(
                       label: 'Help Center',

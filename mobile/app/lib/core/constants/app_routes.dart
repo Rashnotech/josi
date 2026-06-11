@@ -21,6 +21,7 @@ class AppRoutes {
   static const String customerSearchingRider = '/customer/searching-rider';
   static const String customerRideNotFound =
       '/customer/searching-rider?empty=true';
+  static const String customerDriverDetails = '/customer/driver-details';
   static const String customerTripActive = '/customer/trip-active';
   static const String customerTripCompleted = '/customer/trip-completed';
   static const String customerTrips = '/customer/trips';

@@ -533,6 +533,44 @@ void main() {
         findsOneWidget);
     expect(find.text('Ride Founded'), findsOneWidget);
     expect(find.text('Request Ride'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('request-ride-driver-details-link')),
+        findsOneWidget);
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('request-ride-driver-details-link')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-driver-details-screen')),
+        findsOneWidget);
+    expect(find.text('Driver Details'), findsOneWidget);
+    expect(find.text('example@gmail.com'), findsOneWidget);
+    expect(find.text('7,500+'), findsOneWidget);
+    expect(find.text('10+'), findsOneWidget);
+    expect(find.text('4.9+'), findsOneWidget);
+    expect(find.text('4,956'), findsOneWidget);
+    expect(find.text('Driver Contact'), findsOneWidget);
+    expect(find.text('Car Details'), findsOneWidget);
+    expect(find.text('Hyundai Verna'), findsOneWidget);
+    expect(find.text('GR 678-UVWX'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('driver-details-tab-review')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('driver-details-review-panel')),
+        findsOneWidget);
+    expect(find.text('Clean car, fast pickup, and smooth driving.'),
+        findsOneWidget);
+
+    final BuildContext driverDetailsContext = tester.element(
+      find.byKey(const ValueKey<String>('customer-driver-details-screen')),
+    );
+    driverDetailsContext.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
+        findsOneWidget);
 
     final Finder requestSheet =
         find.byKey(const ValueKey<String>('request-ride-bottom-sheet'));
@@ -635,6 +673,24 @@ void main() {
     final Text activeTab = tester.widget<Text>(find.text('Active'));
     expect(activeTab.style?.fontSize, 16);
 
+    await tester.tap(find.byKey(
+        const ValueKey<String>('activity-driver-details-link-TRP-2409')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-driver-details-screen')),
+        findsOneWidget);
+    expect(find.text('Driver Details'), findsOneWidget);
+    expect(find.text('Jenny Wilson'), findsWidgets);
+
+    final BuildContext activityDriverContext = tester.element(
+      find.byKey(const ValueKey<String>('customer-driver-details-screen')),
+    );
+    activityDriverContext.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-activity-screen')),
+        findsOneWidget);
+
     await tester
         .tap(find.byKey(const ValueKey<String>('activity-tab-completed')));
     await tester.pumpAndSettle();
@@ -679,6 +735,9 @@ void main() {
     expect(find.text('Your profile'), findsOneWidget);
     expect(find.text('Manage Address'), findsOneWidget);
     expect(find.text('Payment Methods'), findsOneWidget);
+    expect(find.text('Notification'), findsNothing);
+    expect(find.text('Pre-Booked Rides'), findsNothing);
+    expect(find.text('Emergency Contact'), findsNothing);
     expect(find.text('Activity'), findsOneWidget);
     expect(find.text('Rides'), findsOneWidget);
     expect(find.text('Wallet'), findsNothing);
