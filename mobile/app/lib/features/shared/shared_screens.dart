@@ -326,9 +326,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(28, 12, 28, 24),
+          padding: const EdgeInsets.fromLTRB(28, 10, 28, 18),
           child: SizedBox(
-            height: 62,
+            height: 52,
             child: ElevatedButton(
               key: const ValueKey<String>('profile-update-button'),
               onPressed: () {},
@@ -340,8 +340,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: JosiColors.white,
-                      fontSize: 23,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
               ),
               child: const Text('Update'),

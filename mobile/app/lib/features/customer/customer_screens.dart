@@ -661,7 +661,7 @@ class _CustomerSelectLocationScreenState
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+              padding: const EdgeInsets.fromLTRB(24, 5, 24, 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
@@ -1080,7 +1080,7 @@ class _SavedPlacesCard extends StatelessWidget {
               'Saved Places',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: JosiColors.ink,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -1113,8 +1113,8 @@ class _RecentDestinationTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: JosiColors.ink,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
                   ),
             ),
           ),
@@ -1171,7 +1171,7 @@ class _DestinationBottomBar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 14),
             child: SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 52,
               child: ElevatedButton(
                 key: const ValueKey<String>('destination-confirm-button'),
                 onPressed: onConfirm,
@@ -1183,8 +1183,8 @@ class _DestinationBottomBar extends StatelessWidget {
                   ),
                   textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: JosiColors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                 ),
                 child: const Text('Confirm'),
@@ -1271,7 +1271,7 @@ class _DashedLinePainter extends CustomPainter {
   }
 }
 
-enum _CustomerPaymentOption { cash, wallet, paypal, applePay, googlePay }
+enum _CustomerPaymentOption { cash, wallet }
 
 class CustomerPaymentMethodsScreen extends StatefulWidget {
   const CustomerPaymentMethodsScreen({
@@ -1331,7 +1331,7 @@ class _CustomerPaymentMethodsScreenState
                               _selectedOption == _CustomerPaymentOption.cash,
                           onTap: () => _select(_CustomerPaymentOption.cash),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 22),
                         const _PaymentSectionTitle('Wallet'),
                         const SizedBox(height: 10),
                         _PaymentOptionTile(
@@ -1345,7 +1345,7 @@ class _CustomerPaymentMethodsScreenState
                               _selectedOption == _CustomerPaymentOption.wallet,
                           onTap: () => _select(_CustomerPaymentOption.wallet),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 22),
                         const _PaymentSectionTitle('Credit & Debit Card'),
                         const SizedBox(height: 10),
                         _PaymentActionTile(
@@ -1356,13 +1356,6 @@ class _CustomerPaymentMethodsScreenState
                           ),
                           label: 'Add Card',
                           onTap: () {},
-                        ),
-                        const SizedBox(height: 28),
-                        const _PaymentSectionTitle('More Payment Options'),
-                        const SizedBox(height: 10),
-                        _MorePaymentOptionsCard(
-                          selectedOption: _selectedOption,
-                          onSelected: _select,
                         ),
                       ],
                     ),
@@ -1383,7 +1376,7 @@ class _CustomerPaymentMethodsScreenState
               padding: const EdgeInsets.fromLTRB(24, 10, 24, 18),
               child: SizedBox(
                 width: double.infinity,
-                height: 60,
+                height: 52,
                 child: ElevatedButton(
                   key: const ValueKey<String>('confirm-payment-button'),
                   onPressed: () => context.go(widget.confirmRoute),
@@ -1396,8 +1389,8 @@ class _CustomerPaymentMethodsScreenState
                     textStyle:
                         Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: JosiColors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                   ),
                   child: const Text('Confirm Payment'),
@@ -1443,7 +1436,7 @@ class _PaymentMethodsHeader extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: JosiColors.black,
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -1466,8 +1459,8 @@ class _PaymentSectionTitle extends StatelessWidget {
       title,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: JosiColors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
           ),
     );
   }
@@ -1525,103 +1518,8 @@ class _PaymentActionTile extends StatelessWidget {
           const SizedBox(width: 18),
           Expanded(child: _PaymentTileLabel(label)),
           const Icon(Icons.chevron_right_rounded,
-              color: JosiColors.red, size: 36),
+              color: JosiColors.red, size: 26),
         ],
-      ),
-    );
-  }
-}
-
-class _MorePaymentOptionsCard extends StatelessWidget {
-  const _MorePaymentOptionsCard({
-    required this.selectedOption,
-    required this.onSelected,
-  });
-
-  final _CustomerPaymentOption selectedOption;
-  final ValueChanged<_CustomerPaymentOption> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: JosiColors.line),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: <Widget>[
-          _GroupedPaymentOption(
-            key: const ValueKey<String>('payment-paypal-option'),
-            icon: const _PaypalMark(),
-            label: 'Paypal',
-            selected: selectedOption == _CustomerPaymentOption.paypal,
-            onTap: () => onSelected(_CustomerPaymentOption.paypal),
-          ),
-          const Divider(height: 1, color: JosiColors.line),
-          _GroupedPaymentOption(
-            key: const ValueKey<String>('payment-apple-pay-option'),
-            icon: const _PaymentMaterialIcon(
-              icon: Icons.apple,
-              color: JosiColors.black,
-            ),
-            label: 'Apple Pay',
-            selected: selectedOption == _CustomerPaymentOption.applePay,
-            onTap: () => onSelected(_CustomerPaymentOption.applePay),
-          ),
-          const Divider(height: 1, color: JosiColors.line),
-          _GroupedPaymentOption(
-            key: const ValueKey<String>('payment-google-pay-option'),
-            icon: SizedBox.square(
-              dimension: 36,
-              child: Center(
-                child:
-                    SvgPicture.asset(AppAssets.google, width: 30, height: 30),
-              ),
-            ),
-            label: 'Google Pay',
-            selected: selectedOption == _CustomerPaymentOption.googlePay,
-            onTap: () => onSelected(_CustomerPaymentOption.googlePay),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GroupedPaymentOption extends StatelessWidget {
-  const _GroupedPaymentOption({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    super.key,
-  });
-
-  final Widget icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: JosiColors.white,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: 58,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: <Widget>[
-                icon,
-                const SizedBox(width: 18),
-                Expanded(child: _PaymentTileLabel(label)),
-                _PaymentRadio(selected: selected),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1645,8 +1543,8 @@ class _PaymentTileFrame extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          height: 64,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
             border: Border.all(color: JosiColors.line),
             borderRadius: BorderRadius.circular(8),
@@ -1671,7 +1569,7 @@ class _PaymentTileLabel extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
             color: JosiColors.softMuted,
-            fontSize: 20,
+            fontSize: 16,
             fontWeight: FontWeight.w400,
           ),
     );
@@ -1686,8 +1584,8 @@ class _PaymentRadio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 28,
-      height: 28,
+      width: 24,
+      height: 24,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -1698,8 +1596,8 @@ class _PaymentRadio extends StatelessWidget {
       ),
       child: selected
           ? Container(
-              width: 16,
-              height: 16,
+              width: 12,
+              height: 12,
               decoration: const BoxDecoration(
                 color: JosiColors.red,
                 shape: BoxShape.circle,
@@ -1722,49 +1620,8 @@ class _PaymentMaterialIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
-      dimension: 36,
-      child: Center(child: Icon(icon, color: color, size: 30)),
-    );
-  }
-}
-
-class _PaypalMark extends StatelessWidget {
-  const _PaypalMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 36,
-      height: 36,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Transform.translate(
-            offset: const Offset(5, 2),
-            child: Text(
-              'P',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: const Color(0xFF179BD7),
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    fontStyle: FontStyle.italic,
-                  ),
-            ),
-          ),
-          Transform.translate(
-            offset: const Offset(-1, -1),
-            child: Text(
-              'P',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: const Color(0xFF003087),
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    fontStyle: FontStyle.italic,
-                  ),
-            ),
-          ),
-        ],
-      ),
+      dimension: 32,
+      child: Center(child: Icon(icon, color: color, size: 24)),
     );
   }
 }

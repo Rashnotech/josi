@@ -455,6 +455,7 @@ void main() {
     expect(find.text('Confirm'), findsOneWidget);
     _expectVisibleInViewport(
         tester, find.byKey(const ValueKey<String>('destination-screen-title')));
+    expect(tester.widget<Text>(find.text('Saved Places')).style?.fontSize, 16);
 
     await tester.tap(find
         .byKey(const ValueKey<String>('destination-current-location-field')));
@@ -472,6 +473,12 @@ void main() {
 
     _expectVisibleInViewport(tester,
         find.byKey(const ValueKey<String>('destination-confirm-button')));
+    expect(
+        tester
+            .getSize(find
+                .byKey(const ValueKey<String>('destination-confirm-button')))
+            .height,
+        52);
     _expectVisibleInViewport(tester, find.text('Rides'));
     _expectCustomerNavLabelColor(tester, 'Rides', JosiColors.red);
 
@@ -489,11 +496,17 @@ void main() {
         findsOneWidget);
     expect(find.text('Credit & Debit Card'), findsOneWidget);
     expect(find.text('Add Card'), findsOneWidget);
-    expect(find.text('More Payment Options'), findsOneWidget);
-    expect(find.text('Paypal'), findsOneWidget);
-    expect(find.text('Apple Pay'), findsOneWidget);
-    expect(find.text('Google Pay'), findsOneWidget);
+    expect(find.text('More Payment Options'), findsNothing);
+    expect(find.text('Paypal'), findsNothing);
+    expect(find.text('Apple Pay'), findsNothing);
+    expect(find.text('Google Pay'), findsNothing);
     expect(find.text('Confirm Payment'), findsOneWidget);
+    expect(
+        tester
+            .getSize(
+                find.byKey(const ValueKey<String>('confirm-payment-button')))
+            .height,
+        52);
 
     await tester
         .tap(find.byKey(const ValueKey<String>('confirm-payment-button')));
@@ -651,6 +664,12 @@ void main() {
     expect(find.text('Gender'), findsOneWidget);
     _expectVisibleInViewport(
         tester, find.byKey(const ValueKey<String>('profile-update-button')));
+    expect(
+        tester
+            .getSize(
+                find.byKey(const ValueKey<String>('profile-update-button')))
+            .height,
+        52);
   });
 
   testWidgets('customer profile opens payment methods instead of wallet',
@@ -668,7 +687,10 @@ void main() {
     expect(find.text('Cash'), findsWidgets);
     expect(find.text('Wallet'), findsWidgets);
     expect(find.text('Credit & Debit Card'), findsOneWidget);
-    expect(find.text('More Payment Options'), findsOneWidget);
+    expect(find.text('More Payment Options'), findsNothing);
+    expect(find.text('Paypal'), findsNothing);
+    expect(find.text('Apple Pay'), findsNothing);
+    expect(find.text('Google Pay'), findsNothing);
     expect(find.text('Confirm Payment'), findsOneWidget);
     expect(find.text('Available balance'), findsNothing);
     expect(find.text('Add money'), findsNothing);
