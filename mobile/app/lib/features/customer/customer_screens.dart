@@ -3339,47 +3339,856 @@ class _RateDriverReviewField extends StatelessWidget {
   }
 }
 
-class CustomerTripsScreen extends ConsumerWidget {
+enum _BookingActivityTab {
+  active('Active'),
+  completed('Completed'),
+  cancelled('Cancelled');
+
+  const _BookingActivityTab(this.label);
+
+  final String label;
+
+  String get key => switch (this) {
+        _BookingActivityTab.active => 'activity-tab-active',
+        _BookingActivityTab.completed => 'activity-tab-completed',
+        _BookingActivityTab.cancelled => 'activity-tab-cancelled',
+      };
+}
+
+class _BookingActivityItem {
+  const _BookingActivityItem({
+    required this.id,
+    required this.driverName,
+    required this.vehicle,
+    required this.seats,
+    required this.rating,
+    required this.distance,
+    required this.duration,
+    required this.rate,
+    required this.dateTime,
+    required this.pickup,
+    required this.destination,
+    required this.carNumber,
+    this.statusLabel,
+    this.expanded = false,
+  });
+
+  final String id;
+  final String? statusLabel;
+  final String driverName;
+  final String vehicle;
+  final String seats;
+  final String rating;
+  final String distance;
+  final String duration;
+  final String rate;
+  final String dateTime;
+  final String pickup;
+  final String destination;
+  final String carNumber;
+  final bool expanded;
+}
+
+const Map<_BookingActivityTab, List<_BookingActivityItem>>
+    _bookingActivityItems = <_BookingActivityTab, List<_BookingActivityItem>>{
+  _BookingActivityTab.active: <_BookingActivityItem>[
+    _BookingActivityItem(
+      id: 'TRP-2409',
+      driverName: 'Jenny Wilson',
+      vehicle: 'Sedan',
+      seats: '4 Seater',
+      rating: '5.0',
+      distance: '4.5 Mile',
+      duration: '4 mins',
+      rate: r'$1.25',
+      dateTime: 'Oct 18, 2023 | 08:00 AM',
+      pickup: '6391 Elgin St. Celina, Delawa...',
+      destination: '1901 Thornridge Cir. Sh...',
+      carNumber: 'GR 678-UVWX',
+      expanded: true,
+    ),
+  ],
+  _BookingActivityTab.completed: <_BookingActivityItem>[
+    _BookingActivityItem(
+      id: 'TRP-2408',
+      driverName: 'Byron Barlow',
+      vehicle: 'MPV',
+      seats: '5 Seater',
+      rating: '5.0',
+      distance: '4.5 Mile',
+      duration: '4 mins',
+      rate: r'$1.25',
+      dateTime: 'Oct 18, 2023 | 08:00 AM',
+      pickup: '6391 Elgin St. Celina, Delawa...',
+      destination: '1901 Thornridge Cir. Sh...',
+      carNumber: 'GR 678-UVWX',
+    ),
+    _BookingActivityItem(
+      id: 'TRP-2411',
+      driverName: 'Robert Fox',
+      vehicle: 'MPV',
+      seats: '5 Seater',
+      rating: '5.0',
+      distance: '4.5 Mile',
+      duration: '4 mins',
+      rate: r'$1.25',
+      dateTime: 'Oct 18, 2023 | 08:00 AM',
+      pickup: '6391 Elgin St. Celina, Delawa...',
+      destination: '1901 Thornridge Cir. Sh...',
+      carNumber: 'GR 678-UVWX',
+    ),
+  ],
+  _BookingActivityTab.cancelled: <_BookingActivityItem>[
+    _BookingActivityItem(
+      id: 'TRP-2410',
+      statusLabel: 'Cancelled by Driver',
+      driverName: 'Cody Fisher',
+      vehicle: 'MPV',
+      seats: '5 Seater',
+      rating: '5.0',
+      distance: '4.5 Mile',
+      duration: '4 mins',
+      rate: r'$1.25',
+      dateTime: 'Oct 18, 2023 | 08:00 AM',
+      pickup: '6391 Elgin St. Celina, Delawa...',
+      destination: '1901 Thornridge Cir. Sh...',
+      carNumber: 'GR 678-UVWX',
+    ),
+    _BookingActivityItem(
+      id: 'TRP-2412',
+      statusLabel: 'Cancelled by You',
+      driverName: 'Ralph Edwards',
+      vehicle: 'MPV',
+      seats: '5 Seater',
+      rating: '5.0',
+      distance: '4.5 Mile',
+      duration: '4 mins',
+      rate: r'$1.25',
+      dateTime: 'Oct 18, 2023 | 08:00 AM',
+      pickup: '6391 Elgin St. Celina, Delawa...',
+      destination: '1901 Thornridge Cir. Sh...',
+      carNumber: 'GR 678-UVWX',
+    ),
+  ],
+};
+
+class CustomerTripsScreen extends StatefulWidget {
   const CustomerTripsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Trip>> trips = ref.watch(tripsProvider);
+  State<CustomerTripsScreen> createState() => _CustomerTripsScreenState();
+}
 
-    return AppScaffold(
-      title: 'Trips',
-      subtitle: 'History and active requests',
-      navRole: AppNavRole.customer,
-      selectedTab: 'activity',
-      child: AppScreenBody(
-        children: <Widget>[
-          const _FilterRow(
-              filters: <String>['All', 'Active', 'Completed', 'Cancelled']),
-          const SizedBox(height: 14),
-          trips.when(
-            data: (List<Trip> values) => values.isEmpty
-                ? const EmptyState(
-                    title: 'No trips yet',
-                    message: 'Your completed rides will appear here.')
-                : Column(
-                    children: values.map((Trip trip) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: TripCard(
-                          trip: trip,
-                          onTap: () => context
-                              .go(AppRoutes.customerTripDetailPath(trip.id)),
-                        ),
-                      );
-                    }).toList(),
+class _CustomerTripsScreenState extends State<CustomerTripsScreen> {
+  _BookingActivityTab _selectedTab = _BookingActivityTab.active;
+
+  void _selectTab(_BookingActivityTab tab) {
+    setState(() {
+      _selectedTab = tab;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<_BookingActivityItem> items =
+        _bookingActivityItems[_selectedTab] ?? <_BookingActivityItem>[];
+
+    return Scaffold(
+      key: const ValueKey<String>('customer-activity-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Column(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                  child: _ProfileHeader(
+                    title: 'Bookings',
+                    onBack: () => context.go(AppRoutes.customerHome),
                   ),
-            error: (Object error, StackTrace stackTrace) => const ErrorState(
-                title: 'Trips unavailable', message: 'Please try again later.'),
-            loading: () => const SizedBox(
-                height: 220, child: LoadingState(label: 'Loading trips')),
+                ),
+                const SizedBox(height: 18),
+                _BookingTabs(
+                  selectedTab: _selectedTab,
+                  onSelected: _selectTab,
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    key: const ValueKey<String>('booking-activity-list'),
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                    itemBuilder: (BuildContext context, int index) {
+                      final _BookingActivityItem item = items[index];
+                      return _BookingActivityCard(
+                        item: item,
+                        tab: _selectedTab,
+                        onTap: () =>
+                            context.go(AppRoutes.customerTripDetailPath(
+                          item.id,
+                        )),
+                      );
+                    },
+                    separatorBuilder: (BuildContext context, int index) =>
+                        const SizedBox(height: 16),
+                    itemCount: items.length,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: const CustomerBottomNav(selectedTab: 'activity'),
+    );
+  }
+}
+
+class _BookingTabs extends StatelessWidget {
+  const _BookingTabs({
+    required this.selectedTab,
+    required this.onSelected,
+  });
+
+  final _BookingActivityTab selectedTab;
+  final ValueChanged<_BookingActivityTab> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: JosiColors.line)),
+      ),
+      child: Row(
+        children: <Widget>[
+          for (final _BookingActivityTab tab in _BookingActivityTab.values)
+            Expanded(
+              child: _BookingTabButton(
+                tab: tab,
+                selected: tab == selectedTab,
+                onTap: () => onSelected(tab),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingTabButton extends StatelessWidget {
+  const _BookingTabButton({
+    required this.tab,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _BookingActivityTab tab;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle? style = Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: selected ? JosiColors.red : JosiColors.muted,
+          fontSize: 16,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        );
+
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: InkWell(
+        key: ValueKey<String>(tab.key),
+        onTap: onTap,
+        child: SizedBox(
+          height: 54,
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: <Widget>[
+              Center(child: Text(tab.label, style: style)),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: selected ? 120 : 0,
+                height: 4,
+                decoration: const BoxDecoration(
+                  color: JosiColors.red,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingActivityCard extends StatelessWidget {
+  const _BookingActivityCard({
+    required this.item,
+    required this.tab,
+    required this.onTap,
+  });
+
+  final _BookingActivityItem item;
+  final _BookingActivityTab tab;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      borderRadius: BorderRadius.circular(8),
+      elevation: 3,
+      shadowColor: const Color(0x12000000),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: JosiColors.line),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (item.statusLabel != null) ...<Widget>[
+                Text(
+                  item.statusLabel!,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: JosiColors.red,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 14),
+              ],
+              _BookingDriverRow(item: item),
+              const _BookingDivider(height: 26),
+              _BookingStatsRow(item: item),
+              const SizedBox(height: 18),
+              _BookingDateRow(dateTime: item.dateTime),
+              const _BookingDivider(height: 24),
+              _BookingRouteSummary(
+                pickup: item.pickup,
+                destination: item.destination,
+              ),
+              const _BookingDivider(height: 22),
+              _BookingCarNumberRow(carNumber: item.carNumber),
+              if (item.expanded) ...<Widget>[
+                const SizedBox(height: 14),
+                const _BookingMiniMap(),
+                const SizedBox(height: 18),
+                const _BookingActionRow(),
+              ] else
+                Icon(
+                  Icons.keyboard_arrow_up_rounded,
+                  color: JosiColors.ink,
+                  size: 28,
+                  semanticLabel: '${tab.label} booking collapsed control',
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingDriverRow extends StatelessWidget {
+  const _BookingDriverRow({required this.item});
+
+  final _BookingActivityItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        _BookingDriverAvatar(name: item.driverName),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                item.driverName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${item.vehicle} ( ${item.seats})',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: JosiColors.muted,
+                      fontSize: 15,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.star_rounded, color: JosiColors.red, size: 26),
+            const SizedBox(width: 6),
+            Text(
+              item.rating,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingDriverAvatar extends StatelessWidget {
+  const _BookingDriverAvatar({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final String initials = name
+        .split(' ')
+        .take(2)
+        .map((String part) => part.isEmpty ? '' : part[0].toUpperCase())
+        .join();
+
+    return Container(
+      width: 62,
+      height: 62,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: JosiColors.redSoft,
+        border: Border.all(color: JosiColors.white, width: 2),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
+      child: Text(
+        initials,
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: JosiColors.red,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+      ),
+    );
+  }
+}
+
+class _BookingStatsRow extends StatelessWidget {
+  const _BookingStatsRow({required this.item});
+
+  final _BookingActivityItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: _BookingStat(
+            icon: Icons.location_on_outlined,
+            value: item.distance,
+          ),
+        ),
+        Expanded(
+          child: _BookingStat(
+            icon: Icons.access_time_rounded,
+            value: item.duration,
+          ),
+        ),
+        Expanded(
+          child: _BookingStat(
+            icon: Icons.work_outline_rounded,
+            value: item.rate,
+            suffix: '/mile',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingStat extends StatelessWidget {
+  const _BookingStat({
+    required this.icon,
+    required this.value,
+    this.suffix,
+  });
+
+  final IconData icon;
+  final String value;
+  final String? suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(icon, color: JosiColors.red, size: 24),
+        const SizedBox(width: 8),
+        Flexible(
+          child: RichText(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            text: TextSpan(
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+              children: <InlineSpan>[
+                TextSpan(text: value),
+                if (suffix != null)
+                  TextSpan(
+                    text: ' $suffix',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: JosiColors.muted,
+                          fontSize: 11,
+                        ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingDateRow extends StatelessWidget {
+  const _BookingDateRow({required this.dateTime});
+
+  final String dateTime;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Text(
+          'Date & Time',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: JosiColors.muted,
+                fontSize: 14,
+              ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text(
+            dateTime,
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingRouteSummary extends StatelessWidget {
+  const _BookingRouteSummary({
+    required this.pickup,
+    required this.destination,
+  });
+
+  final String pickup;
+  final String destination;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 86,
+      child: Stack(
+        children: <Widget>[
+          const Positioned(
+            left: 13,
+            top: 31,
+            bottom: 31,
+            child: SizedBox(
+              width: 2,
+              child: CustomPaint(
+                painter: _DashedLinePainter(color: JosiColors.softMuted),
+              ),
+            ),
+          ),
+          _BookingRoutePoint(
+            icon: Icons.radio_button_checked_rounded,
+            color: JosiColors.ink,
+            text: pickup,
+          ),
+          Positioned(
+            left: 48,
+            right: 0,
+            top: 42,
+            child: Container(height: 1, color: JosiColors.line),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _BookingRoutePoint(
+              icon: Icons.location_on_rounded,
+              color: JosiColors.red,
+              text: destination,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingRoutePoint extends StatelessWidget {
+  const _BookingRoutePoint({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Icon(icon, color: color, size: 30),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingCarNumberRow extends StatelessWidget {
+  const _BookingCarNumberRow({required this.carNumber});
+
+  final String carNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Text(
+          'Car Number',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: JosiColors.muted,
+                fontSize: 14,
+              ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            carNumber,
+            textAlign: TextAlign.right,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingMiniMap extends StatelessWidget {
+  const _BookingMiniMap();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: const SizedBox(
+        height: 126,
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: CustomPaint(painter: _BookingMiniMapPainter()),
+            ),
+            Positioned(
+              left: 118,
+              bottom: 24,
+              child: _BookingMapPin(compact: true),
+            ),
+            Positioned(
+              right: 52,
+              bottom: 20,
+              child: _BookingMapPin(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingMapPin extends StatelessWidget {
+  const _BookingMapPin({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: compact ? 30 : 46,
+      height: compact ? 30 : 46,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: compact ? JosiColors.white : JosiColors.redSoft,
+      ),
+      child: Icon(
+        compact ? Icons.location_on_rounded : Icons.radio_button_checked,
+        color: JosiColors.red,
+        size: compact ? 26 : 34,
+      ),
+    );
+  }
+}
+
+class _BookingMiniMapPainter extends CustomPainter {
+  const _BookingMiniMapPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint background = Paint()..color = const Color(0xFFF3F4F5);
+    final Paint road = Paint()
+      ..color = JosiColors.white
+      ..strokeWidth = 9
+      ..strokeCap = StrokeCap.round;
+    final Paint lane = Paint()
+      ..color = const Color(0xFFDADDE1)
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    final Paint route = Paint()
+      ..color = JosiColors.ink
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawRect(Offset.zero & size, background);
+
+    for (double x = -40; x < size.width + 40; x += 72) {
+      canvas.drawLine(Offset(x, 0), Offset(x + 120, size.height), road);
+      canvas.drawLine(Offset(x + 14, 0), Offset(x + 134, size.height), lane);
+    }
+    for (double y = 16; y < size.height; y += 34) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y + 18), road);
+      canvas.drawLine(Offset(0, y + 10), Offset(size.width, y + 28), lane);
+    }
+
+    final Path path = Path()
+      ..moveTo(size.width * 0.34, size.height * 0.70)
+      ..lineTo(size.width * 0.52, size.height * 0.28)
+      ..lineTo(size.width * 0.78, size.height * 0.60);
+    canvas.drawPath(path, route);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BookingMiniMapPainter oldDelegate) => false;
+}
+
+class _BookingActionRow extends StatelessWidget {
+  const _BookingActionRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle? labelStyle = Theme.of(context)
+        .textTheme
+        .labelLarge
+        ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700);
+
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: OutlinedButton(
+              onPressed: () {},
+              style: OutlinedButton.styleFrom(
+                backgroundColor: const Color(0xFFF2F2F2),
+                foregroundColor: JosiColors.red,
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999)),
+                textStyle: labelStyle,
+              ),
+              child: const Text('Cancel'),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: JosiColors.red,
+                foregroundColor: JosiColors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999)),
+                textStyle: labelStyle,
+              ),
+              child: const Text('Reschedule'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingDivider extends StatelessWidget {
+  const _BookingDivider({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: const Center(child: Divider(height: 1, color: JosiColors.line)),
     );
   }
 }
@@ -3742,33 +4551,6 @@ class _CustomerProfileMenuItem extends StatelessWidget {
                 color: JosiColors.red, size: 28),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.filters});
-
-  final List<String> filters;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: filters
-            .map(
-              (String label) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  selected: label == 'All',
-                  onSelected: (bool value) {},
-                  label: Text(label),
-                ),
-              ),
-            )
-            .toList(),
       ),
     );
   }

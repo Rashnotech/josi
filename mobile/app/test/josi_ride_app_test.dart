@@ -616,8 +616,40 @@ void main() {
     await tester.tap(find.text('Activity').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('Trips'), findsWidgets);
-    expect(find.text('History and active requests'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-activity-screen')),
+        findsOneWidget);
+    expect(find.text('Bookings'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('activity-tab-active')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('activity-tab-completed')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('activity-tab-cancelled')),
+        findsOneWidget);
+    expect(find.text('Jenny Wilson'), findsOneWidget);
+    expect(find.text('Reschedule'), findsOneWidget);
+    expect(find.text('History and active requests'), findsNothing);
+    _expectCustomerNavLabelColor(tester, 'Activity', JosiColors.red);
+
+    final Text bookingsTitle = tester.widget<Text>(find.text('Bookings'));
+    expect(bookingsTitle.style?.fontSize, 20);
+    final Text activeTab = tester.widget<Text>(find.text('Active'));
+    expect(activeTab.style?.fontSize, 16);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('activity-tab-completed')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Byron Barlow'), findsOneWidget);
+    expect(find.text('Robert Fox'), findsOneWidget);
+    expect(find.text('Date & Time'), findsWidgets);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('activity-tab-cancelled')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cancelled by Driver'), findsOneWidget);
+    expect(find.text('Cancelled by You'), findsOneWidget);
+    expect(find.text('Cody Fisher'), findsOneWidget);
   });
 
   testWidgets(
