@@ -20,125 +20,54 @@ class RiderHomeScreen extends ConsumerStatefulWidget {
 
 class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
   bool _isOnline = true;
+  bool _showRideRequest = false;
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<JosiUser> user = ref.watch(currentRiderProvider);
-    final AsyncValue<WalletSummary> wallet = ref.watch(riderWalletProvider);
-    final AsyncValue<List<Trip>> trips = ref.watch(tripsProvider);
+    final Trip requestTrip = JosiMockData.trips.first;
 
-    return AppScaffold(
-      title: user.maybeWhen(
-          data: (JosiUser value) => 'Hi, ${value.name.split(' ').first}',
-          orElse: () => 'Rider home'),
-      subtitle: _isOnline ? 'Online and receiving requests' : 'Offline',
-      navRole: AppNavRole.rider,
-      selectedTab: 'home',
-      showBackButton: false,
-      actions: <Widget>[
-        Switch(
-          value: _isOnline,
-          activeThumbColor: JosiColors.success,
-          onChanged: (bool value) => setState(() => _isOnline = value),
-        ),
-      ],
-      child: AppScreenBody(
+    return Scaffold(
+      key: const ValueKey<String>('rider-home-screen'),
+      backgroundColor: JosiColors.white,
+      body: Stack(
         children: <Widget>[
-          AppCard(
-            child: Row(
-              children: <Widget>[
-                const StatusBadge(
-                  label: 'Under review',
-                  color: JosiColors.warning,
-                  softColor: JosiColors.warningSoft,
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => context.go(AppRoutes.riderApplicationStatus),
-                  child: const Text('Status'),
-                ),
-              ],
+          const Positioned.fill(child: _RiderDashboardMapBackdrop()),
+          Positioned(
+            left: 28,
+            right: 28,
+            top: MediaQuery.paddingOf(context).top + 68,
+            child: _RiderDashboardHeader(
+              isOnline: _isOnline,
+              onToggle: () => setState(() => _isOnline = !_isOnline),
             ),
           ),
-          const SizedBox(height: 14),
-          wallet.when(
-            data: (WalletSummary value) => GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.22,
-              physics: const NeverScrollableScrollPhysics(),
-              children: <Widget>[
-                MetricTile(
-                    label: 'Today earnings',
-                    value: value.todayEarnings,
-                    icon: Icons.payments_rounded),
-                MetricTile(
-                  label: 'Cash to remit',
-                  value: value.pendingRemittance,
-                  icon: Icons.price_check_rounded,
-                  color: JosiColors.warning,
-                ),
-                const MetricTile(
-                    label: 'Completed trips',
-                    value: '8',
-                    icon: Icons.route_rounded,
-                    color: JosiColors.info),
-                const MetricTile(
-                    label: 'Rating',
-                    value: '4.8',
-                    icon: Icons.star_rate_rounded,
-                    color: JosiColors.success),
-              ],
+          if (!_showRideRequest)
+            Positioned(
+              left: 28,
+              right: 28,
+              top: MediaQuery.paddingOf(context).top + 154,
+              child: const _RiderDashboardMetrics(),
             ),
-            error: (Object error, StackTrace stackTrace) => const ErrorState(
-                title: 'Earnings unavailable',
-                message: 'Rider wallet could not be loaded.'),
-            loading: () => const SizedBox(
-                height: 180, child: LoadingState(label: 'Loading earnings')),
-          ),
-          const SizedBox(height: 18),
-          AppCard(
-            onTap: () => context.go(AppRoutes.riderAvailableTrips),
-            child: Row(
-              children: <Widget>[
-                const Icon(Icons.local_taxi_rounded,
-                    color: JosiColors.red, size: 34),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text('Available trips',
-                          style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 4),
-                      Text('3 requests around Wuse and Jabi',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: JosiColors.muted)),
-                    ],
+          if (_showRideRequest)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: MediaQuery.paddingOf(context).top + 260,
+              child: const _RideRequestTimer(),
+            ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _showRideRequest
+                ? _RideRequestSheet(
+                    trip: requestTrip,
+                    onDecline: () => setState(() => _showRideRequest = false),
+                    onAccept: () => context
+                        .go(AppRoutes.riderActiveTripPath(requestTrip.id)),
+                  )
+                : _FindingJobsPanel(
+                    onFindingJobs: () =>
+                        setState(() => _showRideRequest = true),
                   ),
-                ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: JosiColors.muted),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          const SectionHeader(title: 'Active trip'),
-          trips.when(
-            data: (List<Trip> values) => TripCard(
-              trip: values[1],
-              onTap: () =>
-                  context.go(AppRoutes.riderActiveTripPath(values[1].id)),
-            ),
-            error: (Object error, StackTrace stackTrace) => const EmptyState(
-                title: 'No active trip',
-                message: 'Accepted trips will appear here.'),
-            loading: () => const SizedBox(
-                height: 140, child: LoadingState(label: 'Loading active trip')),
           ),
         ],
       ),
@@ -151,88 +80,114 @@ class RiderApplicationStatusScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
+    return Scaffold(
       key: const ValueKey<String>('rider-application-status-screen'),
-      title: 'Application status',
-      subtitle: 'Approval checklist',
-      child: AppScreenBody(
-        children: <Widget>[
-          AppCard(
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
             child: Column(
               children: <Widget>[
-                const Icon(Icons.hourglass_top_rounded,
-                    color: JosiColors.warning, size: 54),
-                const SizedBox(height: 12),
-                Text('Under review',
-                    style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 6),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(24, 10, 24, 0),
+                  child: Row(
+                    children: <Widget>[
+                      _RiderCircleBackButton(
+                          fallbackRoute: AppRoutes.roleSelection),
+                      Spacer(),
+                      SizedBox(width: 54),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 62),
                 Text(
-                  'Josi is reviewing your profile, documents, and vehicle information.',
+                  'Welcome!, Esther',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: JosiColors.muted),
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 33,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
-                const SizedBox(height: 14),
-                const Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: <Widget>[
-                    StatusBadge(
-                        label: 'pending',
-                        color: JosiColors.muted,
-                        softColor: JosiColors.surfaceStrong),
-                    StatusBadge(
-                        label: 'under_review',
-                        color: JosiColors.warning,
-                        softColor: JosiColors.warningSoft),
-                    StatusBadge(
-                        label: 'approved',
-                        color: JosiColors.success,
-                        softColor: JosiColors.successSoft),
-                    StatusBadge(
-                        label: 'rejected',
-                        color: JosiColors.red,
-                        softColor: JosiColors.redSoft),
-                    StatusBadge(
-                        label: 'suspended',
-                        color: JosiColors.redDark,
-                        softColor: JosiColors.redSoft),
-                  ],
+                const SizedBox(height: 52),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Text(
+                          'Required Steps',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: JosiColors.ink,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                        ),
+                        const SizedBox(height: 18),
+                        _RiderStepTile(
+                          label: 'Profile Picture',
+                          onTap: () =>
+                              context.go(AppRoutes.riderProfilePicture),
+                        ),
+                        const SizedBox(height: 16),
+                        _RiderStepTile(
+                          label: 'Bank Account Details',
+                          onTap: () =>
+                              context.go(AppRoutes.riderBankAccountDetails),
+                        ),
+                        const SizedBox(height: 16),
+                        _RiderStepTile(
+                          label: 'Driving Details',
+                          onTap: () => context.go(AppRoutes.riderVehicleSetup),
+                        ),
+                        const SizedBox(height: 36),
+                        Text(
+                          'Submitted Steps',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: JosiColors.ink,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                        ),
+                        const SizedBox(height: 18),
+                        _RiderStepTile(
+                          label: 'Government ID',
+                          onTap: () =>
+                              context.go(AppRoutes.riderDocumentUpload),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          const AppCard(
-            child: Column(
-              children: <Widget>[
-                _ChecklistRow(label: 'Profile completed', done: false),
-                _ChecklistRow(label: 'Profile picture uploaded', done: false),
-                _ChecklistRow(label: 'Bank account added', done: false),
-                _ChecklistRow(label: 'Documents uploaded', done: false),
-                _ChecklistRow(label: 'Vehicle added', done: true),
-                _ChecklistRow(label: 'Admin approval', done: false),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          AppButton(
-            label: 'Complete profile',
-            icon: Icons.person_add_alt_1_rounded,
-            onPressed: () => context.go(AppRoutes.riderProfileSetup),
-          ),
-          const SizedBox(height: 10),
-          AppButton(
-            label: 'Upload documents',
-            icon: Icons.upload_file_rounded,
-            variant: AppButtonVariant.secondary,
-            onPressed: () => context.go(AppRoutes.riderDocumentUpload),
-          ),
-        ],
+        ),
       ),
+      bottomNavigationBar: _RiderFixedBottomAction(
+        label: 'Continue',
+        onPressed: () => _showSubmissionSheet(context),
+      ),
+    );
+  }
+
+  void _showSubmissionSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext bottomSheetContext) {
+        return _ApplicationSubmittedSheet(
+          onGotIt: () {
+            Navigator.of(bottomSheetContext).pop();
+            context.go(AppRoutes.riderHome);
+          },
+        );
+      },
     );
   }
 }
@@ -1000,7 +955,7 @@ class RiderProfileScreen extends ConsumerWidget {
                             style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 4),
                         Text(
-                            '${value.completedTrips} trips • ${value.rating} rating',
+                            '${value.completedTrips} trips - ${value.rating} rating',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -1067,6 +1022,850 @@ class RiderProfileScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _RiderStepTile extends StatelessWidget {
+  const _RiderStepTile({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          height: 82,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: JosiColors.line),
+          ),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: JosiColors.red, size: 42),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ApplicationSubmittedSheet extends StatelessWidget {
+  const _ApplicationSubmittedSheet({required this.onGotIt});
+
+  final VoidCallback onGotIt;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey<String>('rider-submission-sheet'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(34, 18, 34, 20),
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 98,
+              height: 4,
+              decoration: BoxDecoration(
+                color: JosiColors.line,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 56),
+            Container(
+              width: 106,
+              height: 106,
+              decoration: const BoxDecoration(
+                color: JosiColors.red,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_rounded,
+                  color: JosiColors.white, size: 70),
+            ),
+            const SizedBox(height: 38),
+            Text(
+              'Application Submitted for\nVerification',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 27,
+                    height: 1.18,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 26),
+            Text(
+              'We will get in touch in 48 Working\nhours. Be ready to for your ride!',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: JosiColors.softMuted,
+                    fontSize: 22,
+                    height: 1.25,
+                  ),
+            ),
+            const SizedBox(height: 46),
+            SizedBox(
+              width: double.infinity,
+              height: 62,
+              child: ElevatedButton(
+                key: const ValueKey<String>('rider-submission-got-it'),
+                onPressed: onGotIt,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: JosiColors.red,
+                  foregroundColor: JosiColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: JosiColors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                child: const Text('Got it'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RiderDashboardHeader extends StatelessWidget {
+  const _RiderDashboardHeader({
+    required this.isOnline,
+    required this.onToggle,
+  });
+
+  final bool isOnline;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: JosiColors.line),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.person_rounded, color: JosiColors.red, size: 34),
+          const Spacer(),
+          InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: onToggle,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 48,
+              padding: const EdgeInsets.fromLTRB(24, 4, 5, 4),
+              decoration: BoxDecoration(
+                color: isOnline ? JosiColors.red : JosiColors.softMuted,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    isOnline ? 'Online' : 'Offline',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: JosiColors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: JosiColors.ink,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: JosiColors.white, width: 3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiderDashboardMetrics extends StatelessWidget {
+  const _RiderDashboardMetrics();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: <Widget>[
+        Expanded(
+          child: _RiderDashboardMetricCard(
+            label: 'Pre - Booked',
+            value: '10',
+            icon: Icons.calendar_month_rounded,
+          ),
+        ),
+        SizedBox(width: 16),
+        Expanded(
+          child: _RiderDashboardMetricCard(
+            label: 'Today Earned',
+            value: '\$754.00',
+            icon: Icons.attach_money_rounded,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RiderDashboardMetricCard extends StatelessWidget {
+  const _RiderDashboardMetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 110,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 62,
+            height: 62,
+            decoration: const BoxDecoration(
+              color: JosiColors.red,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: JosiColors.white, size: 32),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 18,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FindingJobsPanel extends StatelessWidget {
+  const _FindingJobsPanel({required this.onFindingJobs});
+
+  final VoidCallback onFindingJobs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(28, 0, 28, 20),
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 22,
+            offset: Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Container(
+              width: 96,
+              height: 5,
+              decoration: const BoxDecoration(
+                color: JosiColors.red,
+                borderRadius: BorderRadius.only(
+                  bottomRight: Radius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              height: 62,
+              child: ElevatedButton(
+                key: const ValueKey<String>('rider-finding-jobs-button'),
+                onPressed: onFindingJobs,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: JosiColors.red,
+                  foregroundColor: JosiColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: JosiColors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                child: const Text('Finding Jobs'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RideRequestTimer extends StatelessWidget {
+  const _RideRequestTimer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          SizedBox.square(
+            dimension: 150,
+            child: CircularProgressIndicator(
+              value: 0.78,
+              strokeWidth: 6,
+              strokeCap: StrokeCap.round,
+              backgroundColor: JosiColors.white.withValues(alpha: 0.75),
+              color: JosiColors.red,
+            ),
+          ),
+          Container(
+            width: 132,
+            height: 132,
+            decoration: const BoxDecoration(
+              color: JosiColors.white,
+              shape: BoxShape.circle,
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x12000000),
+                  blurRadius: 22,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                const Icon(Icons.hourglass_bottom_rounded,
+                    color: JosiColors.red, size: 32),
+                Text(
+                  '30',
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        color: JosiColors.red,
+                        fontSize: 38,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                Text(
+                  'Seconds',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideRequestSheet extends StatelessWidget {
+  const _RideRequestSheet({
+    required this.trip,
+    required this.onDecline,
+    required this.onAccept,
+  });
+
+  final Trip trip;
+  final VoidCallback onDecline;
+  final VoidCallback onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey<String>('rider-ride-request-sheet'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(28, 14, 28, 20),
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 24,
+            offset: Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Align(
+              child: Container(
+                width: 100,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: JosiColors.line,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 26),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'Ride Request',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                Text(
+                  '5 mins away',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 18,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Divider(color: JosiColors.line),
+            const SizedBox(height: 20),
+            Row(
+              children: <Widget>[
+                const ProfileAvatar(name: 'Esther Howard', size: 64),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Esther Howard',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: JosiColors.ink,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_paymentLabel(trip.paymentMethod)} Payment',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 18,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            const _RideRequestRouteSummary(),
+            const SizedBox(height: 24),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: SizedBox(
+                    height: 62,
+                    child: ElevatedButton(
+                      key: const ValueKey<String>('rider-ride-request-decline'),
+                      onPressed: onDecline,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: JosiColors.surface,
+                        foregroundColor: JosiColors.red,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        textStyle:
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: JosiColors.red,
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                      ),
+                      child: const Text('Decline'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: SizedBox(
+                    height: 62,
+                    child: ElevatedButton(
+                      key: const ValueKey<String>('rider-ride-request-accept'),
+                      onPressed: onAccept,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: JosiColors.red,
+                        foregroundColor: JosiColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        textStyle:
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: JosiColors.white,
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                      ),
+                      child: const Text('Accept'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RideRequestRouteSummary extends StatelessWidget {
+  const _RideRequestRouteSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Column(
+          children: <Widget>[
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: JosiColors.ink, width: 4),
+              ),
+              child: Center(
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: const BoxDecoration(
+                    color: JosiColors.ink,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+            CustomPaint(
+              size: const Size(1, 42),
+              painter: _VerticalDashedLinePainter(),
+            ),
+            const Icon(Icons.location_on_rounded,
+                color: JosiColors.red, size: 38),
+          ],
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '6391 Elgin St. Celina, Dejawa...',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 19,
+                      ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: JosiColors.surface,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '10 mins up',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: JosiColors.softMuted,
+                            fontSize: 17,
+                          ),
+                    ),
+                  ),
+                ),
+                Text(
+                  '1901 Thorrridge Cir. Sh...',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 19,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _VerticalDashedLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = JosiColors.softMuted
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    double y = 4;
+    while (y < size.height) {
+      canvas.drawLine(Offset(0, y), Offset(0, y + 5), paint);
+      y += 10;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _RiderDashboardMapBackdrop extends StatelessWidget {
+  const _RiderDashboardMapBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _RiderDashboardMapPainter(),
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+class _RiderDashboardMapPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+        Offset.zero & size, Paint()..color = const Color(0xFFF5F6F7));
+
+    final Paint roadPaint = Paint()
+      ..color = JosiColors.white
+      ..strokeWidth = 13
+      ..strokeCap = StrokeCap.round;
+    final Paint minorRoadPaint = Paint()
+      ..color = const Color(0xFFE7EAEE)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final Paint arrowPaint = Paint()
+      ..color = const Color(0xFFBFC4CB)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    for (final double x in <double>[0.12, 0.36, 0.60, 0.86]) {
+      canvas.drawLine(
+        Offset(size.width * x, -size.height * 0.08),
+        Offset(size.width * (x - 0.28), size.height * 1.08),
+        roadPaint,
+      );
+    }
+    for (final double y in <double>[0.10, 0.28, 0.48, 0.68, 0.88]) {
+      canvas.drawLine(
+        Offset(-size.width * 0.1, size.height * y),
+        Offset(size.width * 1.1, size.height * (y + 0.18)),
+        roadPaint,
+      );
+    }
+    for (final double x in <double>[0.24, 0.48, 0.74]) {
+      canvas.drawLine(
+        Offset(size.width * x, 0),
+        Offset(size.width * (x + 0.12), size.height),
+        minorRoadPaint,
+      );
+    }
+    for (final double y in <double>[0.20, 0.38, 0.58, 0.78]) {
+      canvas.drawLine(
+        Offset(0, size.height * y),
+        Offset(size.width, size.height * (y - 0.09)),
+        minorRoadPaint,
+      );
+    }
+
+    _drawStreetLabel(canvas, size, 'Reade St', const Offset(0.38, 0.26), 0.34);
+    _drawStreetLabel(canvas, size, 'Broadway', const Offset(0.70, 0.18), -1.04);
+    _drawStreetLabel(canvas, size, 'Warren St', const Offset(0.22, 0.38), 0.38);
+    _drawStreetLabel(canvas, size, 'Park Row', const Offset(0.30, 0.60), -0.2);
+    _drawStreetLabel(canvas, size, 'Gold St', const Offset(0.66, 0.78), -0.78);
+
+    for (final Offset point in <Offset>[
+      const Offset(0.28, 0.32),
+      const Offset(0.54, 0.22),
+      const Offset(0.72, 0.40),
+      const Offset(0.36, 0.62),
+      const Offset(0.66, 0.70),
+    ]) {
+      final Offset center =
+          Offset(size.width * point.dx, size.height * point.dy);
+      canvas.drawLine(center.translate(-8, -8), center, arrowPaint);
+      canvas.drawLine(center, center.translate(-4, 8), arrowPaint);
+    }
+
+    _drawNavigationPulse(canvas, size, const Offset(0.78, 0.58));
+
+    final Rect fadeRect = Offset.zero & size;
+    canvas.drawRect(
+      fadeRect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0x15FFFFFF),
+            Color(0x00FFFFFF),
+            Color(0xAAFFFFFF),
+          ],
+          stops: <double>[0, 0.55, 1],
+        ).createShader(fadeRect),
+    );
+  }
+
+  void _drawStreetLabel(
+    Canvas canvas,
+    Size size,
+    String text,
+    Offset offset,
+    double rotation,
+  ) {
+    canvas.save();
+    canvas.translate(size.width * offset.dx, size.height * offset.dy);
+    canvas.rotate(rotation);
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          color: Color(0xFFB8BCC2),
+          fontSize: 25,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, Offset.zero);
+    canvas.restore();
+  }
+
+  void _drawNavigationPulse(Canvas canvas, Size size, Offset point) {
+    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
+    canvas.drawCircle(
+        center, 54, Paint()..color = JosiColors.red.withValues(alpha: 0.18));
+    canvas.drawCircle(center, 31, Paint()..color = JosiColors.red);
+    canvas.drawCircle(center, 25, Paint()..color = JosiColors.white);
+    canvas.drawCircle(center, 21, Paint()..color = JosiColors.red);
+    final Path arrow = Path()
+      ..moveTo(center.dx - 8, center.dy - 12)
+      ..lineTo(center.dx + 14, center.dy)
+      ..lineTo(center.dx - 7, center.dy + 10)
+      ..close();
+    canvas.drawPath(arrow, Paint()..color = JosiColors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _RiderFlowScaffold extends StatelessWidget {
@@ -1973,36 +2772,6 @@ class _RiderMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _ChecklistRow extends StatelessWidget {
-  const _ChecklistRow({
-    required this.label,
-    required this.done,
-  });
-
-  final String label;
-  final bool done;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: <Widget>[
-          Icon(
-              done
-                  ? Icons.check_circle_rounded
-                  : Icons.radio_button_unchecked_rounded,
-              color: done ? JosiColors.success : JosiColors.muted),
-          const SizedBox(width: 10),
-          Expanded(
-              child:
-                  Text(label, style: Theme.of(context).textTheme.bodyMedium)),
-        ],
-      ),
-    );
-  }
 }
 
 class _FilterRow extends StatelessWidget {
