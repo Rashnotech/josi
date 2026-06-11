@@ -162,6 +162,15 @@ void main() {
         .tap(find.byKey(const ValueKey<String>('rider-submission-got-it')));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey<String>('rider-location-access-screen')),
+        findsOneWidget);
+    expect(find.text('Enable Location Access'), findsOneWidget);
+    expect(find.text('Allow Location Access'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-location-allow-button')));
+    await tester.pumpAndSettle();
+
     expect(find.byKey(const ValueKey<String>('rider-home-screen')),
         findsOneWidget);
     expect(find.text('Online'), findsOneWidget);
@@ -222,7 +231,66 @@ void main() {
         .tap(find.byKey(const ValueKey<String>('rider-active-trip-continue')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Start Trip'), findsWidgets);
+    expect(find.text('Destination'), findsWidgets);
+    expect(find.text('Navigate to Destination'), findsOneWidget);
+
+    await tester.tap(find
+        .byKey(const ValueKey<String>('rider-navigate-destination-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Arrived At Destination'), findsOneWidget);
+    expect(find.text('Arrived At Customer Location'), findsOneWidget);
+    expect(find.text('Collect Cash'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-collect-cash-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-collect-cash-screen')),
+        findsOneWidget);
+    expect(find.text('Cash Collected'), findsOneWidget);
+    expect(find.text('Total Amount'), findsOneWidget);
+  });
+
+  testWidgets('rider bookings can cancel and show success',
+      (WidgetTester tester) async {
+    await _loginAsRider(tester);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderTrips);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-bookings-screen')),
+        findsOneWidget);
+    expect(find.text('Bookings'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
+    expect(find.text('Track Rider'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-booking-cancel-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-cancel-ride-screen')),
+        findsOneWidget);
+    expect(find.text('Please select the reason for cancelations:'),
+        findsOneWidget);
+    expect(find.text('Rider Not Available'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Cancel Ride'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-cancel-success-sheet')),
+        findsOneWidget);
+    expect(find.text('Booking Cancelled\nSuccessfully!'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-cancel-success-got-it')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-bookings-screen')),
+        findsOneWidget);
   });
 
   testWidgets('customer create account opens customer signup and submits',

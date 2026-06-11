@@ -151,6 +151,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const RiderHomeScreen(),
       ),
       GoRoute(
+        path: AppRoutes.riderLocationAccess,
+        builder: (BuildContext context, GoRouterState state) =>
+            const RiderLocationAccessScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.riderApplicationStatus,
         builder: (BuildContext context, GoRouterState state) =>
             const RiderApplicationStatusScreen(),
@@ -198,6 +203,16 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
           return RiderActiveTripScreen(
               tripId: state.pathParameters['id'] ?? 'TRP-2408');
         },
+      ),
+      GoRoute(
+        path: AppRoutes.riderCollectCash,
+        builder: (BuildContext context, GoRouterState state) =>
+            const RiderCollectCashScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.riderCancelRide,
+        builder: (BuildContext context, GoRouterState state) =>
+            const RiderCancelRideScreen(),
       ),
       GoRoute(
         path: AppRoutes.riderTripCompleted,

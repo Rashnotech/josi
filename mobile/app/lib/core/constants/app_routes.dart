@@ -31,6 +31,7 @@ class AppRoutes {
   static const String customerSettings = '/customer/settings';
 
   static const String riderHome = '/rider/home';
+  static const String riderLocationAccess = '/rider/location-access';
   static const String riderApplicationStatus = '/rider/application-status';
   static const String riderProfileSetup = '/rider/profile-setup';
   static const String riderProfilePicture = '/rider/profile-picture';
@@ -40,6 +41,8 @@ class AppRoutes {
   static const String riderAvailableTrips = '/rider/available-trips';
   static const String riderTripRequest = '/rider/trip-request/:id';
   static const String riderActiveTrip = '/rider/active-trip/:id';
+  static const String riderCollectCash = '/rider/collect-cash';
+  static const String riderCancelRide = '/rider/cancel-ride';
   static const String riderTripCompleted = '/rider/trip-completed/:id';
   static const String riderTrips = '/rider/trips';
   static const String riderWallet = '/rider/wallet';
