@@ -375,7 +375,7 @@ class _CurrentLocationBarState extends State<_CurrentLocationBar> {
                         color: JosiColors.muted,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
+                        letterSpacing: 0,
                       ),
                 ),
               ),
@@ -859,7 +859,7 @@ class _DestinationHeader extends StatelessWidget {
           child: const _AssetIcon(
             asset: AppAssets.arrowLeft,
             color: JosiColors.redDark,
-            size: 22,
+            size: 18,
           ),
         ),
         Expanded(
@@ -1080,8 +1080,8 @@ class _SavedPlacesCard extends StatelessWidget {
               'Saved Places',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: JosiColors.ink,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
             ),
           ),
@@ -1431,9 +1431,9 @@ class _PaymentMethodsHeader extends StatelessWidget {
               customBorder: const CircleBorder(),
               onTap: onBack,
               child: const SizedBox.square(
-                dimension: 48,
+                dimension: 42,
                 child: Icon(Icons.arrow_back_rounded,
-                    color: JosiColors.black, size: 27),
+                    color: JosiColors.black, size: 20),
               ),
             ),
           ),
@@ -1448,7 +1448,7 @@ class _PaymentMethodsHeader extends StatelessWidget {
                   ),
             ),
           ),
-          const SizedBox(width: 48),
+          const SizedBox(width: 42),
         ],
       ),
     );
@@ -1745,7 +1745,7 @@ class _PaypalMark extends StatelessWidget {
               'P',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: const Color(0xFF179BD7),
-                    fontSize: 34,
+                    fontSize: 30,
                     fontWeight: FontWeight.w800,
                     fontStyle: FontStyle.italic,
                   ),
@@ -1757,7 +1757,7 @@ class _PaypalMark extends StatelessWidget {
               'P',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: const Color(0xFF003087),
-                    fontSize: 34,
+                    fontSize: 30,
                     fontWeight: FontWeight.w800,
                     fontStyle: FontStyle.italic,
                   ),
@@ -1917,15 +1917,15 @@ class _RideFoundView extends StatelessWidget {
           ),
           Positioned(
             right: 24,
-            bottom: 308,
+            bottom: 236,
             child: _LocateMeButton(onTap: () {}),
           ),
           DraggableScrollableSheet(
-            initialChildSize: 0.4,
-            minChildSize: 0.32,
-            maxChildSize: 0.58,
+            initialChildSize: 0.31,
+            minChildSize: 0.28,
+            maxChildSize: 0.45,
             snap: true,
-            snapSizes: const <double>[0.4, 0.58],
+            snapSizes: const <double>[0.31, 0.45],
             builder: (BuildContext context, ScrollController scrollController) {
               return _RideFoundSheet(
                 scrollController: scrollController,
@@ -2213,8 +2213,8 @@ class _RideNotFoundSheet extends StatelessWidget {
             'Ride Not Found',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: JosiColors.ink,
-                  fontSize: 27,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
                 ),
           ),
           const SizedBox(height: 8),
@@ -2369,12 +2369,12 @@ class _FloatingBackButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: const SizedBox.square(
-          dimension: 54,
+          dimension: 44,
           child: Center(
             child: _AssetIcon(
               asset: AppAssets.arrowLeft,
               color: JosiColors.ink,
-              size: 25,
+              size: 19,
             ),
           ),
         ),
@@ -2700,7 +2700,7 @@ class _RideMapPainter extends CustomPainter {
         text: text,
         style: const TextStyle(
           color: Color(0xFFB8BCC2),
-          fontSize: 28,
+          fontSize: 20,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -2746,9 +2746,10 @@ class CustomerActiveTripScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Active trip',
-      subtitle: 'Rider is en route',
+    return _ActiveTripScaffold(
+      key: const ValueKey<String>('customer-active-trip-shell'),
+      title: 'Driver Arrived',
+      subtitle: 'Driver arrived',
       child: AppScreenBody(
         children: <Widget>[
           const AppMapPlaceholder(
@@ -2828,12 +2829,420 @@ class CustomerActiveTripScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           AppButton(
-            label: 'Complete trip preview',
+            label: 'Trip preview',
             icon: Icons.check_circle_rounded,
             onPressed: () => context.go(AppRoutes.customerTripCompleted),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ActiveTripScaffold extends StatelessWidget {
+  const _ActiveTripScaffold({
+    required Widget child,
+    super.key,
+    String? title,
+    String? subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-active-trip-screen'),
+      backgroundColor: JosiColors.white,
+      body: Stack(
+        children: <Widget>[
+          const Positioned.fill(child: _ActiveTripMapBackdrop()),
+          Positioned(
+            left: 24,
+            top: MediaQuery.paddingOf(context).top + 26,
+            child: _FloatingBackButton(
+              onTap: () => context.go(AppRoutes.customerHome),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + 48,
+            left: 0,
+            right: 0,
+            child: Text(
+              'Driver Arrived',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          Positioned(
+            right: 24,
+            bottom: 300,
+            child: _LocateMeButton(onTap: () {}),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _ActiveTripSheet(
+              onTripPreview: () => context.go(AppRoutes.customerTripCompleted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveTripMapBackdrop extends StatelessWidget {
+  const _ActiveTripMapBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return Stack(
+          children: <Widget>[
+            const Positioned.fill(
+              child: CustomPaint(
+                painter: _RideMapPainter(showRoute: true),
+                child: SizedBox.expand(),
+              ),
+            ),
+            Positioned(
+              left: constraints.maxWidth * 0.56 - 20,
+              top: constraints.maxHeight * 0.33 - 20,
+              child: const _CarMapMarker(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CarMapMarker extends StatelessWidget {
+  const _CarMapMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: -0.52,
+      child: Container(
+        width: 42,
+        height: 42,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: JosiColors.ink,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 12,
+              offset: Offset(0, 7),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.directions_car_filled_rounded,
+          color: JosiColors.white,
+          size: 24,
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveTripSheet extends StatelessWidget {
+  const _ActiveTripSheet({required this.onTripPreview});
+
+  final VoidCallback onTripPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 430),
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x18000000),
+            blurRadius: 24,
+            offset: Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 96,
+              height: 4,
+              decoration: BoxDecoration(
+                color: JosiColors.line,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'Driver Arrived',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+                Text(
+                  '5 min Away',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 14,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(color: JosiColors.line),
+            const SizedBox(height: 14),
+            Row(
+              children: <Widget>[
+                const _DriverAvatar(name: 'Jenny Wilson', size: 56),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Jenny Wilson',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: JosiColors.ink,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Sedan',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 14,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const _ContactRoundButton(icon: Icons.chat_bubble_rounded),
+                const SizedBox(width: 12),
+                const _ContactRoundButton(icon: Icons.call_rounded),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const _ActiveTripRouteSummary(),
+            const SizedBox(height: 16),
+            const Divider(color: JosiColors.line),
+            const SizedBox(height: 14),
+            const Row(
+              children: <Widget>[
+                Expanded(
+                  child: _ActiveTripStat(label: 'Rate per', value: r'$1.25'),
+                ),
+                Expanded(
+                  child: _ActiveTripStat(
+                      label: 'Car Number', value: 'GR 678-UVWX'),
+                ),
+                Expanded(
+                  child:
+                      _ActiveTripStat(label: 'No. of Seats', value: '4 Seats'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _RidePrimaryButton(
+              key: const ValueKey<String>('trip-preview-button'),
+              label: 'Trip preview',
+              onPressed: onTripPreview,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContactRoundButton extends StatelessWidget {
+  const _ContactRoundButton({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 54,
+      height: 54,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: JosiColors.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Icon(icon, color: JosiColors.red, size: 24),
+    );
+  }
+}
+
+class _ActiveTripRouteSummary extends StatelessWidget {
+  const _ActiveTripRouteSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        const Positioned(
+          left: 16,
+          top: 26,
+          bottom: 26,
+          child: _RouteDashedLine(),
+        ),
+        Column(
+          children: <Widget>[
+            _ActiveRoutePoint(
+              icon: Icons.radio_button_checked_rounded,
+              iconColor: JosiColors.ink,
+              label: '6391 Elgin St. Celina, Delswa...',
+              trailing: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: JosiColors.white,
+                  border: Border.all(color: JosiColors.line),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'OTP - 6546',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 14,
+                      ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            const _ActiveRoutePoint(
+              icon: Icons.location_on_rounded,
+              iconColor: JosiColors.red,
+              label: '1901 Thornridge Cir. Sh...',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ActiveRoutePoint extends StatelessWidget {
+  const _ActiveRoutePoint({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        SizedBox(
+          width: 34,
+          child: Icon(icon, color: iconColor, size: 28),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 16,
+                ),
+          ),
+        ),
+        if (trailing != null) ...<Widget>[
+          const SizedBox(width: 8),
+          trailing!,
+        ],
+      ],
+    );
+  }
+}
+
+class _RouteDashedLine extends StatelessWidget {
+  const _RouteDashedLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 1,
+      height: 58,
+      child: CustomPaint(
+        painter: _DashedLinePainter(color: JosiColors.softMuted),
+      ),
+    );
+  }
+}
+
+class _ActiveTripStat extends StatelessWidget {
+  const _ActiveTripStat({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: JosiColors.softMuted,
+                fontSize: 13,
+              ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      ],
     );
   }
 }
@@ -3149,12 +3558,12 @@ class _ProfileHeader extends StatelessWidget {
             customBorder: const CircleBorder(),
             onTap: onBack,
             child: const SizedBox.square(
-              dimension: 48,
+              dimension: 42,
               child: Center(
                 child: _AssetIcon(
                   asset: AppAssets.arrowLeft,
                   color: JosiColors.ink,
-                  size: 23,
+                  size: 19,
                 ),
               ),
             ),
@@ -3166,12 +3575,12 @@ class _ProfileHeader extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: JosiColors.ink,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                 ),
           ),
         ),
-        const SizedBox(width: 48),
+        const SizedBox(width: 42),
       ],
     );
   }

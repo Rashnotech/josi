@@ -708,7 +708,7 @@ class AppScaffold extends StatelessWidget {
         leading: showBackButton && canPop
             ? IconButton(
                 onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: const Icon(Icons.arrow_back_rounded, size: 20),
               )
             : null,
         title: Column(

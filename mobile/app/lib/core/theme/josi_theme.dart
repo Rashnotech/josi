@@ -8,27 +8,27 @@ class JosiTheme {
   static ThemeData get light {
     final TextTheme textTheme = const TextTheme(
       displayLarge:
-          TextStyle(fontSize: 48, fontWeight: FontWeight.w800, height: 1.1),
+          TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.12),
       headlineLarge:
-          TextStyle(fontSize: 32, fontWeight: FontWeight.w800, height: 1.2),
+          TextStyle(fontSize: 24, fontWeight: FontWeight.w700, height: 1.18),
       headlineMedium:
-          TextStyle(fontSize: 24, fontWeight: FontWeight.w800, height: 1.18),
+          TextStyle(fontSize: 22, fontWeight: FontWeight.w600, height: 1.18),
       titleLarge:
-          TextStyle(fontSize: 20, fontWeight: FontWeight.w700, height: 1.22),
+          TextStyle(fontSize: 18, fontWeight: FontWeight.w600, height: 1.22),
       titleMedium:
-          TextStyle(fontSize: 17, fontWeight: FontWeight.w700, height: 1.25),
+          TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.25),
       titleSmall:
-          TextStyle(fontSize: 15, fontWeight: FontWeight.w700, height: 1.25),
+          TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.25),
       bodyLarge:
-          TextStyle(fontSize: 16, fontWeight: FontWeight.w500, height: 1.45),
+          TextStyle(fontSize: 16, fontWeight: FontWeight.w400, height: 1.4),
       bodyMedium:
-          TextStyle(fontSize: 14, fontWeight: FontWeight.w500, height: 1.45),
+          TextStyle(fontSize: 14, fontWeight: FontWeight.w400, height: 1.4),
       bodySmall:
-          TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 1.35),
+          TextStyle(fontSize: 12, fontWeight: FontWeight.w400, height: 1.35),
       labelLarge:
-          TextStyle(fontSize: 15, fontWeight: FontWeight.w800, height: 1.2),
+          TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.2),
       labelMedium:
-          TextStyle(fontSize: 12, fontWeight: FontWeight.w700, height: 1.2),
+          TextStyle(fontSize: 12, fontWeight: FontWeight.w600, height: 1.2),
     ).apply(
       bodyColor: JosiColors.ink,
       displayColor: JosiColors.ink,
@@ -65,7 +65,7 @@ class JosiTheme {
         hintStyle: textTheme.bodyMedium?.copyWith(color: JosiColors.softMuted),
         labelStyle: textTheme.labelMedium?.copyWith(
           color: JosiColors.softMuted,
-          letterSpacing: 0.7,
+          letterSpacing: 0,
         ),
         border: OutlineInputBorder(
           borderSide: const BorderSide(color: JosiColors.line),

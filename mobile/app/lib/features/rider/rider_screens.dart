@@ -123,7 +123,7 @@ class RiderLocationAccessScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 30,
+                          fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
                   ),
@@ -215,7 +215,7 @@ class RiderApplicationStatusScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         color: JosiColors.ink,
-                        fontSize: 33,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -1827,7 +1827,7 @@ class _BookingCancelledSheet extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: JosiColors.ink,
-                    fontSize: 27,
+                    fontSize: 22,
                     height: 1.18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1920,7 +1920,7 @@ class _RiderCollectCashCard extends StatelessWidget {
                   'Collect Cash',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: JosiColors.ink,
-                        fontSize: 32,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -1996,7 +1996,7 @@ class _RiderCollectCashCard extends StatelessWidget {
                   maxLines: 1,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: JosiColors.white,
-                        fontSize: 25,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -2054,7 +2054,7 @@ class _ApplicationSubmittedSheet extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: JosiColors.ink,
-                    fontSize: 27,
+                    fontSize: 22,
                     height: 1.18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -2257,7 +2257,7 @@ class _RiderDashboardMetricCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         color: JosiColors.ink,
-                        fontSize: 26,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -2378,7 +2378,7 @@ class _RideRequestTimer extends StatelessWidget {
                   '30',
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         color: JosiColors.red,
-                        fontSize: 38,
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -2450,7 +2450,7 @@ class _RideRequestSheet extends StatelessWidget {
                     'Ride Request',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 28,
+                          fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
                   ),
@@ -2778,7 +2778,7 @@ class _RiderDashboardMapPainter extends CustomPainter {
         text: text,
         style: const TextStyle(
           color: Color(0xFFB8BCC2),
-          fontSize: 25,
+          fontSize: 22,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -2868,7 +2868,7 @@ class _RiderFlowScaffold extends StatelessWidget {
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 color: JosiColors.ink,
-                                fontSize: 32,
+                                fontSize: 22,
                                 fontWeight: FontWeight.w800,
                               ),
                     ),
@@ -2937,12 +2937,12 @@ class _RiderCircleBackButton extends StatelessWidget {
           }
         },
         child: SizedBox.square(
-          dimension: 54,
+          dimension: 44,
           child: Center(
             child: SvgPicture.asset(
               AppAssets.arrowLeft,
-              width: 24,
-              height: 24,
+              width: 19,
+              height: 19,
               colorFilter:
                   const ColorFilter.mode(JosiColors.ink, BlendMode.srcIn),
             ),
@@ -3428,7 +3428,7 @@ class _RiderCustomerLocationSheet extends StatelessWidget {
                     title,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 26,
+                          fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
                   ),
@@ -3654,7 +3654,7 @@ class _RiderArrivedDestinationSheet extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: JosiColors.ink,
-                    fontSize: 27,
+                    fontSize: 22,
                     fontWeight: FontWeight.w800,
                   ),
             ),
@@ -3870,7 +3870,7 @@ class _RiderMapPainter extends CustomPainter {
         text: text,
         style: const TextStyle(
           color: Color(0xFFB8BCC2),
-          fontSize: 25,
+          fontSize: 22,
           fontWeight: FontWeight.w500,
         ),
       ),

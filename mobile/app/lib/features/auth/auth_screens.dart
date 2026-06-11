@@ -45,9 +45,9 @@ class RoleSelectionScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 25,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -182,9 +182,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: _isRider ? TextAlign.left : TextAlign.center,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: _isRider ? 30 : 32,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -580,7 +580,7 @@ class _SignupScaffold extends StatelessWidget {
     super.key,
     this.logoSize = 68,
     this.logoInnerSize = 68,
-    this.titleFontSize = 27,
+    this.titleFontSize = 22,
     this.topSpacing = 8,
     this.titleSpacing = 18,
     this.fieldSpacing = 24,
@@ -616,8 +616,8 @@ class _SignupScaffold extends StatelessWidget {
                       onPressed: onBack,
                       icon: SvgPicture.asset(
                         AppAssets.arrowLeft,
-                        width: 24,
-                        height: 24,
+                        width: 20,
+                        height: 20,
                         colorFilter: const ColorFilter.mode(
                             JosiColors.muted, BlendMode.srcIn),
                       ),
@@ -638,8 +638,8 @@ class _SignupScaffold extends StatelessWidget {
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           color: JosiColors.ink,
                           fontSize: titleFontSize,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -1252,9 +1252,9 @@ class _RecoveryScaffold extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 31,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -1461,7 +1461,7 @@ class _BackSquareButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
-      dimension: 48,
+      dimension: 42,
       child: Material(
         color: outlined ? JosiColors.white : const Color(0xFFF0F2F4),
         shape: RoundedRectangleBorder(
@@ -1475,8 +1475,8 @@ class _BackSquareButton extends StatelessWidget {
           child: Center(
             child: SvgPicture.asset(
               AppAssets.arrowLeft,
-              width: 24,
-              height: 24,
+              width: 20,
+              height: 20,
               colorFilter:
                   const ColorFilter.mode(JosiColors.ink, BlendMode.srcIn),
             ),

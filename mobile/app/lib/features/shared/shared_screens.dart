@@ -371,12 +371,12 @@ class _EditProfileHeader extends StatelessWidget {
             customBorder: const CircleBorder(),
             onTap: onBack,
             child: const SizedBox.square(
-              dimension: 50,
+              dimension: 42,
               child: Center(
                 child: _SharedAssetIcon(
                   asset: AppAssets.arrowLeft,
                   color: JosiColors.ink,
-                  size: 24,
+                  size: 19,
                 ),
               ),
             ),
@@ -388,12 +388,12 @@ class _EditProfileHeader extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: JosiColors.ink,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                 ),
           ),
         ),
-        const SizedBox(width: 50),
+        const SizedBox(width: 42),
       ],
     );
   }

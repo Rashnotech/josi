@@ -523,6 +523,7 @@ void main() {
 
     final Finder requestSheet =
         find.byKey(const ValueKey<String>('request-ride-bottom-sheet'));
+    expect(tester.getSize(requestSheet).height, lessThan(330));
     final double collapsedTop = tester.getTopLeft(requestSheet).dy;
     await tester.drag(requestSheet, const Offset(0, -160));
     await tester.pumpAndSettle();
@@ -531,8 +532,15 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('request-ride-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Active trip'), findsOneWidget);
-    expect(find.text('Rider is en route'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-active-trip-screen')),
+        findsOneWidget);
+    expect(find.text('Driver Arrived'), findsWidgets);
+    expect(find.text('Jenny Wilson'), findsOneWidget);
+    expect(find.text('Sedan'), findsOneWidget);
+    expect(find.text('OTP - 6546'), findsOneWidget);
+    expect(find.text('GR 678-UVWX'), findsOneWidget);
+    expect(find.text('Trip preview'), findsOneWidget);
+    expect(find.text('Cancel Ride'), findsNothing);
   });
 
   testWidgets('customer ride search can show a not found state',
@@ -651,6 +659,9 @@ void main() {
     expect(theme.colorScheme.secondary, JosiColors.charcoal);
     expect(theme.scaffoldBackgroundColor, JosiColors.surface);
     expect(theme.textTheme.bodyMedium?.fontFamily, 'Inter');
+    expect(theme.textTheme.titleLarge?.fontSize, 18);
+    expect(theme.textTheme.bodyMedium?.fontSize, 14);
+    expect(theme.textTheme.labelLarge?.fontWeight, FontWeight.w600);
   });
 }
 
