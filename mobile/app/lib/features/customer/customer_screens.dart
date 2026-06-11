@@ -588,57 +588,6 @@ class _SavedPlaceButton extends StatelessWidget {
   }
 }
 
-class CustomerBookTripScreen extends StatelessWidget {
-  const CustomerBookTripScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Book a trip',
-      subtitle: 'Ride or package delivery',
-      child: AppScreenBody(
-        children: <Widget>[
-          const AppMapPlaceholder(height: 220),
-          const SizedBox(height: 16),
-          const AppTextField(
-              label: 'Pickup',
-              hintText: 'Wuse 2, Abuja',
-              icon: Icons.radio_button_checked_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Destination',
-              hintText: 'Jabi Lake Mall',
-              icon: Icons.location_on_rounded),
-          const SizedBox(height: 16),
-          AppCard(
-            child: Row(
-              children: <Widget>[
-                const Icon(Icons.inventory_2_rounded, color: JosiColors.red),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Package delivery uses the same confirmation flow with pickup and recipient destination.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: JosiColors.muted),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          AppButton(
-            label: 'Continue',
-            icon: Icons.arrow_forward_rounded,
-            onPressed: () => context.go(AppRoutes.customerConfirmTrip),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class CustomerSelectLocationScreen extends StatefulWidget {
   const CustomerSelectLocationScreen({super.key});
 
@@ -746,7 +695,7 @@ class _CustomerSelectLocationScreenState
         ),
       ),
       bottomNavigationBar: _DestinationBottomBar(
-        onConfirm: () => context.go(AppRoutes.customerSearchingRider),
+        onConfirm: () => context.go(AppRoutes.customerConfirmTrip),
       ),
     );
   }
@@ -1285,7 +1234,7 @@ class _CustomerFixedBottomNav extends StatelessWidget {
                 tab: 'rides',
                 label: 'Rides',
                 asset: AppAssets.bikeLane,
-                route: AppRoutes.customerBookTrip,
+                route: AppRoutes.customerSelectLocation,
                 selectedTab: selectedTab,
               ),
               _CustomerNavItem(
@@ -1436,8 +1385,9 @@ class _CustomerConfirmTripScreenState extends State<CustomerConfirmTripScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Confirm trip',
-      subtitle: 'Fare estimate and payment',
+      key: const ValueKey<String>('customer-payment-methods-screen'),
+      title: 'Payment Methods',
+      subtitle: 'Fare estimate and trip type',
       child: AppScreenBody(
         children: <Widget>[
           TripCard(trip: JosiMockData.trips[0]),

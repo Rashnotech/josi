@@ -34,6 +34,20 @@ function Assert-Contains {
   }
 }
 
+function Assert-NotContains {
+  param(
+    [string] $RelativePath,
+    [string] $Pattern,
+    [string] $Message
+  )
+
+  $path = Join-Path $appRoot $RelativePath
+  $content = Get-Content -LiteralPath $path -Raw
+  if ($content -match $Pattern) {
+    throw $Message
+  }
+}
+
 function Assert-MinBytes {
   param(
     [string] $RelativePath,
@@ -155,16 +169,25 @@ Assert-Contains "lib/features/customer/customer_screens.dart" "destination-locat
 Assert-Contains "lib/features/customer/customer_screens.dart" "destination-current-location-field" "Destination current location must trigger GPS."
 Assert-Contains "lib/features/customer/customer_screens.dart" "AppAssets\.history" "Customer Activity navigation must use the history SVG."
 Assert-Contains "lib/features/customer/customer_screens.dart" "AppAssets\.office" "Customer Office tile must use the office SVG."
+Assert-Contains "lib/features/customer/customer_screens.dart" "customer-payment-methods-screen" "Destination must continue into the payment methods step."
+Assert-NotContains "lib/features/customer/customer_screens.dart" "CustomerBookTripScreen" "Redundant Book a trip screen must be removed."
+Assert-NotContains "lib/features/customer/customer_screens.dart" "Book a trip" "Redundant Book a trip copy must be removed."
+Assert-NotContains "lib/core/constants/app_routes.dart" "customerBookTrip" "Redundant customer book-trip route must be removed."
+Assert-NotContains "lib/core/router/app_router.dart" "customerBookTrip" "Router must not expose the redundant book-trip route."
+Assert-NotContains "lib/core/mock/josi_mock_data.dart" "customerBookTrip" "Customer quick actions must route through destination instead of book-trip."
 
 Assert-Contains "test/josi_ride_app_test.dart" "starts on red splash and advances to role selection" "Tests must cover splash-to-role flow."
 Assert-Contains "test/josi_ride_app_test.dart" "customer role opens customer login" "Tests must cover customer login."
 Assert-Contains "test/josi_ride_app_test.dart" "customer home map fills screen and where to sheet drags up" "Tests must cover the customer home full-screen map and draggable where-to sheet."
 Assert-Contains "test/josi_ride_app_test.dart" "destination-location-field" "Tests must cover editable destination input."
 Assert-Contains "test/josi_ride_app_test.dart" "josi_ride/device_location" "Tests must mock the native GPS channel."
+Assert-Contains "test/josi_ride_app_test.dart" "customer rides navigation opens destination instead of book trip" "Tests must cover removing the Book a trip screen from customer navigation."
+Assert-Contains "test/josi_ride_app_test.dart" "customer-payment-methods-screen" "Tests must cover destination connecting to payment methods."
 Assert-Contains "test/josi_ride_app_test.dart" "rider role opens rider login" "Tests must cover rider login."
 Assert-Contains "test/josi_ride_app_test.dart" "customer create account opens customer signup" "Tests must cover customer signup."
 Assert-Contains "test/josi_ride_app_test.dart" "rider role opens rider login and create account reaches rider signup" "Tests must cover rider signup."
 Assert-Contains "evals/design_contract.md" "draggable where-to bottom sheet" "Design eval must include the customer home map and draggable sheet contract."
 Assert-Contains "evals/design_contract.md" "current location can fill from device GPS" "Design eval must include destination GPS behavior."
+Assert-Contains "evals/design_contract.md" "obsolete Book a trip screen" "Design eval must require removing the redundant Book a trip screen."
 
 Write-Host "OK: Josi first-run redline, SVG assets, design tokens, tests, and eval contract are present."

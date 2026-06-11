@@ -479,6 +479,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
+        find.byKey(const ValueKey<String>('customer-payment-methods-screen')),
+        findsOneWidget);
+    expect(find.text('Payment Methods'), findsOneWidget);
+    expect(find.text('Payment method'), findsOneWidget);
+    expect(find.text('Confirm request'), findsOneWidget);
+
+    await tester.tap(find.text('Confirm request'));
+    await tester.pumpAndSettle();
+
+    expect(
         find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
         findsOneWidget);
     expect(find.text('Searching Ride...'), findsOneWidget);
@@ -509,6 +519,8 @@ void main() {
     await tester
         .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm request'));
+    await tester.pumpAndSettle();
 
     final BuildContext context = tester.element(
       find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
@@ -533,6 +545,20 @@ void main() {
 
     expect(find.text('Trips'), findsWidgets);
     expect(find.text('History and active requests'), findsOneWidget);
+  });
+
+  testWidgets(
+      'customer rides navigation opens destination instead of book trip',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Rides').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-destination-screen')),
+        findsOneWidget);
+    expect(find.text('Destination'), findsOneWidget);
+    expect(find.text('Book a trip'), findsNothing);
   });
 
   testWidgets('customer profile opens editable profile form',

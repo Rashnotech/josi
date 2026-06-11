@@ -77,11 +77,6 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const CustomerHomeScreen(),
       ),
       GoRoute(
-        path: AppRoutes.customerBookTrip,
-        builder: (BuildContext context, GoRouterState state) =>
-            const CustomerBookTripScreen(),
-      ),
-      GoRoute(
         path: AppRoutes.customerSelectLocation,
         builder: (BuildContext context, GoRouterState state) =>
             const CustomerSelectLocationScreen(),

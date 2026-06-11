@@ -201,11 +201,11 @@ class JosiMockData {
     QuickAction(
         label: 'Book Ride',
         icon: Icons.local_taxi_rounded,
-        route: AppRoutes.customerBookTrip),
+        route: AppRoutes.customerSelectLocation),
     QuickAction(
         label: 'Send Package',
         icon: Icons.inventory_2_rounded,
-        route: AppRoutes.customerBookTrip),
+        route: AppRoutes.customerSelectLocation),
     QuickAction(
         label: 'Trip History',
         icon: Icons.history_rounded,
