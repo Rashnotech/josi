@@ -9,6 +9,7 @@ class AppAssets {
   static const String profile = 'assets/images/iconamoon--profile.svg';
   static const String bikeLane =
       'assets/images/material-symbols--bike-lane-rounded.svg';
+  static const String bike = 'assets/images/humbleicons--bike.svg';
   static const String home =
       'assets/images/material-symbols--home-outline-rounded.svg';
   static const String history =

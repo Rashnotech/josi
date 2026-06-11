@@ -493,14 +493,29 @@ void main() {
         findsOneWidget);
     expect(find.text('Searching Ride...'), findsOneWidget);
     expect(find.text('Book Mini'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('searching-ride-bike-icon')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('ride-map-bike-marker-0')),
+        findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey<String>('book-mini-button')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
         findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('request-ride-bottom-sheet')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('request-ride-bike-icon')),
+        findsOneWidget);
     expect(find.text('Ride Founded'), findsOneWidget);
     expect(find.text('Request Ride'), findsOneWidget);
+
+    final Finder requestSheet =
+        find.byKey(const ValueKey<String>('request-ride-bottom-sheet'));
+    final double collapsedTop = tester.getTopLeft(requestSheet).dy;
+    await tester.drag(requestSheet, const Offset(0, -160));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(requestSheet).dy, lessThan(collapsedTop - 80));
 
     await tester.tap(find.byKey(const ValueKey<String>('request-ride-button')));
     await tester.pumpAndSettle();

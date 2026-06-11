@@ -78,6 +78,7 @@ $requiredFiles = @(
   "assets/images/josi-logo.jpeg",
   "assets/images/ep--arrow-left-bold.svg",
   "assets/images/flat-color-icons--google.svg",
+  "assets/images/humbleicons--bike.svg",
   "assets/images/hugeicons--office.svg",
   "assets/images/iconamoon--profile.svg",
   "assets/images/line-md--email.svg",
@@ -131,6 +132,7 @@ Assert-Contains "lib/core/constants/app_assets.dart" "line-md--email\.svg" "Emai
 Assert-Contains "lib/core/constants/app_assets.dart" "ep--arrow-left-bold\.svg" "Back SVG asset must be registered."
 Assert-Contains "lib/core/constants/app_assets.dart" "uil--padlock\.svg" "Padlock SVG asset must be registered."
 Assert-Contains "lib/core/constants/app_assets.dart" "material-symbols--bike-lane-rounded\.svg" "Rider SVG asset must be registered."
+Assert-Contains "lib/core/constants/app_assets.dart" "humbleicons--bike\.svg" "Ride search bike SVG asset must be registered."
 Assert-Contains "lib/core/constants/app_assets.dart" "material-symbols--history-rounded\.svg" "Activity history SVG asset must be registered."
 Assert-Contains "lib/core/constants/app_assets.dart" "hugeicons--office\.svg" "Office SVG asset must be registered."
 Assert-Contains "lib/core/services/device_location_service.dart" "josi_ride/device_location" "Device location service must use the native GPS channel."
@@ -170,6 +172,10 @@ Assert-Contains "lib/features/customer/customer_screens.dart" "destination-curre
 Assert-Contains "lib/features/customer/customer_screens.dart" "AppAssets\.history" "Customer Activity navigation must use the history SVG."
 Assert-Contains "lib/features/customer/customer_screens.dart" "AppAssets\.office" "Customer Office tile must use the office SVG."
 Assert-Contains "lib/features/customer/customer_screens.dart" "customer-payment-methods-screen" "Destination must continue into the payment methods step."
+Assert-Contains "lib/features/customer/customer_screens.dart" "searching-ride-bike-icon" "Searching ride state must use the bike SVG."
+Assert-Contains "lib/features/customer/customer_screens.dart" "ride-map-bike-marker" "Ride search map must show bike markers."
+Assert-Contains "lib/features/customer/customer_screens.dart" "request-ride-bottom-sheet" "Request ride details must be a draggable bottom sheet."
+Assert-Contains "lib/features/customer/customer_screens.dart" "DraggableScrollableSheet" "Ride request sheet must be draggable."
 Assert-NotContains "lib/features/customer/customer_screens.dart" "CustomerBookTripScreen" "Redundant Book a trip screen must be removed."
 Assert-NotContains "lib/features/customer/customer_screens.dart" "Book a trip" "Redundant Book a trip copy must be removed."
 Assert-NotContains "lib/core/constants/app_routes.dart" "customerBookTrip" "Redundant customer book-trip route must be removed."
@@ -183,11 +189,14 @@ Assert-Contains "test/josi_ride_app_test.dart" "destination-location-field" "Tes
 Assert-Contains "test/josi_ride_app_test.dart" "josi_ride/device_location" "Tests must mock the native GPS channel."
 Assert-Contains "test/josi_ride_app_test.dart" "customer rides navigation opens destination instead of book trip" "Tests must cover removing the Book a trip screen from customer navigation."
 Assert-Contains "test/josi_ride_app_test.dart" "customer-payment-methods-screen" "Tests must cover destination connecting to payment methods."
+Assert-Contains "test/josi_ride_app_test.dart" "searching-ride-bike-icon" "Tests must cover the bike icon on ride search."
+Assert-Contains "test/josi_ride_app_test.dart" "request-ride-bottom-sheet" "Tests must cover the request ride bottom sheet."
 Assert-Contains "test/josi_ride_app_test.dart" "rider role opens rider login" "Tests must cover rider login."
 Assert-Contains "test/josi_ride_app_test.dart" "customer create account opens customer signup" "Tests must cover customer signup."
 Assert-Contains "test/josi_ride_app_test.dart" "rider role opens rider login and create account reaches rider signup" "Tests must cover rider signup."
 Assert-Contains "evals/design_contract.md" "draggable where-to bottom sheet" "Design eval must include the customer home map and draggable sheet contract."
 Assert-Contains "evals/design_contract.md" "current location can fill from device GPS" "Design eval must include destination GPS behavior."
 Assert-Contains "evals/design_contract.md" "obsolete Book a trip screen" "Design eval must require removing the redundant Book a trip screen."
+Assert-Contains "evals/design_contract.md" "humbleicons bike SVG" "Design eval must require the bike search map and request sheet."
 
 Write-Host "OK: Josi first-run redline, SVG assets, design tokens, tests, and eval contract are present."

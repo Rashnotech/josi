@@ -1439,7 +1439,7 @@ class _CustomerConfirmTripScreenState extends State<CustomerConfirmTripScreen> {
           const SizedBox(height: 18),
           AppButton(
             label: 'Confirm request',
-            icon: Icons.local_taxi_rounded,
+            icon: Icons.pedal_bike_rounded,
             onPressed: () => context.go(AppRoutes.customerSearchingRider),
           ),
         ],
@@ -1522,7 +1522,7 @@ class _SearchingRideView extends StatelessWidget {
         children: <Widget>[
           const Positioned.fill(
             child: _RideMapBackdrop(
-              showCars: true,
+              showBikes: true,
               showRoute: false,
             ),
           ),
@@ -1534,27 +1534,27 @@ class _SearchingRideView extends StatelessWidget {
           Positioned(
             left: 24,
             right: 24,
-            top: MediaQuery.paddingOf(context).top + 150,
+            top: MediaQuery.paddingOf(context).top + 136,
             child: Column(
               children: <Widget>[
                 const _SearchingRideBadge(),
-                const SizedBox(height: 26),
+                const SizedBox(height: 22),
                 Text(
                   'Searching Ride...',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: JosiColors.ink,
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   'This may take a few seconds...',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: JosiColors.softMuted,
-                        fontSize: 18,
+                        fontSize: 14,
                       ),
                 ),
               ],
@@ -1586,7 +1586,9 @@ class _RideFoundView extends StatelessWidget {
       backgroundColor: JosiColors.white,
       body: Stack(
         children: <Widget>[
-          const Positioned.fill(child: _RideMapBackdrop(showRoute: true)),
+          const Positioned.fill(
+            child: _RideMapBackdrop(showBikes: true, showRoute: true),
+          ),
           Positioned(
             left: 24,
             top: MediaQuery.paddingOf(context).top + 26,
@@ -1597,9 +1599,18 @@ class _RideFoundView extends StatelessWidget {
             bottom: 308,
             child: _LocateMeButton(onTap: () {}),
           ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: _RideFoundSheet(onRequestRide: onRequestRide),
+          DraggableScrollableSheet(
+            initialChildSize: 0.4,
+            minChildSize: 0.32,
+            maxChildSize: 0.58,
+            snap: true,
+            snapSizes: const <double>[0.4, 0.58],
+            builder: (BuildContext context, ScrollController scrollController) {
+              return _RideFoundSheet(
+                scrollController: scrollController,
+                onRequestRide: onRequestRide,
+              );
+            },
           ),
         ],
       ),
@@ -1681,8 +1692,8 @@ class _SearchingRideBadge extends StatelessWidget {
         );
       },
       child: Container(
-        width: 92,
-        height: 92,
+        width: 88,
+        height: 88,
         decoration: const BoxDecoration(
           color: JosiColors.white,
           shape: BoxShape.circle,
@@ -1694,124 +1705,166 @@ class _SearchingRideBadge extends StatelessWidget {
             ),
           ],
         ),
-        child: const Icon(Icons.local_taxi_rounded,
-            color: JosiColors.red, size: 48),
+        child: const Center(
+          child: _RideBikeIcon(
+            key: ValueKey<String>('searching-ride-bike-icon'),
+            color: JosiColors.red,
+            size: 48,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _RideFoundSheet extends StatelessWidget {
-  const _RideFoundSheet({required this.onRequestRide});
+  const _RideFoundSheet({
+    required this.scrollController,
+    required this.onRequestRide,
+  });
 
+  final ScrollController scrollController;
   final VoidCallback onRequestRide;
 
   @override
   Widget build(BuildContext context) {
-    return _RideSheet(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  'Ride Founded',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: JosiColors.ink,
-                        fontSize: 25,
-                        fontWeight: FontWeight.w800,
-                      ),
+    return Material(
+      key: const ValueKey<String>('request-ride-bottom-sheet'),
+      color: JosiColors.white,
+      elevation: 18,
+      shadowColor: JosiColors.charcoal.withValues(alpha: 0.16),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+      clipBehavior: Clip.antiAlias,
+      child: SafeArea(
+        top: false,
+        child: ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
+          children: <Widget>[
+            Center(
+              child: Container(
+                width: 72,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: JosiColors.line,
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              Text(
-                '5 min Away',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: JosiColors.softMuted,
-                      fontSize: 17,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          const Divider(color: JosiColors.line),
-          const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const _DriverAvatar(name: 'Jenny Wilson', size: 62),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'Ride Founded',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '5 min Away',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(color: JosiColors.line),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const _DriverAvatar(name: 'Jenny Wilson', size: 52),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Jenny Wilson',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: JosiColors.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Bike rider',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 12,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      const _RideBikeIcon(
+                        key: ValueKey<String>('request-ride-bike-icon'),
+                        color: JosiColors.red,
+                        size: 22,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: <Widget>[
-                    Text(
-                      'Jenny Wilson',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: JosiColors.ink,
-                            fontSize: 23,
-                            fontWeight: FontWeight.w800,
+                    Text.rich(
+                      TextSpan(
+                        text: '\$1.25',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: JosiColors.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                        children: <InlineSpan>[
+                          TextSpan(
+                            text: '/mi',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: JosiColors.softMuted,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                           ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Sedan (4 Seater)',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      'GR 678',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: JosiColors.softMuted,
-                            fontSize: 16,
+                            fontSize: 11,
                           ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  Text.rich(
-                    TextSpan(
-                      text: '\$1.25',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: JosiColors.ink,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                      children: <InlineSpan>[
-                        TextSpan(
-                          text: '/ per mile',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: JosiColors.softMuted,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'GR 678-UVWX',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: JosiColors.softMuted,
-                          fontSize: 15,
-                        ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _RidePrimaryButton(
-            key: const ValueKey<String>('request-ride-button'),
-            label: 'Request Ride',
-            onPressed: onRequestRide,
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 18),
+            _RidePrimaryButton(
+              key: const ValueKey<String>('request-ride-button'),
+              label: 'Request Ride',
+              onPressed: onRequestRide,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1959,7 +2012,7 @@ class _RidePrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 62,
+      height: 54,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -1969,7 +2022,7 @@ class _RidePrimaryButton extends StatelessWidget {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
           textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: JosiColors.white,
-                fontSize: 22,
+                fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
         ),
@@ -2069,45 +2122,141 @@ class _DriverAvatar extends StatelessWidget {
   }
 }
 
+class _MapBikeMarker extends StatelessWidget {
+  const _MapBikeMarker({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: JosiColors.red.withValues(alpha: 0.16)),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 14,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const _RideBikeIcon(color: JosiColors.red, size: 24),
+    );
+  }
+}
+
+class _RideBikeIcon extends StatelessWidget {
+  const _RideBikeIcon({
+    required this.color,
+    required this.size,
+    super.key,
+  });
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      AppAssets.bike,
+      width: size,
+      height: size,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+    );
+  }
+}
+
 class _RideMapBackdrop extends StatelessWidget {
   const _RideMapBackdrop({
-    this.showCars = false,
+    this.showBikes = false,
     this.showRoute = true,
   });
 
-  final bool showCars;
+  final bool showBikes;
   final bool showRoute;
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _RideMapPainter(showCars: showCars, showRoute: showRoute),
-      child: const SizedBox.expand(),
+    final List<Offset> bikes = showRoute
+        ? const <Offset>[Offset(0.58, 0.43)]
+        : const <Offset>[
+            Offset(0.22, 0.44),
+            Offset(0.75, 0.45),
+            Offset(0.52, 0.64),
+            Offset(0.22, 0.72),
+            Offset(0.78, 0.71),
+            Offset(0.42, 0.90),
+          ];
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _RideMapPainter(showRoute: showRoute),
+                child: const SizedBox.expand(),
+              ),
+            ),
+            if (showBikes)
+              for (int index = 0; index < bikes.length; index += 1)
+                Positioned(
+                  left: constraints.maxWidth * bikes[index].dx - 21,
+                  top: constraints.maxHeight * bikes[index].dy - 21,
+                  child: _MapBikeMarker(
+                    key: ValueKey<String>('ride-map-bike-marker-$index'),
+                  ),
+                ),
+          ],
+        );
+      },
     );
   }
 }
 
 class _RideMapPainter extends CustomPainter {
-  const _RideMapPainter({
-    required this.showCars,
-    required this.showRoute,
-  });
+  const _RideMapPainter({required this.showRoute});
 
-  final bool showCars;
   final bool showRoute;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(
-        Offset.zero & size, Paint()..color = const Color(0xFFF5F6F7));
+        Offset.zero & size, Paint()..color = const Color(0xFFEAF2EE));
+
+    final Paint districtPaint = Paint()..color = const Color(0xFFDCEED8);
+    final Paint waterPaint = Paint()..color = const Color(0xFFD8EAF7);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * 0.58, size.height * 0.06, size.width * 0.34,
+            size.height * 0.22),
+        const Radius.circular(26),
+      ),
+      districtPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(-size.width * 0.08, size.height * 0.54, size.width * 0.42,
+            size.height * 0.18),
+        const Radius.circular(42),
+      ),
+      waterPaint,
+    );
 
     final Paint roadPaint = Paint()
       ..color = JosiColors.white
-      ..strokeWidth = 11
+      ..strokeWidth = 18
       ..strokeCap = StrokeCap.round;
     final Paint minorRoadPaint = Paint()
-      ..color = const Color(0xFFE8EAED)
-      ..strokeWidth = 2.2
+      ..color = const Color(0xFFF7F8F7)
+      ..strokeWidth = 9
+      ..strokeCap = StrokeCap.round;
+    final Paint roadLinePaint = Paint()
+      ..color = JosiColors.mapLine
+      ..strokeWidth = 1.2
       ..strokeCap = StrokeCap.round;
     final Paint arrowPaint = Paint()
       ..color = const Color(0xFFC9CDD2)
@@ -2120,12 +2269,22 @@ class _RideMapPainter extends CustomPainter {
         Offset(size.width * (x - 0.24), size.height * 1.1),
         roadPaint,
       );
+      canvas.drawLine(
+        Offset(size.width * x, -size.height * 0.1),
+        Offset(size.width * (x - 0.24), size.height * 1.1),
+        roadLinePaint,
+      );
     }
     for (final double y in <double>[0.12, 0.28, 0.45, 0.66, 0.84]) {
       canvas.drawLine(
         Offset(-size.width * 0.1, size.height * y),
         Offset(size.width * 1.1, size.height * (y + 0.16)),
         roadPaint,
+      );
+      canvas.drawLine(
+        Offset(-size.width * 0.1, size.height * y),
+        Offset(size.width * 1.1, size.height * (y + 0.16)),
+        roadLinePaint,
       );
     }
     for (final double x in <double>[0.2, 0.46, 0.71]) {
@@ -2134,12 +2293,22 @@ class _RideMapPainter extends CustomPainter {
         Offset(size.width * (x + 0.12), size.height),
         minorRoadPaint,
       );
+      canvas.drawLine(
+        Offset(size.width * x, 0),
+        Offset(size.width * (x + 0.12), size.height),
+        roadLinePaint,
+      );
     }
     for (final double y in <double>[0.2, 0.38, 0.58, 0.76]) {
       canvas.drawLine(
         Offset(0, size.height * y),
         Offset(size.width, size.height * (y - 0.08)),
         minorRoadPaint,
+      );
+      canvas.drawLine(
+        Offset(0, size.height * y),
+        Offset(size.width, size.height * (y - 0.08)),
+        roadLinePaint,
       );
     }
 
@@ -2175,19 +2344,6 @@ class _RideMapPainter extends CustomPainter {
       canvas.drawPath(route, routePaint);
       _drawMapPin(canvas, size, const Offset(0.34, 0.22), isPickup: true);
       _drawDestinationPulse(canvas, size, const Offset(0.78, 0.62));
-    }
-
-    if (showCars) {
-      for (final Offset point in <Offset>[
-        const Offset(0.22, 0.44),
-        const Offset(0.75, 0.45),
-        const Offset(0.52, 0.64),
-        const Offset(0.22, 0.72),
-        const Offset(0.78, 0.71),
-        const Offset(0.42, 0.90),
-      ]) {
-        _drawCar(canvas, size, point);
-      }
     }
 
     final Rect fadeRect = Offset.zero & size;
@@ -2258,35 +2414,9 @@ class _RideMapPainter extends CustomPainter {
     canvas.drawPath(arrow, Paint()..color = JosiColors.white);
   }
 
-  void _drawCar(Canvas canvas, Size size, Offset point) {
-    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(-0.62);
-    final RRect shadow = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(-19, 4, 42, 21),
-      const Radius.circular(8),
-    );
-    canvas.drawRRect(shadow, Paint()..color = const Color(0x25000000));
-    final RRect body = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(-18, -10, 36, 20),
-      const Radius.circular(7),
-    );
-    canvas.drawRRect(body, Paint()..color = const Color(0xFF222629));
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-8, -8, 16, 16),
-        const Radius.circular(5),
-      ),
-      Paint()..color = const Color(0xFF3D4348),
-    );
-    canvas.restore();
-  }
-
   @override
   bool shouldRepaint(covariant _RideMapPainter oldDelegate) {
-    return oldDelegate.showCars != showCars ||
-        oldDelegate.showRoute != showRoute;
+    return oldDelegate.showRoute != showRoute;
   }
 }
 
