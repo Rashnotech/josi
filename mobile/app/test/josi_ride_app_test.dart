@@ -314,6 +314,7 @@ void main() {
     expect(find.byKey(const ValueKey<String>('rider-ride-request-sheet')),
         findsOneWidget);
     expect(find.text('Ride Request'), findsOneWidget);
+    expect(tester.widget<Text>(find.text('Ride Request')).style?.fontSize, 18);
     expect(find.text('Esther Howard'), findsOneWidget);
     expect(find.text('Accept'), findsOneWidget);
     expect(find.text('Decline'), findsOneWidget);
@@ -340,6 +341,12 @@ void main() {
     expect(find.byKey(const ValueKey<String>('rider-active-trip-screen')),
         findsOneWidget);
     expect(find.text('Customer Location'), findsWidgets);
+    expect(
+      tester
+          .widgetList<Text>(find.text('Customer Location'))
+          .every((Text widget) => widget.style?.fontSize == 18),
+      isTrue,
+    );
     expect(find.text('Esther Howard'), findsOneWidget);
     expect(find.text('Cash Payment'), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('rider-active-trip-continue')),
@@ -358,6 +365,12 @@ void main() {
 
     expect(find.text('Arrived At Destination'), findsOneWidget);
     expect(find.text('Arrived At Customer Location'), findsOneWidget);
+    expect(
+        tester
+            .widget<Text>(find.text('Arrived At Customer Location'))
+            .style
+            ?.fontSize,
+        18);
     expect(find.text('Collect Cash'), findsOneWidget);
 
     await tester
@@ -368,6 +381,13 @@ void main() {
         findsOneWidget);
     expect(find.text('Cash Collected'), findsOneWidget);
     expect(find.text('Total Amount'), findsOneWidget);
+    expect(
+      tester
+          .getSize(find.byKey(
+              const ValueKey<String>('rider-bottom-action-cash-collected')))
+          .height,
+      52,
+    );
   });
 
   testWidgets('rider bookings can cancel and show success',
@@ -384,6 +404,20 @@ void main() {
         findsOneWidget);
     expect(find.text('Bookings'), findsWidgets);
     expect(find.text('Active'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('rider-bookings-tab-active')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('rider-bookings-tab-completed')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('rider-bookings-tab-cancelled')),
+      findsOneWidget,
+    );
+    expect(tester.widget<Text>(find.text('Active')).style?.fontSize, 17);
+    expect(find.text('Jenny Wilson'), findsOneWidget);
     expect(find.text('Track Rider'), findsOneWidget);
 
     await tester
@@ -409,6 +443,39 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('rider-bookings-screen')),
         findsOneWidget);
+  });
+
+  testWidgets('rider bookings tabs show completed and cancelled variants',
+      (WidgetTester tester) async {
+    await _loginAsRider(tester);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderTrips);
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bookings-tab-completed')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Completed'), findsOneWidget);
+    expect(tester.widget<Text>(find.text('Completed')).style?.fontSize, 17);
+    expect(find.text('Byron Barlow'), findsOneWidget);
+    expect(find.text('Robert Fox'), findsOneWidget);
+    expect(find.text('Track Rider'), findsNothing);
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bookings-tab-cancelled')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cancelled'), findsOneWidget);
+    expect(tester.widget<Text>(find.text('Cancelled')).style?.fontSize, 17);
+    expect(find.text('Cancelled by You'), findsOneWidget);
+    expect(find.text('Cancelled by Rider'), findsOneWidget);
+    expect(find.text('Cody Fisher'), findsOneWidget);
+    expect(find.text('Ralph Edwards'), findsOneWidget);
+    expect(find.text('Track Rider'), findsNothing);
   });
 
   testWidgets('customer create account opens customer signup and submits',
