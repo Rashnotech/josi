@@ -63,9 +63,21 @@ void main() {
         findsOneWidget);
     expect(find.text('Where to?'), findsOneWidget);
     expect(find.text('Destination'), findsOneWidget);
+    expect(
+        tester.widget<Text>(find.text('Current Location')).style?.fontSize, 14);
+    expect(tester.widget<Text>(find.text('Destination')).style?.fontSize, 16);
+    expect(tester.widget<Text>(find.text('Office')).style?.fontSize, 16);
     expect(find.text('Last Trip'), findsOneWidget);
     _expectVisibleInViewport(tester, find.text('Home'));
     _expectVisibleInViewport(tester, find.text('Activity'));
+
+    await tester.tap(find.byKey(const ValueKey<String>('home-last-trip-tile')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-activity-screen')),
+        findsOneWidget);
+    expect(find.text('Bookings'), findsOneWidget);
+    expect(find.text('Trip detail'), findsNothing);
   });
 
   testWidgets('customer home map fills screen and where to sheet drags up',

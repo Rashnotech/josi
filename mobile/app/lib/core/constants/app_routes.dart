@@ -25,7 +25,6 @@ class AppRoutes {
   static const String customerTripActive = '/customer/trip-active';
   static const String customerTripCompleted = '/customer/trip-completed';
   static const String customerTrips = '/customer/trips';
-  static const String customerTripDetail = '/customer/trip-detail/:id';
   static const String customerPaymentMethods = '/customer/payment-methods';
   static const String customerNotifications = '/customer/notifications';
   static const String customerProfile = '/customer/profile';
@@ -62,9 +61,6 @@ class AppRoutes {
       '$verifyResetCode?role=$role';
 
   static String resetPasswordFor(String role) => '$resetPassword?role=$role';
-
-  static String customerTripDetailPath(String id) =>
-      '/customer/trip-detail/$id';
 
   static String riderTripRequestPath(String id) => '/rider/trip-request/$id';
 

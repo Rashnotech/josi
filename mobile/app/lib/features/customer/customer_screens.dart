@@ -373,8 +373,8 @@ class _CurrentLocationBarState extends State<_CurrentLocationBar> {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: JosiColors.muted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: 0,
                       ),
                 ),
@@ -478,7 +478,7 @@ class _WhereToPanel extends StatelessWidget {
             'Saved Places',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: JosiColors.ink,
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
           ),
@@ -561,7 +561,7 @@ class _SavedPlaceButton extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: JosiColors.ink,
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.w800,
                           ),
                     ),
@@ -572,7 +572,7 @@ class _SavedPlaceButton extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: JosiColors.muted,
-                            fontSize: 10,
+                            fontSize: 12,
                           ),
                     ),
                   ],
@@ -760,7 +760,7 @@ class _HomePlaceTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: foreground,
-                      fontSize: 12,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
               ),
@@ -771,7 +771,7 @@ class _HomePlaceTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: muted,
-                      fontSize: 10,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -794,7 +794,8 @@ class _LastTripTile extends StatelessWidget {
       color: const Color(0xFFFFF8F8),
       borderRadius: BorderRadius.circular(4),
       child: InkWell(
-        onTap: () => context.go(AppRoutes.customerTripDetailPath(trip.id)),
+        key: const ValueKey<String>('home-last-trip-tile'),
+        onTap: () => context.go(AppRoutes.customerTrips),
         borderRadius: BorderRadius.circular(4),
         child: Container(
           height: 56,
@@ -819,7 +820,7 @@ class _LastTripTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: JosiColors.ink,
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.w800,
                           ),
                     ),
@@ -829,7 +830,7 @@ class _LastTripTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: JosiColors.muted,
-                            fontSize: 10,
+                            fontSize: 12,
                           ),
                     ),
                   ],
@@ -3574,9 +3575,7 @@ class _CustomerTripsScreenState extends State<CustomerTripsScreen> {
                         item: item,
                         tab: _selectedTab,
                         onTap: () =>
-                            context.go(AppRoutes.customerTripDetailPath(
-                          item.id,
-                        )),
+                            context.push(AppRoutes.customerDriverDetails),
                       );
                     },
                     separatorBuilder: (BuildContext context, int index) =>
@@ -5544,77 +5543,6 @@ class _DriverReviewCard extends StatelessWidget {
   }
 }
 
-class CustomerTripDetailScreen extends ConsumerWidget {
-  const CustomerTripDetailScreen({
-    required this.tripId,
-    super.key,
-  });
-
-  final String tripId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Trip>> trips = ref.watch(tripsProvider);
-
-    return AppScaffold(
-      title: 'Trip detail',
-      subtitle: tripId,
-      child: AppScreenBody(
-        children: <Widget>[
-          trips.when(
-            data: (List<Trip> values) {
-              final Trip trip = values.firstWhere(
-                  (Trip value) => value.id == tripId,
-                  orElse: () => values.first);
-              return Column(
-                children: <Widget>[
-                  TripCard(trip: trip),
-                  const SizedBox(height: 16),
-                  const AppMapPlaceholder(height: 220),
-                  const SizedBox(height: 16),
-                  AppCard(
-                    child: Column(
-                      children: <Widget>[
-                        _SummaryRow(label: 'Rider', value: trip.riderName),
-                        _SummaryRow(
-                            label: 'Payment',
-                            value: _paymentLabel(trip.paymentMethod)),
-                        _SummaryRow(label: 'Distance', value: trip.distance),
-                        _SummaryRow(label: 'Duration', value: trip.duration),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const AppCard(
-                    child: _Timeline(labels: <String>[
-                      'Requested',
-                      'Accepted',
-                      'Picked up',
-                      'Completed'
-                    ]),
-                  ),
-                  const SizedBox(height: 16),
-                  AppButton(
-                    label: 'Receipt',
-                    icon: Icons.receipt_long_rounded,
-                    variant: AppButtonVariant.secondary,
-                    onPressed: () {},
-                  ),
-                ],
-              );
-            },
-            error: (Object error, StackTrace stackTrace) => const ErrorState(
-                title: 'Trip unavailable',
-                message: 'This trip could not be loaded.'),
-            loading: () => const SizedBox(
-                height: 220, child: LoadingState(label: 'Loading trip')),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class CustomerProfileScreen extends ConsumerWidget {
   const CustomerProfileScreen({super.key});
 
@@ -5971,16 +5899,5 @@ class _SummaryRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-String _paymentLabel(PaymentMethod method) {
-  switch (method) {
-    case PaymentMethod.cash:
-      return 'Cash';
-    case PaymentMethod.online:
-      return 'Online payment';
-    case PaymentMethod.wallet:
-      return 'Wallet';
   }
 }
