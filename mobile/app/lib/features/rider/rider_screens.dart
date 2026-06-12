@@ -33,9 +33,9 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
         children: <Widget>[
           const Positioned.fill(child: _RiderDashboardMapBackdrop()),
           Positioned(
-            left: 28,
-            right: 28,
-            top: MediaQuery.paddingOf(context).top + 68,
+            left: 20,
+            right: 20,
+            top: MediaQuery.paddingOf(context).top + 48,
             child: _RiderDashboardHeader(
               isOnline: _isOnline,
               onToggle: () => setState(() => _isOnline = !_isOnline),
@@ -43,9 +43,9 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
           ),
           if (!_showRideRequest)
             Positioned(
-              left: 28,
-              right: 28,
-              top: MediaQuery.paddingOf(context).top + 154,
+              left: 20,
+              right: 20,
+              top: MediaQuery.paddingOf(context).top + 122,
               child: const _RiderDashboardMetrics(),
             ),
           if (_showRideRequest)
@@ -71,6 +71,8 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
           ),
         ],
       ),
+      bottomNavigationBar:
+          const AppBottomNav(role: AppNavRole.rider, selectedTab: 'home'),
     );
   }
 }
@@ -831,6 +833,8 @@ class RiderTripsScreen extends StatelessWidget {
           ),
         ),
       ),
+      bottomNavigationBar:
+          const AppBottomNav(role: AppNavRole.rider, selectedTab: 'bookings'),
     );
   }
 }
@@ -2032,8 +2036,8 @@ class _RiderDashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: JosiColors.white,
         borderRadius: BorderRadius.circular(8),
@@ -2048,15 +2052,15 @@ class _RiderDashboardHeader extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.person_rounded, color: JosiColors.red, size: 34),
+          const Icon(Icons.person_rounded, color: JosiColors.red, size: 28),
           const Spacer(),
           InkWell(
             borderRadius: BorderRadius.circular(999),
             onTap: onToggle,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              height: 48,
-              padding: const EdgeInsets.fromLTRB(24, 4, 5, 4),
+              height: 40,
+              padding: const EdgeInsets.fromLTRB(18, 4, 5, 4),
               decoration: BoxDecoration(
                 color: isOnline ? JosiColors.red : JosiColors.softMuted,
                 borderRadius: BorderRadius.circular(999),
@@ -2068,14 +2072,14 @@ class _RiderDashboardHeader extends StatelessWidget {
                     isOnline ? 'Online' : 'Offline',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: JosiColors.white,
-                          fontSize: 18,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       color: JosiColors.ink,
                       shape: BoxShape.circle,
@@ -2101,14 +2105,16 @@ class _RiderDashboardMetrics extends StatelessWidget {
       children: <Widget>[
         Expanded(
           child: _RiderDashboardMetricCard(
+            key: ValueKey<String>('rider-metric-prebooked-card'),
             label: 'Pre - Booked',
             value: '10',
             icon: Icons.calendar_month_rounded,
           ),
         ),
-        SizedBox(width: 16),
+        SizedBox(width: 10),
         Expanded(
           child: _RiderDashboardMetricCard(
+            key: ValueKey<String>('rider-metric-today-earned-card'),
             label: 'Today Earned',
             value: '\$754.00',
             icon: Icons.attach_money_rounded,
@@ -2124,6 +2130,7 @@ class _RiderDashboardMetricCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.icon,
+    super.key,
   });
 
   final String label;
@@ -2133,11 +2140,11 @@ class _RiderDashboardMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 110,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 82,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: JosiColors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: const <BoxShadow>[
           BoxShadow(
             color: Color(0x10000000),
@@ -2149,15 +2156,15 @@ class _RiderDashboardMetricCard extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Container(
-            width: 62,
-            height: 62,
+            width: 40,
+            height: 40,
             decoration: const BoxDecoration(
               color: JosiColors.red,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: JosiColors.white, size: 32),
+            child: Icon(icon, color: JosiColors.white, size: 21),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -2169,17 +2176,17 @@ class _RiderDashboardMetricCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: JosiColors.ink,
-                        fontSize: 18,
+                        fontSize: 13,
                       ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         color: JosiColors.ink,
-                        fontSize: 22,
+                        fontSize: 17,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -2201,10 +2208,10 @@ class _FindingJobsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(28, 0, 28, 20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       decoration: const BoxDecoration(
         color: JosiColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: Color(0x12000000),
@@ -2220,19 +2227,17 @@ class _FindingJobsPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Container(
-              width: 96,
-              height: 5,
+              width: 58,
+              height: 4,
               decoration: const BoxDecoration(
                 color: JosiColors.red,
-                borderRadius: BorderRadius.only(
-                  bottomRight: Radius.circular(999),
-                ),
+                borderRadius: BorderRadius.all(Radius.circular(999)),
               ),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
-              height: 62,
+              height: 52,
               child: ElevatedButton(
                 key: const ValueKey<String>('rider-finding-jobs-button'),
                 onPressed: onFindingJobs,
@@ -2244,8 +2249,8 @@ class _FindingJobsPanel extends StatelessWidget {
                   ),
                   textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: JosiColors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
                       ),
                 ),
                 child: const Text('Finding Jobs'),

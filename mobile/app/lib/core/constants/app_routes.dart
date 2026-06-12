@@ -25,6 +25,7 @@ class AppRoutes {
   static const String customerTripActive = '/customer/trip-active';
   static const String customerTripCompleted = '/customer/trip-completed';
   static const String customerTrips = '/customer/trips';
+  static const String customerWallet = '/customer/wallet';
   static const String customerPaymentMethods = '/customer/payment-methods';
   static const String customerNotifications = '/customer/notifications';
   static const String customerProfile = '/customer/profile';

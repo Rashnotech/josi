@@ -124,6 +124,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const CustomerTripsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.customerWallet,
+        builder: (BuildContext context, GoRouterState state) =>
+            const CustomerWalletScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.customerPaymentMethods,
         builder: (BuildContext context, GoRouterState state) =>
             const CustomerPaymentMethodsScreen(

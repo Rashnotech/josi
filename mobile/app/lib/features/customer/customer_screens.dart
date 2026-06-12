@@ -1192,7 +1192,7 @@ class _DestinationBottomBar extends StatelessWidget {
               ),
             ),
           ),
-          const CustomerBottomNav(selectedTab: 'rides'),
+          const CustomerBottomNav(selectedTab: 'home'),
         ],
       ),
     );
@@ -3588,7 +3588,210 @@ class _CustomerTripsScreenState extends State<CustomerTripsScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: const CustomerBottomNav(selectedTab: 'activity'),
+      bottomNavigationBar: const CustomerBottomNav(selectedTab: 'bookings'),
+    );
+  }
+}
+
+class CustomerWalletScreen extends ConsumerWidget {
+  const CustomerWalletScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<WalletSummary> summary = ref.watch(customerWalletProvider);
+    final AsyncValue<List<WalletTransaction>> transactions =
+        ref.watch(walletTransactionsProvider);
+
+    return Scaffold(
+      key: const ValueKey<String>('customer-wallet-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Column(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                  child: _ProfileHeader(
+                    title: 'Wallet',
+                    onBack: () => context.go(AppRoutes.customerHome),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+                    children: <Widget>[
+                      summary.when(
+                        data: (WalletSummary wallet) => Column(
+                          children: <Widget>[
+                            WalletBalanceCard(
+                              key: const ValueKey<String>(
+                                  'customer-wallet-balance-card'),
+                              title: 'Available balance',
+                              balance: wallet.availableBalance,
+                              subtitle: 'Use wallet balance for faster rides',
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: MetricTile(
+                                    label: 'Today',
+                                    value: wallet.todayEarnings,
+                                    icon: Icons.today_rounded,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: MetricTile(
+                                    label: 'Pending',
+                                    value: wallet.pendingRemittance,
+                                    icon: Icons.hourglass_bottom_rounded,
+                                    color: JosiColors.warning,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        error: (Object error, StackTrace stackTrace) =>
+                            const ErrorState(
+                          title: 'Wallet unavailable',
+                          message: 'Wallet balance could not load.',
+                        ),
+                        loading: () => const SizedBox(
+                          height: 220,
+                          child: LoadingState(label: 'Loading wallet'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      AppButton(
+                        label: 'Payment methods',
+                        icon: Icons.credit_card_rounded,
+                        variant: AppButtonVariant.secondary,
+                        onPressed: () =>
+                            context.go(AppRoutes.customerPaymentMethods),
+                      ),
+                      const SizedBox(height: 18),
+                      const SectionHeader(title: 'Transactions'),
+                      const SizedBox(height: 8),
+                      transactions.when(
+                        data: (List<WalletTransaction> values) => Column(
+                          children: values
+                              .map(
+                                (WalletTransaction transaction) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _CustomerWalletTransactionCard(
+                                    transaction: transaction,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                        error: (Object error, StackTrace stackTrace) =>
+                            const ErrorState(
+                          title: 'Transactions unavailable',
+                          message: 'Please try again later.',
+                        ),
+                        loading: () => const SizedBox(
+                          height: 160,
+                          child: LoadingState(label: 'Loading transactions'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: const CustomerBottomNav(selectedTab: 'wallet'),
+    );
+  }
+}
+
+class _CustomerWalletTransactionCard extends StatelessWidget {
+  const _CustomerWalletTransactionCard({required this.transaction});
+
+  final WalletTransaction transaction;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color =
+        transaction.isCredit ? JosiColors.success : JosiColors.red;
+
+    return AppCard(
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              transaction.isCredit
+                  ? Icons.arrow_downward_rounded
+                  : Icons.arrow_upward_rounded,
+              color: color,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  transaction.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: JosiColors.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  transaction.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: JosiColors.muted,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              Text(
+                transaction.amount,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: JosiColors.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                transaction.status,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: JosiColors.muted,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

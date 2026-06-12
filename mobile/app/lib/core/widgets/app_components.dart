@@ -760,19 +760,22 @@ class AppBottomNav extends StatelessWidget {
       return CustomerBottomNav(selectedTab: selectedTab);
     }
 
+    final String activeTab = switch (selectedTab) {
+      'trips' => 'bookings',
+      _ => selectedTab,
+    };
+
     const List<_NavDestination> destinations = <_NavDestination>[
       _NavDestination('home', 'Home', Icons.home_rounded, AppRoutes.riderHome),
-      _NavDestination(
-          'trips', 'Trips', Icons.route_rounded, AppRoutes.riderTrips),
+      _NavDestination('bookings', 'Bookings', Icons.event_note_rounded,
+          AppRoutes.riderTrips),
       _NavDestination('wallet', 'Wallet', Icons.account_balance_wallet_rounded,
           AppRoutes.riderWallet),
-      _NavDestination('notifications', 'Alerts', Icons.notifications_rounded,
-          AppRoutes.riderNotifications),
       _NavDestination(
           'profile', 'Profile', Icons.person_rounded, AppRoutes.riderProfile),
     ];
     final int selectedIndex = destinations
-        .indexWhere((_NavDestination item) => item.key == selectedTab);
+        .indexWhere((_NavDestination item) => item.key == activeTab);
 
     return NavigationBar(
       selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
@@ -801,8 +804,8 @@ class CustomerBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String activeTab = switch (selectedTab) {
-      'trips' => 'activity',
-      'ride' => 'rides',
+      'activity' || 'trips' => 'bookings',
+      'ride' || 'rides' => 'home',
       _ => selectedTab,
     };
 
@@ -825,17 +828,17 @@ class CustomerBottomNav extends StatelessWidget {
                 selectedTab: activeTab,
               ),
               _CustomerNavItem(
-                tab: 'activity',
-                label: 'Activity',
+                tab: 'bookings',
+                label: 'Bookings',
                 asset: AppAssets.history,
                 route: AppRoutes.customerTrips,
                 selectedTab: activeTab,
               ),
               _CustomerNavItem(
-                tab: 'rides',
-                label: 'Rides',
-                asset: AppAssets.bikeLane,
-                route: AppRoutes.customerSelectLocation,
+                tab: 'wallet',
+                label: 'Wallet',
+                asset: AppAssets.card,
+                route: AppRoutes.customerWallet,
                 selectedTab: activeTab,
               ),
               _CustomerNavItem(

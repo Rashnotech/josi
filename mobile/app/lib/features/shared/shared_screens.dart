@@ -184,7 +184,7 @@ const List<_HelpFaqItem> _helpFaqItems = <_HelpFaqItem>[
   _HelpFaqItem(
     question: 'How do I receive Booking Details?',
     answer:
-        'Booking details appear in Activity after a ride is confirmed and remain available from the trip card.',
+        'Booking details appear in Bookings after a ride is confirmed and remain available from the trip card.',
   ),
   _HelpFaqItem(
     question: 'How can I edit my profile information?',
@@ -203,7 +203,7 @@ const List<_HelpFaqItem> _helpFaqItems = <_HelpFaqItem>[
   ),
   _HelpFaqItem(
     question: 'How to see pre-booked Taxi?',
-    answer: 'Open Profile, then Pre-Booked Rides to review scheduled bookings.',
+    answer: 'Open Bookings to review scheduled and completed rides.',
   ),
 ];
 
