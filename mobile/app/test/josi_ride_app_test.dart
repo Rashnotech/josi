@@ -162,7 +162,23 @@ void main() {
     expect(find.text('Required Steps'), findsOneWidget);
     expect(find.text('Profile Picture'), findsOneWidget);
     expect(find.text('Bank Account Details'), findsOneWidget);
-    expect(find.text('Government ID'), findsOneWidget);
+    expect(find.text('Driving Details'), findsOneWidget);
+    expect(find.text('Submitted Steps'), findsNothing);
+    expect(find.text('Government ID'), findsNothing);
+    expect(
+        tester.widget<Text>(find.text('Welcome!, Esther')).style?.fontSize, 20);
+    expect(
+        tester.widget<Text>(find.text('Required Steps')).style?.fontSize, 18);
+    expect(
+        tester.widget<Text>(find.text('Profile Picture')).style?.fontSize, 16);
+    final Finder continueButton =
+        find.byKey(const ValueKey<String>('rider-bottom-action-continue'));
+    expect(continueButton, findsOneWidget);
+    expect(tester.getSize(continueButton).height, 52);
+    final ElevatedButton continueAction =
+        tester.widget<ElevatedButton>(continueButton);
+    expect(continueAction.style?.textStyle?.resolve(<WidgetState>{})?.fontSize,
+        16);
   });
 
   testWidgets('rider account completion flow includes bank details',
@@ -191,13 +207,18 @@ void main() {
     expect(find.text('Account Number'), findsOneWidget);
     expect(find.text('Bank Name'), findsOneWidget);
     expect(find.text('Account Name'), findsOneWidget);
-    expect(find.text('Attach Bank Account Details'), findsOneWidget);
+    expect(find.textContaining('Upload Bank Document'), findsNothing);
+    expect(find.text('Attach Bank Account Details'), findsNothing);
+    expect(find.text('Upload Documents'), findsNothing);
 
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Documents'), findsOneWidget);
-    expect(find.text('KYC upload checklist'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsOneWidget);
+    expect(find.text('Government ID'), findsNothing);
+    expect(find.text('Documents'), findsNothing);
   });
 
   testWidgets('rider submission opens dashboard finding jobs',
@@ -212,6 +233,26 @@ void main() {
     expect(
         find.text('Application Submitted for\nVerification'), findsOneWidget);
     expect(find.text('Got it'), findsOneWidget);
+    expect(
+        tester
+            .widget<Text>(find.text('Application Submitted for\nVerification'))
+            .style
+            ?.fontSize,
+        20);
+    expect(
+        tester
+            .widget<Text>(find.text(
+                'We will get in touch in 48 Working\nhours. Be ready to for your ride!'))
+            .style
+            ?.fontSize,
+        14);
+    final Finder gotItButton =
+        find.byKey(const ValueKey<String>('rider-submission-got-it'));
+    expect(tester.getSize(gotItButton).height, 52);
+    final ElevatedButton gotItAction =
+        tester.widget<ElevatedButton>(gotItButton);
+    expect(
+        gotItAction.style?.textStyle?.resolve(<WidgetState>{})?.fontSize, 16);
 
     await tester
         .tap(find.byKey(const ValueKey<String>('rider-submission-got-it')));

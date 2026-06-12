@@ -209,20 +209,20 @@ class RiderApplicationStatusScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 62),
+                const SizedBox(height: 28),
                 Text(
                   'Welcome!, Esther',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         color: JosiColors.ink,
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
-                const SizedBox(height: 52),
+                const SizedBox(height: 30),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
@@ -231,42 +231,26 @@ class RiderApplicationStatusScreen extends StatelessWidget {
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     color: JosiColors.ink,
-                                    fontSize: 22,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w800,
                                   ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 14),
                         _RiderStepTile(
                           label: 'Profile Picture',
                           onTap: () =>
                               context.go(AppRoutes.riderProfilePicture),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         _RiderStepTile(
                           label: 'Bank Account Details',
                           onTap: () =>
                               context.go(AppRoutes.riderBankAccountDetails),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         _RiderStepTile(
                           label: 'Driving Details',
                           onTap: () => context.go(AppRoutes.riderVehicleSetup),
-                        ),
-                        const SizedBox(height: 36),
-                        Text(
-                          'Submitted Steps',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: JosiColors.ink,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                        ),
-                        const SizedBox(height: 18),
-                        _RiderStepTile(
-                          label: 'Government ID',
-                          onTap: () =>
-                              context.go(AppRoutes.riderDocumentUpload),
                         ),
                       ],
                     ),
@@ -461,17 +445,10 @@ class RiderBankAccountDetailsScreen extends StatelessWidget {
       fallbackRoute: AppRoutes.riderProfilePicture,
       appBarTitle: 'Bank Account Details',
       bottomLabel: 'Done',
-      onBottomPressed: () => context.go(AppRoutes.riderDocumentUpload),
+      onBottomPressed: () => context.go(AppRoutes.riderApplicationStatus),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _UploadRequirement(
-              'Upload Bank Document (Passbook, Cancelled Cheque, Bank Statement, or Digital Account Screenshot)'),
-          SizedBox(height: 18),
-          _UploadRequirement('Upload PDF / JPEG / PNG'),
-          SizedBox(height: 26),
-          Divider(color: JosiColors.line),
-          SizedBox(height: 24),
           _RiderFormField(
             label: 'Account Number',
             hintText: '0123456789',
@@ -482,57 +459,6 @@ class RiderBankAccountDetailsScreen extends StatelessWidget {
               label: 'Bank Name', hintText: 'Josi Microfinance Bank'),
           SizedBox(height: 14),
           _RiderFormField(label: 'Account Name', hintText: 'Jenny Wilson'),
-          SizedBox(height: 26),
-          Text('Attach Bank Account Details',
-              style: TextStyle(
-                  color: JosiColors.ink,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800)),
-          SizedBox(height: 16),
-          _DashedUploadBox(),
-          SizedBox(height: 26),
-          _AttachedFilePreview(
-            title: 'Bank Cheque',
-            meta: 'PNG',
-            sizeLabel: '460 KB',
-            icon: Icons.description_rounded,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class RiderDocumentUploadScreen extends ConsumerWidget {
-  const RiderDocumentUploadScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<DocumentRequirement>> documents =
-        ref.watch(riderDocumentsProvider);
-
-    return AppScaffold(
-      title: 'Documents',
-      subtitle: 'KYC upload checklist',
-      child: AppScreenBody(
-        children: <Widget>[
-          documents.when(
-            data: (List<DocumentRequirement> values) => Column(
-              children: values
-                  .map(
-                    (DocumentRequirement document) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: DocumentUploadCard(document: document),
-                    ),
-                  )
-                  .toList(),
-            ),
-            error: (Object error, StackTrace stackTrace) => const ErrorState(
-                title: 'Documents unavailable',
-                message: 'Upload checklist could not load.'),
-            loading: () => const SizedBox(
-                height: 220, child: LoadingState(label: 'Loading documents')),
-          ),
         ],
       ),
     );
@@ -1334,10 +1260,6 @@ class RiderProfileScreen extends ConsumerWidget {
               label: 'Bank Account Details',
               route: AppRoutes.riderBankAccountDetails),
           const _ProfileMenuItem(
-              icon: Icons.upload_file_rounded,
-              label: 'Documents',
-              route: AppRoutes.riderDocumentUpload),
-          const _ProfileMenuItem(
               icon: Icons.directions_car_rounded,
               label: 'Vehicle',
               route: AppRoutes.riderVehicleSetup),
@@ -1385,10 +1307,10 @@ class _RiderStepTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Container(
-          height: 82,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          height: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: JosiColors.line),
           ),
           child: Row(
@@ -1398,13 +1320,13 @@ class _RiderStepTile extends StatelessWidget {
                   label,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: JosiColors.ink,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                 ),
               ),
               const Icon(Icons.chevron_right_rounded,
-                  color: JosiColors.red, size: 42),
+                  color: JosiColors.red, size: 26),
             ],
           ),
         ),
@@ -2019,7 +1941,7 @@ class _ApplicationSubmittedSheet extends StatelessWidget {
     return Container(
       key: const ValueKey<String>('rider-submission-sheet'),
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(34, 18, 34, 20),
+      padding: const EdgeInsets.fromLTRB(28, 14, 28, 18),
       decoration: const BoxDecoration(
         color: JosiColors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -2037,42 +1959,42 @@ class _ApplicationSubmittedSheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
-            const SizedBox(height: 56),
+            const SizedBox(height: 30),
             Container(
-              width: 106,
-              height: 106,
+              width: 78,
+              height: 78,
               decoration: const BoxDecoration(
                 color: JosiColors.red,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_rounded,
-                  color: JosiColors.white, size: 70),
+                  color: JosiColors.white, size: 48),
             ),
-            const SizedBox(height: 38),
+            const SizedBox(height: 24),
             Text(
               'Application Submitted for\nVerification',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: JosiColors.ink,
-                    fontSize: 22,
+                    fontSize: 20,
                     height: 1.18,
                     fontWeight: FontWeight.w800,
                   ),
             ),
-            const SizedBox(height: 26),
+            const SizedBox(height: 14),
             Text(
               'We will get in touch in 48 Working\nhours. Be ready to for your ride!',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: JosiColors.softMuted,
-                    fontSize: 22,
-                    height: 1.25,
+                    fontSize: 14,
+                    height: 1.35,
                   ),
             ),
-            const SizedBox(height: 46),
+            const SizedBox(height: 28),
             SizedBox(
               width: double.infinity,
-              height: 62,
+              height: 52,
               child: ElevatedButton(
                 key: const ValueKey<String>('rider-submission-got-it'),
                 onPressed: onGotIt,
@@ -2084,7 +2006,7 @@ class _ApplicationSubmittedSheet extends StatelessWidget {
                   ),
                   textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: JosiColors.white,
-                        fontSize: 21,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -2964,6 +2886,8 @@ class _RiderFixedBottomAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String keyLabel = label.toLowerCase().replaceAll(' ', '-');
+
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: JosiColors.white,
@@ -2978,10 +2902,11 @@ class _RiderFixedBottomAction extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(30, 18, 30, 18),
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 14),
           child: SizedBox(
-            height: 60,
+            height: 52,
             child: ElevatedButton(
+              key: ValueKey<String>('rider-bottom-action-$keyLabel'),
               onPressed: onPressed,
               style: ElevatedButton.styleFrom(
                 backgroundColor: JosiColors.red,
@@ -2990,7 +2915,7 @@ class _RiderFixedBottomAction extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999)),
                 textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: JosiColors.white,
-                      fontSize: 21,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
               ),
