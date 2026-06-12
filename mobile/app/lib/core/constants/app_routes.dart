@@ -39,6 +39,12 @@ class AppRoutes {
   static const String riderProfilePicture = '/rider/profile-picture';
   static const String riderBankAccountDetails = '/rider/bank-account-details';
   static const String riderVehicleSetup = '/rider/vehicle-setup';
+  static const String riderProfileSetupUpdate =
+      '$riderProfileSetup?mode=update';
+  static const String riderBankAccountDetailsUpdate =
+      '$riderBankAccountDetails?mode=update';
+  static const String riderVehicleSetupUpdate =
+      '$riderVehicleSetup?mode=update';
   static const String riderAvailableTrips = '/rider/available-trips';
   static const String riderTripRequest = '/rider/trip-request/:id';
   static const String riderActiveTrip = '/rider/active-trip/:id';

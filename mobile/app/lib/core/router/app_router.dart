@@ -173,7 +173,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.riderProfileSetup,
         builder: (BuildContext context, GoRouterState state) =>
-            const RiderProfileSetupScreen(),
+            RiderProfileSetupScreen(
+                isUpdate: state.uri.queryParameters['mode'] == 'update'),
       ),
       GoRoute(
         path: AppRoutes.riderProfilePicture,
@@ -183,12 +184,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.riderBankAccountDetails,
         builder: (BuildContext context, GoRouterState state) =>
-            const RiderBankAccountDetailsScreen(),
+            RiderBankAccountDetailsScreen(
+                isUpdate: state.uri.queryParameters['mode'] == 'update'),
       ),
       GoRoute(
         path: AppRoutes.riderVehicleSetup,
         builder: (BuildContext context, GoRouterState state) =>
-            const RiderVehicleSetupScreen(),
+            RiderVehicleSetupScreen(
+                isUpdate: state.uri.queryParameters['mode'] == 'update'),
       ),
       GoRoute(
         path: AppRoutes.riderAvailableTrips,

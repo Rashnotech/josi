@@ -162,7 +162,8 @@ void main() {
     expect(find.text('Required Steps'), findsOneWidget);
     expect(find.text('Profile Picture'), findsOneWidget);
     expect(find.text('Bank Account Details'), findsOneWidget);
-    expect(find.text('Driving Details'), findsOneWidget);
+    expect(find.text('Riding Details'), findsOneWidget);
+    expect(find.text('Driving Details'), findsNothing);
     expect(find.text('Submitted Steps'), findsNothing);
     expect(find.text('Government ID'), findsNothing);
     expect(
@@ -172,7 +173,7 @@ void main() {
     expect(
         tester.widget<Text>(find.text('Profile Picture')).style?.fontSize, 16);
     final Finder continueButton =
-        find.byKey(const ValueKey<String>('rider-bottom-action-continue'));
+        find.byKey(const ValueKey<String>('rider-bottom-action-continue')).last;
     expect(continueButton, findsOneWidget);
     expect(tester.getSize(continueButton).height, 52);
     final ElevatedButton continueAction =
@@ -221,8 +222,60 @@ void main() {
     expect(find.text('Documents'), findsNothing);
   });
 
+  testWidgets('rider riding details uses uploaded form structure',
+      (WidgetTester tester) async {
+    await _loginAsRider(tester);
+
+    expect(find.text('Riding Details'), findsOneWidget);
+    expect(find.text('Driving Details'), findsNothing);
+
+    await tester.tap(find.text('Riding Details'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const ValueKey<String>('rider-vehicle-setup-screen')),
+        findsOneWidget);
+    expect(find.text('Complete Your Riding Details'), findsOneWidget);
+    expect(
+      find.text(
+          "Don't worry, only you can see your riding data. No one else will be able to see it."),
+      findsOneWidget,
+    );
+    expect(find.text('Vehicle Type'), findsOneWidget);
+    expect(find.text('Vehicle Brand'), findsOneWidget);
+    expect(find.text('Vehicle Model'), findsOneWidget);
+    expect(find.text('Vehicle Color'), findsOneWidget);
+    expect(find.text('Plate Number'), findsOneWidget);
+    expect(find.text('Registration Number'), findsOneWidget);
+    expect(find.text('City You Ride In'), findsOneWidget);
+    expect(find.text('Vehicle setup'), findsNothing);
+    expect(find.text('Vehicle documents'), findsNothing);
+    expect(find.text('Vehicle registration'), findsNothing);
+    expect(find.text('Save vehicle'), findsNothing);
+
+    final Finder continueButton =
+        find.byKey(const ValueKey<String>('rider-bottom-action-continue')).last;
+    expect(continueButton, findsOneWidget);
+    expect(tester.getSize(continueButton).height, 52);
+
+    await tester.tap(continueButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsOneWidget);
+  });
+
   testWidgets('rider submission opens dashboard finding jobs',
       (WidgetTester tester) async {
+    int locationCalls = 0;
+    _mockDeviceLocation(
+      tester,
+      onCall: () {
+        locationCalls++;
+      },
+    );
     await _loginAsRider(tester);
 
     await tester.tap(find.text('Continue'));
@@ -267,6 +320,7 @@ void main() {
         .tap(find.byKey(const ValueKey<String>('rider-location-allow-button')));
     await tester.pumpAndSettle();
 
+    expect(locationCalls, 1);
     expect(find.byKey(const ValueKey<String>('rider-home-screen')),
         findsOneWidget);
     expect(find.text('Online'), findsOneWidget);
@@ -476,6 +530,74 @@ void main() {
     expect(find.text('Cody Fisher'), findsOneWidget);
     expect(find.text('Ralph Edwards'), findsOneWidget);
     expect(find.text('Track Rider'), findsNothing);
+  });
+
+  testWidgets(
+      'rider profile update menus save back and logout opens rider login',
+      (WidgetTester tester) async {
+    await _loginAsRider(tester);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderProfile);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your profile'), findsOneWidget);
+    expect(find.text('Profile setup'), findsNothing);
+    expect(find.text('Profile picture'), findsNothing);
+    expect(find.text('Bank Account Details'), findsOneWidget);
+    expect(find.text('Riding Details'), findsOneWidget);
+
+    await tester.tap(find.text('Your profile'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-profile-setup-screen')),
+        findsOneWidget);
+    expect(find.text('Your profile'), findsOneWidget);
+    expect(find.text('Profile Picture'), findsOneWidget);
+    expect(find.text('Complete Your Profile'), findsNothing);
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bottom-action-save-changes')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your profile'), findsOneWidget);
+
+    await tester.tap(find.text('Bank Account Details'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('rider-bank-account-details-screen')),
+        findsOneWidget);
+    expect(find.text('Save changes'), findsOneWidget);
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bottom-action-save-changes')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bank Account Details'), findsOneWidget);
+
+    await tester.tap(find.text('Riding Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-vehicle-setup-screen')),
+        findsOneWidget);
+    expect(find.text('Riding Details'), findsOneWidget);
+    expect(find.text('Complete Your Riding Details'), findsNothing);
+    expect(find.text('Save changes'), findsOneWidget);
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bottom-action-save-changes')));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Logout'));
+    await tester.tap(find.text('Logout'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('login-screen')), findsOneWidget);
+    expect(find.text('Rider Login'), findsOneWidget);
+    expect(find.text('Customer Login'), findsNothing);
   });
 
   testWidgets('customer create account opens customer signup and submits',

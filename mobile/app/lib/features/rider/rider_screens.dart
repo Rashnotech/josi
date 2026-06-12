@@ -8,6 +8,7 @@ import '../../core/constants/app_routes.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/services/device_location_service.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 
@@ -77,8 +78,48 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
   }
 }
 
-class RiderLocationAccessScreen extends StatelessWidget {
+class RiderLocationAccessScreen extends StatefulWidget {
   const RiderLocationAccessScreen({super.key});
+
+  @override
+  State<RiderLocationAccessScreen> createState() =>
+      _RiderLocationAccessScreenState();
+}
+
+class _RiderLocationAccessScreenState extends State<RiderLocationAccessScreen> {
+  final DeviceLocationService _locationService = const DeviceLocationService();
+  bool _isLocating = false;
+
+  Future<void> _allowLocationAccess() async {
+    if (_isLocating) {
+      return;
+    }
+
+    setState(() {
+      _isLocating = true;
+    });
+
+    try {
+      await _locationService.currentPosition();
+      if (!mounted) {
+        return;
+      }
+      context.go(AppRoutes.riderHome);
+    } on DeviceLocationException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLocating = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +187,7 @@ class RiderLocationAccessScreen extends StatelessWidget {
                     child: ElevatedButton(
                       key:
                           const ValueKey<String>('rider-location-allow-button'),
-                      onPressed: () => context.go(AppRoutes.riderHome),
+                      onPressed: _isLocating ? null : _allowLocationAccess,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: JosiColors.red,
                         foregroundColor: JosiColors.white,
@@ -160,7 +201,15 @@ class RiderLocationAccessScreen extends StatelessWidget {
                                   fontWeight: FontWeight.w800,
                                 ),
                       ),
-                      child: const Text('Allow Location Access'),
+                      child: _isLocating
+                          ? const SizedBox.square(
+                              dimension: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: JosiColors.white,
+                              ),
+                            )
+                          : const Text('Allow Location Access'),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -251,7 +300,7 @@ class RiderApplicationStatusScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         _RiderStepTile(
-                          label: 'Driving Details',
+                          label: 'Riding Details',
                           onTap: () => context.go(AppRoutes.riderVehicleSetup),
                         ),
                       ],
@@ -288,7 +337,12 @@ class RiderApplicationStatusScreen extends StatelessWidget {
 }
 
 class RiderProfileSetupScreen extends StatefulWidget {
-  const RiderProfileSetupScreen({super.key});
+  const RiderProfileSetupScreen({
+    super.key,
+    this.isUpdate = false,
+  });
+
+  final bool isUpdate;
 
   @override
   State<RiderProfileSetupScreen> createState() =>
@@ -302,14 +356,21 @@ class _RiderProfileSetupScreenState extends State<RiderProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isUpdate = widget.isUpdate;
+
     return _RiderFlowScaffold(
       key: const ValueKey<String>('rider-profile-setup-screen'),
-      fallbackRoute: AppRoutes.riderApplicationStatus,
-      headline: 'Complete Your Profile',
-      subtitle:
-          "Don't worry, only you can see your personal data. No one else will be able to see it.",
-      bottomLabel: 'Continue',
-      onBottomPressed: () => context.go(AppRoutes.riderProfilePicture),
+      fallbackRoute:
+          isUpdate ? AppRoutes.riderProfile : AppRoutes.riderApplicationStatus,
+      appBarTitle: isUpdate ? 'Your profile' : null,
+      headline: isUpdate ? null : 'Complete Your Profile',
+      subtitle: isUpdate
+          ? null
+          : "Don't worry, only you can see your personal data. No one else will be able to see it.",
+      bottomLabel: isUpdate ? 'Save changes' : 'Continue',
+      onBottomPressed: () => context.go(
+        isUpdate ? AppRoutes.riderProfile : AppRoutes.riderProfilePicture,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -338,56 +399,64 @@ class _RiderProfileSetupScreenState extends State<RiderProfileSetupScreen> {
             onChanged: (String? value) =>
                 setState(() => _city = value ?? _city),
           ),
-          const SizedBox(height: 22),
-          InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: _acceptedTerms ? JosiColors.red : JosiColors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color:
-                            _acceptedTerms ? JosiColors.red : JosiColors.line),
-                  ),
-                  child: _acceptedTerms
-                      ? const Icon(Icons.check_rounded,
-                          color: JosiColors.white, size: 24)
-                      : null,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      text: 'By Accept, you agree to Company ',
-                      children: <InlineSpan>[
-                        TextSpan(
-                          text: 'Terms & Condition',
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: JosiColors.red,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: JosiColors.red,
-                                  ),
-                        ),
-                      ],
+          if (isUpdate) ...<Widget>[
+            const SizedBox(height: 22),
+            const Divider(color: JosiColors.line),
+            const SizedBox(height: 22),
+            const _RiderProfilePictureFields(),
+          ] else ...<Widget>[
+            const SizedBox(height: 22),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: _acceptedTerms ? JosiColors.red : JosiColors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: _acceptedTerms
+                              ? JosiColors.red
+                              : JosiColors.line),
                     ),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: JosiColors.ink,
-                          fontSize: 17,
-                          height: 1.35,
-                        ),
+                    child: _acceptedTerms
+                        ? const Icon(Icons.check_rounded,
+                            color: JosiColors.white, size: 24)
+                        : null,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'By Accept, you agree to Company ',
+                        children: <InlineSpan>[
+                          TextSpan(
+                            text: 'Terms & Condition',
+                            style:
+                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      color: JosiColors.red,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: JosiColors.red,
+                                    ),
+                          ),
+                        ],
+                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: JosiColors.ink,
+                            fontSize: 17,
+                            height: 1.35,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -405,49 +474,68 @@ class RiderProfilePictureScreen extends StatelessWidget {
       appBarTitle: 'Profile Picture',
       bottomLabel: 'Done',
       onBottomPressed: () => context.go(AppRoutes.riderBankAccountDetails),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _UploadRequirement('Please Upload a Clear Selfie'),
-          SizedBox(height: 16),
-          _UploadRequirement(
-              'The Selfie Should have the applicants face alone'),
-          SizedBox(height: 16),
-          _UploadRequirement('Upload PDF / JPEG / PNG'),
-          SizedBox(height: 26),
-          Divider(color: JosiColors.line),
-          SizedBox(height: 28),
-          Text('Profile Picture',
-              style: TextStyle(
-                  color: JosiColors.ink,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800)),
-          SizedBox(height: 16),
-          _DashedUploadBox(),
-          SizedBox(height: 26),
-          _AttachedFilePreview(
-            title: 'Profile',
-            meta: 'JPG',
-            sizeLabel: '250 kb',
-            icon: Icons.person_rounded,
+      child: const _RiderProfilePictureFields(),
+    );
+  }
+}
+
+class _RiderProfilePictureFields extends StatelessWidget {
+  const _RiderProfilePictureFields();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _UploadRequirement('Please Upload a Clear Selfie'),
+        SizedBox(height: 16),
+        _UploadRequirement('The Selfie Should have the applicants face alone'),
+        SizedBox(height: 16),
+        _UploadRequirement('Upload PDF / JPEG / PNG'),
+        SizedBox(height: 26),
+        Divider(color: JosiColors.line),
+        SizedBox(height: 28),
+        Text(
+          'Profile Picture',
+          style: TextStyle(
+            color: JosiColors.ink,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
           ),
-        ],
-      ),
+        ),
+        SizedBox(height: 16),
+        _DashedUploadBox(),
+        SizedBox(height: 26),
+        _AttachedFilePreview(
+          title: 'Profile',
+          meta: 'JPG',
+          sizeLabel: '250 kb',
+          icon: Icons.person_rounded,
+        ),
+      ],
     );
   }
 }
 
 class RiderBankAccountDetailsScreen extends StatelessWidget {
-  const RiderBankAccountDetailsScreen({super.key});
+  const RiderBankAccountDetailsScreen({
+    super.key,
+    this.isUpdate = false,
+  });
+
+  final bool isUpdate;
 
   @override
   Widget build(BuildContext context) {
     return _RiderFlowScaffold(
       key: const ValueKey<String>('rider-bank-account-details-screen'),
-      fallbackRoute: AppRoutes.riderProfilePicture,
+      fallbackRoute:
+          isUpdate ? AppRoutes.riderProfile : AppRoutes.riderProfilePicture,
       appBarTitle: 'Bank Account Details',
-      bottomLabel: 'Done',
-      onBottomPressed: () => context.go(AppRoutes.riderApplicationStatus),
+      bottomLabel: isUpdate ? 'Save changes' : 'Done',
+      onBottomPressed: () => context.go(
+        isUpdate ? AppRoutes.riderProfile : AppRoutes.riderApplicationStatus,
+      ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -467,64 +555,128 @@ class RiderBankAccountDetailsScreen extends StatelessWidget {
   }
 }
 
-class RiderVehicleSetupScreen extends StatelessWidget {
-  const RiderVehicleSetupScreen({super.key});
+class RiderVehicleSetupScreen extends StatefulWidget {
+  const RiderVehicleSetupScreen({
+    super.key,
+    this.isUpdate = false,
+  });
+
+  final bool isUpdate;
+
+  @override
+  State<RiderVehicleSetupScreen> createState() =>
+      _RiderVehicleSetupScreenState();
+}
+
+class _RiderVehicleSetupScreenState extends State<RiderVehicleSetupScreen> {
+  String _vehicleType = 'Bike';
+  String _city = 'Jersey City, New Jersey';
+  bool _confirmed = true;
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Vehicle setup',
-      subtitle: 'Vehicle and documents',
-      child: AppScreenBody(
+    final bool isUpdate = widget.isUpdate;
+
+    return _RiderFlowScaffold(
+      key: const ValueKey<String>('rider-vehicle-setup-screen'),
+      fallbackRoute:
+          isUpdate ? AppRoutes.riderProfile : AppRoutes.riderApplicationStatus,
+      appBarTitle: isUpdate ? 'Riding Details' : null,
+      headline: isUpdate ? null : 'Complete Your Riding Details',
+      subtitle: isUpdate
+          ? null
+          : "Don't worry, only you can see your riding data. No one else will be able to see it.",
+      bottomLabel: isUpdate ? 'Save changes' : 'Continue',
+      onBottomPressed: () => context.go(
+        isUpdate ? AppRoutes.riderProfile : AppRoutes.riderApplicationStatus,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const VehicleCard(vehicle: JosiMockData.vehicle),
-          const SizedBox(height: 16),
-          const AppTextField(
-              label: 'Vehicle type',
-              hintText: 'Car',
-              icon: Icons.category_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Brand',
-              hintText: 'Toyota',
-              icon: Icons.directions_car_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Model',
-              hintText: 'Corolla',
-              icon: Icons.car_repair_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Color', hintText: 'White', icon: Icons.palette_outlined),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Plate number',
-              hintText: 'ABC 482 JK',
-              icon: Icons.pin_rounded),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Chassis number',
-              hintText: 'JTDBR32E123456789',
-              icon: Icons.confirmation_number_outlined),
-          const SizedBox(height: 12),
-          const AppTextField(
-              label: 'Engine number',
-              hintText: '2ZR-789432',
-              icon: Icons.memory_rounded),
-          const SizedBox(height: 16),
-          const SectionHeader(title: 'Vehicle documents'),
-          const DocumentUploadCard(
-            document: DocumentRequirement(
-              title: 'Vehicle registration',
-              description: 'Upload valid registration document',
-              status: DocumentStatus.notUploaded,
-            ),
+          _RiderSelectField(
+            label: 'Vehicle Type',
+            value: _vehicleType,
+            items: const <String>['Bike', 'Car', 'Tricycle', 'Van'],
+            onChanged: (String? value) =>
+                setState(() => _vehicleType = value ?? _vehicleType),
           ),
-          const SizedBox(height: 18),
-          AppButton(
-              label: 'Save vehicle',
-              icon: Icons.save_rounded,
-              onPressed: () {}),
+          const SizedBox(height: 14),
+          const _RiderFormField(label: 'Vehicle Brand', hintText: 'Toyota'),
+          const SizedBox(height: 14),
+          const _RiderFormField(label: 'Vehicle Model', hintText: 'Corolla'),
+          const SizedBox(height: 14),
+          const _RiderFormField(label: 'Vehicle Color', hintText: 'White'),
+          const SizedBox(height: 14),
+          const _RiderFormField(label: 'Plate Number', hintText: 'ABC 482 JK'),
+          const SizedBox(height: 14),
+          const _RiderFormField(
+            label: 'Registration Number',
+            hintText: 'REG-2408-JR',
+          ),
+          const SizedBox(height: 14),
+          _RiderSelectField(
+            label: 'City You Ride In',
+            value: _city,
+            items: const <String>[
+              'Jersey City, New Jersey',
+              'Abuja, FCT',
+              'Lagos, Lagos',
+            ],
+            onChanged: (String? value) =>
+                setState(() => _city = value ?? _city),
+          ),
+          if (!isUpdate) ...<Widget>[
+            const SizedBox(height: 22),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _confirmed = !_confirmed),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: _confirmed ? JosiColors.red : JosiColors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: _confirmed ? JosiColors.red : JosiColors.line),
+                    ),
+                    child: _confirmed
+                        ? const Icon(Icons.check_rounded,
+                            color: JosiColors.white, size: 24)
+                        : null,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'By Accept, you confirm these ',
+                        children: <InlineSpan>[
+                          TextSpan(
+                            text: 'Riding Details',
+                            style:
+                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      color: JosiColors.red,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: JosiColors.red,
+                                    ),
+                          ),
+                          const TextSpan(text: ' are correct.'),
+                        ],
+                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: JosiColors.ink,
+                            fontSize: 17,
+                            height: 1.35,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1382,20 +1534,16 @@ class RiderProfileScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           const _ProfileMenuItem(
               icon: Icons.edit_rounded,
-              label: 'Profile setup',
-              route: AppRoutes.riderProfileSetup),
-          const _ProfileMenuItem(
-              icon: Icons.photo_camera_rounded,
-              label: 'Profile picture',
-              route: AppRoutes.riderProfilePicture),
+              label: 'Your profile',
+              route: AppRoutes.riderProfileSetupUpdate),
           const _ProfileMenuItem(
               icon: Icons.account_balance_rounded,
               label: 'Bank Account Details',
-              route: AppRoutes.riderBankAccountDetails),
+              route: AppRoutes.riderBankAccountDetailsUpdate),
           const _ProfileMenuItem(
               icon: Icons.directions_car_rounded,
-              label: 'Vehicle',
-              route: AppRoutes.riderVehicleSetup),
+              label: 'Riding Details',
+              route: AppRoutes.riderVehicleSetupUpdate),
           const _ProfileMenuItem(
               icon: Icons.support_agent_rounded,
               label: 'Support',
@@ -1412,7 +1560,7 @@ class RiderProfileScreen extends ConsumerWidget {
             onPressed: () async {
               await ref.read(authControllerProvider.notifier).signOut();
               if (context.mounted) {
-                context.go(AppRoutes.login);
+                context.go(AppRoutes.loginFor('rider'));
               }
             },
           ),
