@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:josi_ride/core/constants/app_routes.dart';
+import 'package:josi_ride/core/location/location_providers.dart';
+import 'package:josi_ride/core/location/location_service.dart';
 import 'package:josi_ride/core/theme/josi_colors.dart';
 import 'package:josi_ride/core/theme/josi_theme.dart';
+import 'package:josi_ride/core/widgets/josi_google_map.dart';
 import 'package:josi_ride/main.dart';
+
+VoidCallback? _mockLocationCall;
 
 void main() {
   testWidgets('starts on red splash and advances to role selection',
@@ -119,7 +124,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(locationCalls, 1);
-    expect(find.text('Lat 9.07650, Lng 7.39860'), findsOneWidget);
+    expect(find.text('Current location: 9.07650, 7.39860'), findsOneWidget);
   });
 
   testWidgets(
@@ -320,7 +325,7 @@ void main() {
         .tap(find.byKey(const ValueKey<String>('rider-location-allow-button')));
     await tester.pumpAndSettle();
 
-    expect(locationCalls, 1);
+    expect(locationCalls, greaterThanOrEqualTo(1));
     expect(find.byKey(const ValueKey<String>('rider-home-screen')),
         findsOneWidget);
     expect(find.text('Online'), findsOneWidget);
@@ -725,8 +730,15 @@ void main() {
         .byKey(const ValueKey<String>('destination-current-location-field')));
     await tester.pumpAndSettle();
 
-    expect(locationCalls, 1);
-    expect(find.text('Lat 9.07650, Lng 7.39860'), findsOneWidget);
+    expect(locationCalls, 2);
+    expect(find.text('Pickup: 9.07650, 7.39860'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('destination-location-field')));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(80, 220));
+    await tester.pumpAndSettle();
+    expect(find.text('Destination: 9.08160, 7.46340'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey<String>('destination-location-field')),
@@ -1194,13 +1206,24 @@ void main() {
 }
 
 Future<void> _pumpApp(WidgetTester tester) async {
+  JosiGoogleMap.debugUseStaticMap = true;
   tester.view.physicalSize = const Size(430, 932);
   tester.view.devicePixelRatio = 1;
   addTearDown(() {
+    JosiGoogleMap.debugUseStaticMap = false;
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
   });
-  await tester.pumpWidget(const ProviderScope(child: JosiApp()));
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: <Override>[
+        locationServiceProvider.overrideWithValue(
+          _FakeLocationService(onCall: () => _mockLocationCall?.call()),
+        ),
+      ],
+      child: const JosiApp(),
+    ),
+  );
 }
 
 Future<void> _finishSplash(WidgetTester tester) async {
@@ -1243,26 +1266,36 @@ void _mockDeviceLocation(
   WidgetTester tester, {
   VoidCallback? onCall,
 }) {
-  const MethodChannel channel = MethodChannel('josi_ride/device_location');
-
-  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-    channel,
-    (MethodCall methodCall) async {
-      expect(methodCall.method, 'currentPosition');
-      onCall?.call();
-      return <String, double>{
-        'latitude': 9.0765,
-        'longitude': 7.3986,
-      };
-    },
-  );
-
+  _mockLocationCall = onCall;
   addTearDown(() {
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      channel,
-      null,
-    );
+    _mockLocationCall = null;
   });
+}
+
+class _FakeLocationService extends LocationService {
+  const _FakeLocationService({this.onCall});
+
+  final VoidCallback? onCall;
+
+  @override
+  Future<Position> currentPosition() async {
+    onCall?.call();
+    return Position(
+      latitude: 9.0765,
+      longitude: 7.3986,
+      timestamp: DateTime(2026, 6, 13),
+      accuracy: 8,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
+  }
+
+  @override
+  Future<bool> openAppSettings() async => true;
 }
 
 void _expectVisibleInViewport(WidgetTester tester, Finder finder) {

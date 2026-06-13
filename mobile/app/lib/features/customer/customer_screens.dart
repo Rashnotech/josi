@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_assets.dart';
+import '../../core/constants/map_constants.dart';
 import '../../core/constants/app_routes.dart';
+import '../../core/location/location_providers.dart';
+import '../../core/location/location_service.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
-import '../../core/services/device_location_service.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
+import '../../core/widgets/josi_google_map.dart';
+
+String _mockAddress(String label, LatLng position) {
+  return '$label: ${position.latitude.toStringAsFixed(5)}, '
+      '${position.longitude.toStringAsFixed(5)}';
+}
 
 class CustomerHomeScreen extends ConsumerWidget {
   const CustomerHomeScreen({super.key});
@@ -142,37 +151,19 @@ class _CustomerHomeMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: CustomPaint(painter: _CustomerHomeMapPainter()),
-        ),
-        const Positioned(
-          right: 32,
-          top: 178,
-          child: _MapActionButton(icon: Icons.my_location_rounded),
-        ),
-        const Positioned(
-          right: 28,
-          top: 278,
-          child: _HomeMapMarker(
-            icon: Icons.directions_car_filled_rounded,
-            color: JosiColors.charcoal,
-          ),
-        ),
-        const Positioned(
-          left: 74,
-          bottom: 260,
-          child: _HomeMapMarker(
-            icon: Icons.person_pin_circle_rounded,
-            color: JosiColors.red,
-          ),
-        ),
-      ],
+    return JosiGoogleMap(
+      initialCameraPosition: MapConstants.cameraFor(MapConstants.abuja),
+      markers: <Marker>{
+        MapConstants.customerMarker(MapConstants.mockCustomerLocation),
+        MapConstants.riderMarker(MapConstants.mockRiderLocation),
+      },
+      myLocationEnabled: true,
+      showCurrentLocationButton: true,
     );
   }
 }
 
+// ignore: unused_element
 class _MapActionButton extends StatelessWidget {
   const _MapActionButton({required this.icon});
 
@@ -193,6 +184,7 @@ class _MapActionButton extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _HomeMapMarker extends StatelessWidget {
   const _HomeMapMarker({
     required this.icon,
@@ -224,6 +216,7 @@ class _HomeMapMarker extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _CustomerHomeMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -297,15 +290,15 @@ class _CustomerHomeMapPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _CurrentLocationBar extends StatefulWidget {
+class _CurrentLocationBar extends ConsumerStatefulWidget {
   const _CurrentLocationBar();
 
   @override
-  State<_CurrentLocationBar> createState() => _CurrentLocationBarState();
+  ConsumerState<_CurrentLocationBar> createState() =>
+      _CurrentLocationBarState();
 }
 
-class _CurrentLocationBarState extends State<_CurrentLocationBar> {
-  final DeviceLocationService _locationService = const DeviceLocationService();
+class _CurrentLocationBarState extends ConsumerState<_CurrentLocationBar> {
   String _locationLabel = 'Current Location';
   bool _isLocating = false;
 
@@ -319,14 +312,15 @@ class _CurrentLocationBarState extends State<_CurrentLocationBar> {
     });
 
     try {
-      final DeviceLocation location = await _locationService.currentPosition();
+      final LatLng location =
+          (await ref.read(locationServiceProvider).currentPosition()).latLng;
       if (!mounted) {
         return;
       }
       setState(() {
-        _locationLabel = location.displayLabel;
+        _locationLabel = _mockAddress('Current location', location);
       });
-    } on DeviceLocationException catch (error) {
+    } on LocationFailure catch (error) {
       if (!mounted) {
         return;
       }
@@ -588,20 +582,27 @@ class _SavedPlaceButton extends StatelessWidget {
   }
 }
 
-class CustomerSelectLocationScreen extends StatefulWidget {
+class CustomerSelectLocationScreen extends ConsumerStatefulWidget {
   const CustomerSelectLocationScreen({super.key});
 
   @override
-  State<CustomerSelectLocationScreen> createState() =>
+  ConsumerState<CustomerSelectLocationScreen> createState() =>
       _CustomerSelectLocationScreenState();
 }
 
 class _CustomerSelectLocationScreenState
-    extends State<CustomerSelectLocationScreen> {
-  final DeviceLocationService _locationService = const DeviceLocationService();
+    extends ConsumerState<CustomerSelectLocationScreen> {
   late final TextEditingController _pickupController;
   late final TextEditingController _destinationController;
+  GoogleMapController? _mapController;
+  LatLng _mapCenter = MapConstants.abuja;
+  LatLng _selectedPickup = MapConstants.defaultPickup;
+  LatLng _selectedDestination = MapConstants.defaultDestination;
+  bool _selectingDestination = false;
+  bool _isMapLoading = true;
   bool _isLocating = false;
+  String? _mapErrorMessage;
+  bool _isPermissionPermanentlyDenied = false;
 
   @override
   void initState() {
@@ -609,6 +610,9 @@ class _CustomerSelectLocationScreenState
     _pickupController = TextEditingController(text: 'Current Location');
     _destinationController =
         TextEditingController(text: '1901 Thornridge Cir. Shiloh');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialLocation();
+    });
   }
 
   @override
@@ -616,6 +620,43 @@ class _CustomerSelectLocationScreenState
     _pickupController.dispose();
     _destinationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadInitialLocation() async {
+    setState(() {
+      _isMapLoading = true;
+      _mapErrorMessage = null;
+      _isPermissionPermanentlyDenied = false;
+    });
+
+    try {
+      final LatLng location =
+          (await ref.read(locationServiceProvider).currentPosition()).latLng;
+      if (!mounted) {
+        return;
+      }
+      _setPickup(location);
+      await _moveCamera(location);
+      setState(() {
+        _mapCenter = location;
+      });
+    } on LocationFailure catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _mapCenter = MapConstants.abuja;
+        _mapErrorMessage = error.message;
+        _isPermissionPermanentlyDenied =
+            error.reason == LocationFailureReason.permissionPermanentlyDenied;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isMapLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _useCurrentLocation() async {
@@ -628,14 +669,14 @@ class _CustomerSelectLocationScreenState
     });
 
     try {
-      final DeviceLocation location = await _locationService.currentPosition();
+      final LatLng location =
+          (await ref.read(locationServiceProvider).currentPosition()).latLng;
       if (!mounted) {
         return;
       }
-      setState(() {
-        _pickupController.text = location.displayLabel;
-      });
-    } on DeviceLocationException catch (error) {
+      _setPickup(location);
+      await _moveCamera(location);
+    } on LocationFailure catch (error) {
       if (!mounted) {
         return;
       }
@@ -651,48 +692,154 @@ class _CustomerSelectLocationScreenState
     }
   }
 
+  void _setPickup(LatLng location) {
+    setState(() {
+      _selectedPickup = location;
+      _mapCenter = location;
+      _pickupController.text = _mockAddress('Pickup', location);
+      _selectingDestination = false;
+      _mapErrorMessage = null;
+    });
+    ref.read(selectedPickupProvider.notifier).state = location;
+  }
+
+  void _setDestination(LatLng location) {
+    setState(() {
+      _selectedDestination = location;
+      _destinationController.text = _mockAddress('Destination', location);
+      _selectingDestination = true;
+      _mapErrorMessage = null;
+    });
+    ref.read(selectedDestinationProvider.notifier).state = location;
+  }
+
+  Future<void> _moveCamera(LatLng location) async {
+    await _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(MapConstants.cameraFor(location)),
+    );
+  }
+
+  void _handleMapTap(LatLng location) {
+    if (_selectingDestination) {
+      _setDestination(location);
+      return;
+    }
+    _setPickup(location);
+  }
+
+  void _continueWithDefaultLocation() {
+    setState(() {
+      _mapErrorMessage = null;
+      _mapCenter = MapConstants.abuja;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: const ValueKey<String>('customer-destination-screen'),
       backgroundColor: JosiColors.surface,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 5, 24, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  _DestinationHeader(
-                    onBack: () => context.go(AppRoutes.customerHome),
-                  ),
-                  const SizedBox(height: 18),
-                  _DestinationRouteCard(
-                    pickupController: _pickupController,
-                    destinationController: _destinationController,
-                    isLocating: _isLocating,
-                    onUseCurrentLocation: _useCurrentLocation,
-                  ),
-                  const SizedBox(height: 28),
-                  _SavedPlacesCard(
-                    onTap: () => context.go(AppRoutes.customerProfile),
-                  ),
-                  const SizedBox(height: 28),
-                  for (final String location in const <String>[
-                    '2118 Thornridge Cir. Syracuse, C...',
-                    '4517 Washington Ave. Manche...',
-                    '2715 Ash Dr. San Jose, South Da...',
-                  ]) ...<Widget>[
-                    _RecentDestinationTile(location: location),
-                    const SizedBox(height: 12),
-                  ],
-                ],
+      body: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: JosiGoogleMap(
+              key: const ValueKey<String>('customer-select-location-map'),
+              initialCameraPosition: MapConstants.cameraFor(_mapCenter),
+              markers: <Marker>{
+                MapConstants.pickupMarker(_selectedPickup),
+                MapConstants.destinationMarker(_selectedDestination),
+              },
+              myLocationEnabled: true,
+              showCurrentLocationButton: true,
+              isLoading: _isMapLoading,
+              errorMessage: _mapErrorMessage,
+              isPermissionPermanentlyDenied: _isPermissionPermanentlyDenied,
+              onMapCreated: (GoogleMapController controller) {
+                _mapController = controller;
+              },
+              onTap: _handleMapTap,
+              onCurrentLocationPressed: _useCurrentLocation,
+              onRetryPermission: _loadInitialLocation,
+              onOpenAppSettings: () {
+                ref.read(locationServiceProvider).openAppSettings();
+              },
+              onContinueWithDefaultLocation: _continueWithDefaultLocation,
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 5, 24, 0),
+              child: _DestinationHeader(
+                onBack: () => context.go(AppRoutes.customerHome),
               ),
             ),
           ),
-        ),
+          DraggableScrollableSheet(
+            initialChildSize: 0.52,
+            minChildSize: 0.34,
+            maxChildSize: 0.86,
+            snap: true,
+            snapSizes: const <double>[0.52, 0.86],
+            builder: (BuildContext context, ScrollController controller) {
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxWidth: 430),
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
+                  decoration: const BoxDecoration(
+                    color: JosiColors.surface,
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(18)),
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: Color(0x18000000),
+                        blurRadius: 24,
+                        offset: Offset(0, -8),
+                      ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    controller: controller,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        _DestinationRouteCard(
+                          pickupController: _pickupController,
+                          destinationController: _destinationController,
+                          isLocating: _isLocating,
+                          onUseCurrentLocation: _useCurrentLocation,
+                          onSelectDestination: () {
+                            setState(() {
+                              _selectingDestination = true;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        _MapSelectionHint(
+                          selectingDestination: _selectingDestination,
+                        ),
+                        const SizedBox(height: 18),
+                        _SavedPlacesCard(
+                          onTap: () => context.go(AppRoutes.customerProfile),
+                        ),
+                        const SizedBox(height: 18),
+                        for (final String location in const <String>[
+                          '2118 Thornridge Cir. Syracuse, C...',
+                          '4517 Washington Ave. Manche...',
+                          '2715 Ash Dr. San Jose, South Da...',
+                        ]) ...<Widget>[
+                          _RecentDestinationTile(location: location),
+                          const SizedBox(height: 12),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       bottomNavigationBar: _DestinationBottomBar(
         onConfirm: () => context.go(AppRoutes.customerConfirmTrip),
@@ -888,12 +1035,14 @@ class _DestinationRouteCard extends StatelessWidget {
     required this.destinationController,
     required this.isLocating,
     required this.onUseCurrentLocation,
+    required this.onSelectDestination,
   });
 
   final TextEditingController pickupController;
   final TextEditingController destinationController;
   final bool isLocating;
   final VoidCallback onUseCurrentLocation;
+  final VoidCallback onSelectDestination;
 
   @override
   Widget build(BuildContext context) {
@@ -929,6 +1078,7 @@ class _DestinationRouteCard extends StatelessWidget {
                         fieldKey: const ValueKey<String>(
                             'destination-location-field'),
                         controller: destinationController,
+                        onTap: onSelectDestination,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1058,6 +1208,48 @@ class _DestinationInputLine extends StatelessWidget {
                       color: JosiColors.red, size: 18))
               : null,
         ),
+      ),
+    );
+  }
+}
+
+class _MapSelectionHint extends StatelessWidget {
+  const _MapSelectionHint({required this.selectingDestination});
+
+  final bool selectingDestination;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            selectingDestination
+                ? Icons.location_on_rounded
+                : Icons.radio_button_checked_rounded,
+            color: JosiColors.red,
+            size: 19,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              selectingDestination
+                  ? 'Tap map to choose destination'
+                  : 'Tap map to choose pickup',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2628,8 +2820,7 @@ class CustomerActiveTripScreen extends StatelessWidget {
       subtitle: 'Driver arrived',
       child: AppScreenBody(
         children: <Widget>[
-          const AppMapPlaceholder(
-              height: 300, title: 'Live tracking placeholder'),
+          const SizedBox(height: 300, child: _ActiveTripMapBackdrop()),
           const SizedBox(height: 16),
           AppCard(
             child: Column(
@@ -2769,33 +2960,27 @@ class _ActiveTripScaffold extends StatelessWidget {
   }
 }
 
-class _ActiveTripMapBackdrop extends StatelessWidget {
+class _ActiveTripMapBackdrop extends ConsumerWidget {
   const _ActiveTripMapBackdrop();
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        return Stack(
-          children: <Widget>[
-            const Positioned.fill(
-              child: CustomPaint(
-                painter: _RideMapPainter(showRoute: true),
-                child: SizedBox.expand(),
-              ),
-            ),
-            Positioned(
-              left: constraints.maxWidth * 0.56 - 20,
-              top: constraints.maxHeight * 0.33 - 20,
-              child: const _CarMapMarker(),
-            ),
-          ],
-        );
-      },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ActiveTripMapState mapState = ref.watch(activeTripMapProvider);
+
+    return JosiGoogleMap(
+      key: const ValueKey<String>('customer-active-trip-map'),
+      initialCameraPosition: MapConstants.cameraFor(
+        mapState.rider,
+        zoom: MapConstants.tripZoom,
+      ),
+      markers: mapState.customerTripMarkers,
+      myLocationEnabled: true,
+      showCurrentLocationButton: true,
     );
   }
 }
 
+// ignore: unused_element
 class _CarMapMarker extends StatelessWidget {
   const _CarMapMarker();
 

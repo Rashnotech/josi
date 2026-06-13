@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_routes.dart';
+import '../../core/constants/map_constants.dart';
+import '../../core/location/location_providers.dart';
+import '../../core/location/location_service.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
-import '../../core/services/device_location_service.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
+import '../../core/widgets/josi_google_map.dart';
 
 class RiderHomeScreen extends ConsumerStatefulWidget {
   const RiderHomeScreen({super.key});
@@ -23,6 +27,10 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
   bool _isOnline = true;
   bool _showRideRequest = false;
 
+  void _prepareRiderLocationSync(LatLng location) {
+    // TODO: send to POST /api/v1/rider/location when the API client is ready.
+  }
+
   @override
   Widget build(BuildContext context) {
     final Trip requestTrip = JosiMockData.trips.first;
@@ -32,7 +40,12 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
       backgroundColor: JosiColors.white,
       body: Stack(
         children: <Widget>[
-          const Positioned.fill(child: _RiderDashboardMapBackdrop()),
+          Positioned.fill(
+            child: _RiderDashboardMapBackdrop(
+              activeTrip: _showRideRequest ? requestTrip : null,
+              onRiderLocationReady: _prepareRiderLocationSync,
+            ),
+          ),
           Positioned(
             left: 20,
             right: 20,
@@ -78,16 +91,16 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
   }
 }
 
-class RiderLocationAccessScreen extends StatefulWidget {
+class RiderLocationAccessScreen extends ConsumerStatefulWidget {
   const RiderLocationAccessScreen({super.key});
 
   @override
-  State<RiderLocationAccessScreen> createState() =>
+  ConsumerState<RiderLocationAccessScreen> createState() =>
       _RiderLocationAccessScreenState();
 }
 
-class _RiderLocationAccessScreenState extends State<RiderLocationAccessScreen> {
-  final DeviceLocationService _locationService = const DeviceLocationService();
+class _RiderLocationAccessScreenState
+    extends ConsumerState<RiderLocationAccessScreen> {
   bool _isLocating = false;
 
   Future<void> _allowLocationAccess() async {
@@ -100,12 +113,12 @@ class _RiderLocationAccessScreenState extends State<RiderLocationAccessScreen> {
     });
 
     try {
-      await _locationService.currentPosition();
+      await ref.read(locationServiceProvider).currentPosition();
       if (!mounted) {
         return;
       }
       context.go(AppRoutes.riderHome);
-    } on DeviceLocationException catch (error) {
+    } on LocationFailure catch (error) {
       if (!mounted) {
         return;
       }
@@ -829,7 +842,9 @@ class _RiderActiveTripScreenState extends State<RiderActiveTripScreen> {
       backgroundColor: JosiColors.white,
       body: Stack(
         children: <Widget>[
-          const Positioned.fill(child: _RiderMapBackdrop()),
+          Positioned.fill(
+            child: _RiderMapBackdrop(trip: trip),
+          ),
           Positioned(
             left: 26,
             top: MediaQuery.paddingOf(context).top + 26,
@@ -3022,18 +3037,41 @@ class _VerticalDashedLinePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _RiderDashboardMapBackdrop extends StatelessWidget {
-  const _RiderDashboardMapBackdrop();
+class _RiderDashboardMapBackdrop extends ConsumerWidget {
+  const _RiderDashboardMapBackdrop({
+    required this.onRiderLocationReady,
+    this.activeTrip,
+  });
+
+  final Trip? activeTrip;
+  final ValueChanged<LatLng> onRiderLocationReady;
 
   @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _RiderDashboardMapPainter(),
-      child: const SizedBox.expand(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocation = ref.watch(currentLocationProvider);
+    final LatLng riderLocation =
+        currentLocation.valueOrNull?.latLng ?? MapConstants.mockRiderLocation;
+    final Set<Marker> markers = <Marker>{
+      MapConstants.riderMarker(riderLocation),
+      if (activeTrip != null) ...<Marker>{
+        MapConstants.customerMarker(MapConstants.defaultPickup),
+        MapConstants.destinationMarker(MapConstants.defaultDestination),
+      },
+    };
+
+    return JosiGoogleMap(
+      key: const ValueKey<String>('rider-home-map'),
+      initialCameraPosition: MapConstants.cameraFor(riderLocation),
+      markers: markers,
+      myLocationEnabled: currentLocation.hasValue,
+      showCurrentLocationButton: true,
+      isLoading: currentLocation.isLoading,
+      onMapCreated: (_) => onRiderLocationReady(riderLocation),
     );
   }
 }
 
+// ignore: unused_element
 class _RiderDashboardMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -4108,18 +4146,39 @@ class _RiderContactButton extends StatelessWidget {
   }
 }
 
-class _RiderMapBackdrop extends StatelessWidget {
-  const _RiderMapBackdrop();
+class _RiderMapBackdrop extends ConsumerWidget {
+  const _RiderMapBackdrop({required this.trip});
+
+  final Trip trip;
 
   @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _RiderMapPainter(),
-      child: const SizedBox.expand(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocation = ref.watch(currentLocationProvider);
+    final LatLng riderLocation =
+        currentLocation.valueOrNull?.latLng ?? MapConstants.mockRiderLocation;
+    final ActiveTripMapState mapState = ref.watch(activeTripMapProvider);
+
+    return JosiGoogleMap(
+      key: const ValueKey<String>('rider-active-trip-map'),
+      initialCameraPosition: MapConstants.cameraFor(
+        riderLocation,
+        zoom: MapConstants.tripZoom,
+      ),
+      markers: <Marker>{
+        MapConstants.riderMarker(riderLocation),
+        MapConstants.customerMarker(mapState.pickup, id: 'customer-${trip.id}'),
+        MapConstants.destinationMarker(
+          mapState.destination,
+          id: 'destination-${trip.id}',
+        ),
+      },
+      myLocationEnabled: currentLocation.hasValue,
+      showCurrentLocationButton: true,
     );
   }
 }
 
+// ignore: unused_element
 class _RiderMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
