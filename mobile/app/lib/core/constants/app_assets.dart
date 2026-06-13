@@ -18,6 +18,8 @@ class AppAssets {
   static const String notification =
       'assets/images/mingcute--notification-fill.svg';
   static const String card = 'assets/images/solar--card-bold.svg';
+  static const String call = 'assets/images/material-symbols--call.svg';
+  static const String sms = 'assets/images/material-symbols--sms.svg';
   static const String location = 'assets/images/boxicons--location-filled.svg';
   static const String padlock = 'assets/images/uil--padlock.svg';
   static const String locationSearch =

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:josi_ride/core/constants/app_routes.dart';
 import 'package:josi_ride/core/location/location_providers.dart';
 import 'package:josi_ride/core/location/location_service.dart';
+import 'package:josi_ride/core/location/reverse_geocoding_service.dart';
 import 'package:josi_ride/core/theme/josi_colors.dart';
 import 'package:josi_ride/core/theme/josi_theme.dart';
 import 'package:josi_ride/core/widgets/josi_google_map.dart';
@@ -125,7 +126,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(locationCalls, 1);
-    expect(find.text('Current location: 9.07650, 7.39860'), findsOneWidget);
+    expect(find.text('Wuse 2, Abuja, Federal Capital Territory, Nigeria'),
+        findsOneWidget);
+    expect(find.textContaining('9.07650'), findsNothing);
   });
 
   testWidgets(
@@ -732,14 +735,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(locationCalls, 2);
-    expect(find.text('Pickup: 9.07650, 7.39860'), findsOneWidget);
+    expect(find.text('Wuse 2, Abuja, Federal Capital Territory, Nigeria'),
+        findsOneWidget);
+    expect(find.textContaining('9.07650'), findsNothing);
 
     await tester
         .tap(find.byKey(const ValueKey<String>('destination-location-field')));
     await tester.pumpAndSettle();
     await tester.tapAt(const Offset(80, 220));
     await tester.pumpAndSettle();
-    expect(find.text('Destination: 9.08160, 7.46340'), findsOneWidget);
+    expect(find.text('Jabi, Abuja, Federal Capital Territory, Nigeria'),
+        findsOneWidget);
+    expect(find.textContaining('7.46340'), findsNothing);
 
     await tester.enterText(
       find.byKey(const ValueKey<String>('destination-location-field')),
@@ -807,7 +814,7 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey<String>('request-ride-bike-icon')),
         findsOneWidget);
-    expect(find.text('Ride Founded'), findsOneWidget);
+    expect(find.text('Ride Found'), findsOneWidget);
     expect(find.text('Request Ride'), findsOneWidget);
     expect(
         find.byKey(const ValueKey<String>('request-ride-driver-details-link')),
@@ -819,13 +826,13 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('customer-driver-details-screen')),
         findsOneWidget);
-    expect(find.text('Driver Details'), findsOneWidget);
+    expect(find.text('Rider Details'), findsOneWidget);
     expect(find.text('example@gmail.com'), findsOneWidget);
     expect(find.text('7,500+'), findsOneWidget);
     expect(find.text('10+'), findsOneWidget);
     expect(find.text('4.9+'), findsOneWidget);
     expect(find.text('4,956'), findsOneWidget);
-    expect(find.text('Driver Contact'), findsOneWidget);
+    expect(find.text('Rider Contact'), findsOneWidget);
     expect(find.text('Car Details'), findsOneWidget);
     expect(find.text('Hyundai Verna'), findsOneWidget);
     expect(find.text('GR 678-UVWX'), findsOneWidget);
@@ -861,7 +868,7 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('customer-active-trip-screen')),
         findsOneWidget);
-    expect(find.text('Driver Arrived'), findsWidgets);
+    expect(find.text('Rider Arrived'), findsWidgets);
     expect(find.text('Jenny Wilson'), findsOneWidget);
     expect(find.text('Sedan'), findsOneWidget);
     expect(find.text('OTP - 6546'), findsOneWidget);
@@ -874,7 +881,7 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('customer-trip-completed-screen')),
         findsOneWidget);
-    expect(find.text('Rate Driver'), findsOneWidget);
+    expect(find.text('Rate Rider'), findsOneWidget);
     expect(find.text('Jenny Wilson'), findsOneWidget);
     expect(find.text('Hyundai Verna'), findsOneWidget);
     expect(find.text('OR 678-UVWX'), findsOneWidget);
@@ -941,6 +948,10 @@ void main() {
         findsOneWidget);
     expect(find.text('Jenny Wilson'), findsOneWidget);
     expect(find.text('Reschedule'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('booking-sms-button')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('booking-call-button')),
+        findsOneWidget);
     expect(find.text('History and active requests'), findsNothing);
     _expectCustomerNavLabelColor(tester, 'Activity', JosiColors.red);
 
@@ -955,7 +966,7 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('customer-driver-details-screen')),
         findsOneWidget);
-    expect(find.text('Driver Details'), findsOneWidget);
+    expect(find.text('Rider Details'), findsOneWidget);
     expect(find.text('Jenny Wilson'), findsWidgets);
 
     final BuildContext activityDriverContext = tester.element(
@@ -979,7 +990,7 @@ void main() {
         .tap(find.byKey(const ValueKey<String>('activity-tab-cancelled')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Cancelled by Driver'), findsOneWidget);
+    expect(find.text('Cancelled by Rider'), findsOneWidget);
     expect(find.text('Cancelled by You'), findsOneWidget);
     expect(find.text('Cody Fisher'), findsOneWidget);
   });
@@ -1221,6 +1232,9 @@ Future<void> _pumpApp(WidgetTester tester) async {
         locationServiceProvider.overrideWithValue(
           _FakeLocationService(onCall: () => _mockLocationCall?.call()),
         ),
+        reverseGeocodingServiceProvider.overrideWithValue(
+          const _FakeReverseGeocodingService(),
+        ),
       ],
       child: const JosiApp(),
     ),
@@ -1297,6 +1311,23 @@ class _FakeLocationService extends LocationService {
 
   @override
   Future<bool> openAppSettings() async => true;
+}
+
+class _FakeReverseGeocodingService extends ReverseGeocodingService {
+  const _FakeReverseGeocodingService();
+
+  @override
+  Future<String> addressFromCoordinates({
+    required double latitude,
+    required double longitude,
+    String fallback = 'Selected location',
+  }) async {
+    if (latitude.toStringAsFixed(4) == '9.0816' &&
+        longitude.toStringAsFixed(4) == '7.4634') {
+      return 'Jabi, Abuja, Federal Capital Territory, Nigeria';
+    }
+    return 'Wuse 2, Abuja, Federal Capital Territory, Nigeria';
+  }
 }
 
 void _expectVisibleInViewport(WidgetTester tester, Finder finder) {

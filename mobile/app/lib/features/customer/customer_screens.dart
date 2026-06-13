@@ -16,11 +16,6 @@ import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 import '../../core/widgets/josi_google_map.dart';
 
-String _mockAddress(String label, LatLng position) {
-  return '$label: ${position.latitude.toStringAsFixed(5)}, '
-      '${position.longitude.toStringAsFixed(5)}';
-}
-
 class CustomerHomeScreen extends ConsumerWidget {
   const CustomerHomeScreen({super.key});
 
@@ -299,7 +294,6 @@ class _CurrentLocationBar extends ConsumerStatefulWidget {
 }
 
 class _CurrentLocationBarState extends ConsumerState<_CurrentLocationBar> {
-  String _locationLabel = 'Current Location';
   bool _isLocating = false;
 
   Future<void> _useCurrentLocation() async {
@@ -314,12 +308,19 @@ class _CurrentLocationBarState extends ConsumerState<_CurrentLocationBar> {
     try {
       final LatLng location =
           (await ref.read(locationServiceProvider).currentPosition()).latLng;
+      final String address = await ref
+          .read(reverseGeocodingServiceProvider)
+          .addressFromCoordinates(
+            latitude: location.latitude,
+            longitude: location.longitude,
+            fallback: 'Unable to get address. Please adjust the pin.',
+          );
       if (!mounted) {
         return;
       }
-      setState(() {
-        _locationLabel = _mockAddress('Current location', location);
-      });
+      ref.read(currentLocationAddressProvider.notifier).state = address;
+      ref.read(selectedPickupProvider.notifier).state = location;
+      ref.read(selectedPickupAddressProvider.notifier).state = address;
     } on LocationFailure catch (error) {
       if (!mounted) {
         return;
@@ -338,6 +339,8 @@ class _CurrentLocationBarState extends ConsumerState<_CurrentLocationBar> {
 
   @override
   Widget build(BuildContext context) {
+    final String locationLabel = ref.watch(currentLocationAddressProvider);
+
     return Material(
       color: JosiColors.white,
       borderRadius: BorderRadius.circular(6),
@@ -362,7 +365,7 @@ class _CurrentLocationBarState extends ConsumerState<_CurrentLocationBar> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  _isLocating ? 'Locating...' : _locationLabel,
+                  _isLocating ? 'Fetching location address...' : locationLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -601,6 +604,8 @@ class _CustomerSelectLocationScreenState
   bool _selectingDestination = false;
   bool _isMapLoading = true;
   bool _isLocating = false;
+  bool _isFetchingPickupAddress = false;
+  bool _isFetchingDestinationAddress = false;
   String? _mapErrorMessage;
   bool _isPermissionPermanentlyDenied = false;
 
@@ -635,7 +640,7 @@ class _CustomerSelectLocationScreenState
       if (!mounted) {
         return;
       }
-      _setPickup(location);
+      await _setPickup(location);
       await _moveCamera(location);
       setState(() {
         _mapCenter = location;
@@ -674,7 +679,7 @@ class _CustomerSelectLocationScreenState
       if (!mounted) {
         return;
       }
-      _setPickup(location);
+      await _setPickup(location);
       await _moveCamera(location);
     } on LocationFailure catch (error) {
       if (!mounted) {
@@ -692,25 +697,55 @@ class _CustomerSelectLocationScreenState
     }
   }
 
-  void _setPickup(LatLng location) {
+  Future<void> _setPickup(LatLng location) async {
     setState(() {
       _selectedPickup = location;
       _mapCenter = location;
-      _pickupController.text = _mockAddress('Pickup', location);
+      _pickupController.text = 'Fetching location address...';
       _selectingDestination = false;
       _mapErrorMessage = null;
+      _isFetchingPickupAddress = true;
     });
     ref.read(selectedPickupProvider.notifier).state = location;
+
+    final String address = await _addressFor(location);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _pickupController.text = address;
+      _isFetchingPickupAddress = false;
+    });
+    ref.read(selectedPickupAddressProvider.notifier).state = address;
   }
 
-  void _setDestination(LatLng location) {
+  Future<void> _setDestination(LatLng location) async {
     setState(() {
       _selectedDestination = location;
-      _destinationController.text = _mockAddress('Destination', location);
+      _destinationController.text = 'Fetching location address...';
       _selectingDestination = true;
       _mapErrorMessage = null;
+      _isFetchingDestinationAddress = true;
     });
     ref.read(selectedDestinationProvider.notifier).state = location;
+
+    final String address = await _addressFor(location);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _destinationController.text = address;
+      _isFetchingDestinationAddress = false;
+    });
+    ref.read(selectedDestinationAddressProvider.notifier).state = address;
+  }
+
+  Future<String> _addressFor(LatLng location) {
+    return ref.read(reverseGeocodingServiceProvider).addressFromCoordinates(
+          latitude: location.latitude,
+          longitude: location.longitude,
+          fallback: 'Unable to get address. Please adjust the pin.',
+        );
   }
 
   Future<void> _moveCamera(LatLng location) async {
@@ -807,12 +842,19 @@ class _CustomerSelectLocationScreenState
                         _DestinationRouteCard(
                           pickupController: _pickupController,
                           destinationController: _destinationController,
-                          isLocating: _isLocating,
+                          isLocating: _isLocating || _isFetchingPickupAddress,
+                          isFetchingDestination: _isFetchingDestinationAddress,
                           onUseCurrentLocation: _useCurrentLocation,
                           onSelectDestination: () {
                             setState(() {
                               _selectingDestination = true;
                             });
+                          },
+                          onDestinationChanged: (String value) {
+                            ref
+                                .read(
+                                    selectedDestinationAddressProvider.notifier)
+                                .state = value;
                           },
                         ),
                         const SizedBox(height: 14),
@@ -1034,69 +1076,55 @@ class _DestinationRouteCard extends StatelessWidget {
     required this.pickupController,
     required this.destinationController,
     required this.isLocating,
+    required this.isFetchingDestination,
     required this.onUseCurrentLocation,
     required this.onSelectDestination,
+    required this.onDestinationChanged,
   });
 
   final TextEditingController pickupController;
   final TextEditingController destinationController;
   final bool isLocating;
+  final bool isFetchingDestination;
   final VoidCallback onUseCurrentLocation;
   final VoidCallback onSelectDestination;
+  final ValueChanged<String> onDestinationChanged;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
         color: JosiColors.white,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: JosiColors.line),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const _DestinationRail(),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              children: <Widget>[
-                _DestinationInputLine(
-                  fieldKey: const ValueKey<String>(
-                      'destination-current-location-field'),
-                  controller: pickupController,
-                  isFilled: true,
-                  readOnly: true,
-                  isLoading: isLocating,
-                  onTap: onUseCurrentLocation,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: _DestinationInputLine(
-                        fieldKey: const ValueKey<String>(
-                            'destination-location-field'),
-                        controller: destinationController,
-                        onTap: onSelectDestination,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.map_outlined,
-                        color: JosiColors.red, size: 24),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      constraints:
-                          const BoxConstraints.tightFor(width: 34, height: 34),
-                      padding: EdgeInsets.zero,
-                      onPressed: () {},
-                      icon: const Icon(Icons.add_rounded,
-                          color: JosiColors.red, size: 27),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          _DestinationInputLine(
+            fieldKey:
+                const ValueKey<String>('destination-current-location-field'),
+            controller: pickupController,
+            leadingIcon: Icons.radio_button_checked_rounded,
+            leadingColor: JosiColors.ink,
+            readOnly: true,
+            isLoading: isLocating,
+            onTap: onUseCurrentLocation,
+          ),
+          const SizedBox(height: 10),
+          _DestinationInputLine(
+            fieldKey: const ValueKey<String>('destination-location-field'),
+            controller: destinationController,
+            leadingIcon: Icons.location_on_rounded,
+            leadingColor: JosiColors.red,
+            isLoading: isFetchingDestination,
+            onTap: onSelectDestination,
+            onChanged: onDestinationChanged,
+          ),
+          _LocationAddressStatus(
+            isFetchingPickup: isLocating,
+            isFetchingDestination: isFetchingDestination,
           ),
         ],
       ),
@@ -1104,6 +1132,7 @@ class _DestinationRouteCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _DestinationRail extends StatelessWidget {
   const _DestinationRail();
 
@@ -1153,61 +1182,102 @@ class _DestinationInputLine extends StatelessWidget {
   const _DestinationInputLine({
     required this.controller,
     required this.fieldKey,
-    this.isFilled = false,
+    required this.leadingIcon,
+    required this.leadingColor,
     this.readOnly = false,
     this.isLoading = false,
     this.onTap,
+    this.onChanged,
   });
 
   final TextEditingController controller;
   final Key fieldKey;
-  final bool isFilled;
+  final IconData leadingIcon;
+  final Color leadingColor;
   final bool readOnly;
   final bool isLoading;
   final VoidCallback? onTap;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 44,
+      height: 42,
       alignment: Alignment.centerLeft,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: isFilled ? const Color(0xFFF0F1F4) : JosiColors.white,
-        border: const Border(
-          bottom: BorderSide(color: JosiColors.ink, width: 1),
-        ),
+        color: readOnly ? const Color(0xFFF4F5F7) : JosiColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: JosiColors.line),
       ),
-      child: TextField(
-        key: fieldKey,
-        controller: controller,
-        readOnly: readOnly,
-        onTap: onTap,
-        maxLines: 1,
-        showCursor: !readOnly,
-        textInputAction: readOnly ? TextInputAction.none : TextInputAction.done,
-        textAlignVertical: TextAlignVertical.center,
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: JosiColors.ink,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+      child: Row(
+        children: <Widget>[
+          Icon(leadingIcon, color: leadingColor, size: 16),
+          const SizedBox(width: 9),
+          Expanded(
+            child: TextField(
+              key: fieldKey,
+              controller: controller,
+              readOnly: readOnly,
+              onTap: onTap,
+              onChanged: onChanged,
+              maxLines: 1,
+              showCursor: !readOnly,
+              textInputAction:
+                  readOnly ? TextInputAction.none : TextInputAction.done,
+              textAlignVertical: TextAlignVertical.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: EdgeInsets.zero,
-          suffixIconConstraints:
-              const BoxConstraints.tightFor(width: 24, height: 24),
-          suffixIcon: readOnly
-              ? (isLoading
-                  ? const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location_rounded,
-                      color: JosiColors.red, size: 18))
-              : null,
-        ),
+          ),
+          if (isLoading)
+            const SizedBox.square(
+              dimension: 15,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else if (readOnly)
+            const Icon(Icons.my_location_rounded,
+                color: JosiColors.red, size: 16)
+          else
+            const Icon(Icons.map_outlined, color: JosiColors.red, size: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocationAddressStatus extends StatelessWidget {
+  const _LocationAddressStatus({
+    required this.isFetchingPickup,
+    required this.isFetchingDestination,
+  });
+
+  final bool isFetchingPickup;
+  final bool isFetchingDestination;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isFetchingPickup && !isFetchingDestination) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        'Fetching location address...',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: JosiColors.softMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
       ),
     );
   }
@@ -2127,7 +2197,7 @@ class _RideFoundSheet extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: Text(
-                    'Ride Founded',
+                    'Ride Found',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -2558,7 +2628,7 @@ class _RideBikeIcon extends StatelessWidget {
   }
 }
 
-class _RideMapBackdrop extends StatelessWidget {
+class _RideMapBackdrop extends ConsumerWidget {
   const _RideMapBackdrop({
     this.showBikes = false,
     this.showRoute = true,
@@ -2568,7 +2638,8 @@ class _RideMapBackdrop extends StatelessWidget {
   final bool showRoute;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ActiveTripMapState mapState = ref.watch(activeTripMapProvider);
     final List<Offset> bikes = showRoute
         ? const <Offset>[Offset(0.58, 0.43)]
         : const <Offset>[
@@ -2579,15 +2650,42 @@ class _RideMapBackdrop extends StatelessWidget {
             Offset(0.78, 0.71),
             Offset(0.42, 0.90),
           ];
+    final Set<Marker> markers = showRoute
+        ? mapState.customerTripMarkers
+        : <Marker>{
+            MapConstants.pickupMarker(mapState.pickup),
+            MapConstants.destinationMarker(mapState.destination),
+            MapConstants.riderMarker(
+              MapConstants.mockRiderLocation,
+              id: 'rider-1',
+            ),
+            MapConstants.riderMarker(
+              const LatLng(9.0832, 7.4321),
+              id: 'rider-2',
+            ),
+            MapConstants.riderMarker(
+              const LatLng(9.0614, 7.4102),
+              id: 'rider-3',
+            ),
+          };
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return Stack(
           children: <Widget>[
             Positioned.fill(
-              child: CustomPaint(
-                painter: _RideMapPainter(showRoute: showRoute),
-                child: const SizedBox.expand(),
+              child: JosiGoogleMap(
+                key: ValueKey<String>(
+                  showRoute ? 'ride-found-google-map' : 'ride-search-map',
+                ),
+                initialCameraPosition: MapConstants.cameraFor(
+                  showRoute ? mapState.rider : MapConstants.abuja,
+                  zoom:
+                      showRoute ? MapConstants.tripZoom : MapConstants.cityZoom,
+                ),
+                markers: markers,
+                myLocationEnabled: true,
+                showCurrentLocationButton: false,
               ),
             ),
             if (showBikes)
@@ -2606,209 +2704,6 @@ class _RideMapBackdrop extends StatelessWidget {
   }
 }
 
-class _RideMapPainter extends CustomPainter {
-  const _RideMapPainter({required this.showRoute});
-
-  final bool showRoute;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-        Offset.zero & size, Paint()..color = const Color(0xFFEAF2EE));
-
-    final Paint districtPaint = Paint()..color = const Color(0xFFDCEED8);
-    final Paint waterPaint = Paint()..color = const Color(0xFFD8EAF7);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(size.width * 0.58, size.height * 0.06, size.width * 0.34,
-            size.height * 0.22),
-        const Radius.circular(26),
-      ),
-      districtPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(-size.width * 0.08, size.height * 0.54, size.width * 0.42,
-            size.height * 0.18),
-        const Radius.circular(42),
-      ),
-      waterPaint,
-    );
-
-    final Paint roadPaint = Paint()
-      ..color = JosiColors.white
-      ..strokeWidth = 18
-      ..strokeCap = StrokeCap.round;
-    final Paint minorRoadPaint = Paint()
-      ..color = const Color(0xFFF7F8F7)
-      ..strokeWidth = 9
-      ..strokeCap = StrokeCap.round;
-    final Paint roadLinePaint = Paint()
-      ..color = JosiColors.mapLine
-      ..strokeWidth = 1.2
-      ..strokeCap = StrokeCap.round;
-    final Paint arrowPaint = Paint()
-      ..color = const Color(0xFFC9CDD2)
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round;
-
-    for (final double x in <double>[0.12, 0.34, 0.57, 0.82]) {
-      canvas.drawLine(
-        Offset(size.width * x, -size.height * 0.1),
-        Offset(size.width * (x - 0.24), size.height * 1.1),
-        roadPaint,
-      );
-      canvas.drawLine(
-        Offset(size.width * x, -size.height * 0.1),
-        Offset(size.width * (x - 0.24), size.height * 1.1),
-        roadLinePaint,
-      );
-    }
-    for (final double y in <double>[0.12, 0.28, 0.45, 0.66, 0.84]) {
-      canvas.drawLine(
-        Offset(-size.width * 0.1, size.height * y),
-        Offset(size.width * 1.1, size.height * (y + 0.16)),
-        roadPaint,
-      );
-      canvas.drawLine(
-        Offset(-size.width * 0.1, size.height * y),
-        Offset(size.width * 1.1, size.height * (y + 0.16)),
-        roadLinePaint,
-      );
-    }
-    for (final double x in <double>[0.2, 0.46, 0.71]) {
-      canvas.drawLine(
-        Offset(size.width * x, 0),
-        Offset(size.width * (x + 0.12), size.height),
-        minorRoadPaint,
-      );
-      canvas.drawLine(
-        Offset(size.width * x, 0),
-        Offset(size.width * (x + 0.12), size.height),
-        roadLinePaint,
-      );
-    }
-    for (final double y in <double>[0.2, 0.38, 0.58, 0.76]) {
-      canvas.drawLine(
-        Offset(0, size.height * y),
-        Offset(size.width, size.height * (y - 0.08)),
-        minorRoadPaint,
-      );
-      canvas.drawLine(
-        Offset(0, size.height * y),
-        Offset(size.width, size.height * (y - 0.08)),
-        roadLinePaint,
-      );
-    }
-
-    _drawStreetLabel(canvas, size, 'Worth St', const Offset(0.36, 0.08), -0.6);
-    _drawStreetLabel(canvas, size, 'Broadway', const Offset(0.70, 0.29), -1.05);
-    _drawStreetLabel(canvas, size, 'Reade St', const Offset(0.37, 0.41), 0.28);
-    _drawStreetLabel(canvas, size, 'Park Row', const Offset(0.35, 0.70), -0.18);
-    _drawStreetLabel(canvas, size, 'Warren St', const Offset(0.24, 0.58), 0.38);
-
-    for (final Offset point in <Offset>[
-      const Offset(0.22, 0.52),
-      const Offset(0.38, 0.74),
-      const Offset(0.63, 0.46),
-      const Offset(0.72, 0.68),
-    ]) {
-      final Offset center =
-          Offset(size.width * point.dx, size.height * point.dy);
-      canvas.drawLine(center.translate(-8, -8), center, arrowPaint);
-      canvas.drawLine(center, center.translate(-4, 8), arrowPaint);
-    }
-
-    if (showRoute) {
-      final Paint routePaint = Paint()
-        ..color = const Color(0xFF4A4A4A)
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      final Path route = Path()
-        ..moveTo(size.width * 0.34, size.height * 0.22)
-        ..lineTo(size.width * 0.60, size.height * 0.34)
-        ..lineTo(size.width * 0.48, size.height * 0.48)
-        ..lineTo(size.width * 0.78, size.height * 0.62);
-      canvas.drawPath(route, routePaint);
-      _drawMapPin(canvas, size, const Offset(0.34, 0.22), isPickup: true);
-      _drawDestinationPulse(canvas, size, const Offset(0.78, 0.62));
-    }
-
-    final Rect fadeRect = Offset.zero & size;
-    canvas.drawRect(
-      fadeRect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[
-            Color(0x55FFFFFF),
-            Color(0x00FFFFFF),
-            Color(0xB8FFFFFF),
-          ],
-          stops: <double>[0, 0.45, 1],
-        ).createShader(fadeRect),
-    );
-  }
-
-  void _drawStreetLabel(
-    Canvas canvas,
-    Size size,
-    String text,
-    Offset fractionalOffset,
-    double rotation,
-  ) {
-    canvas.save();
-    canvas.translate(
-        size.width * fractionalOffset.dx, size.height * fractionalOffset.dy);
-    canvas.rotate(rotation);
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(
-          color: Color(0xFFB8BCC2),
-          fontSize: 20,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(canvas, Offset.zero);
-    canvas.restore();
-  }
-
-  void _drawMapPin(Canvas canvas, Size size, Offset point,
-      {required bool isPickup}) {
-    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
-    final Paint paint = Paint()..color = JosiColors.red;
-    canvas.drawLine(center, center.translate(0, 48), paint..strokeWidth = 4);
-    canvas.drawCircle(center, 24, Paint()..color = JosiColors.white);
-    canvas.drawCircle(center, 19, paint);
-    canvas.drawCircle(center, 10, Paint()..color = JosiColors.white);
-  }
-
-  void _drawDestinationPulse(Canvas canvas, Size size, Offset point) {
-    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
-    canvas.drawCircle(
-        center, 54, Paint()..color = JosiColors.red.withValues(alpha: 0.16));
-    canvas.drawCircle(
-        center, 38, Paint()..color = JosiColors.red.withValues(alpha: 0.22));
-    canvas.drawCircle(center, 28, Paint()..color = JosiColors.red);
-    final Path arrow = Path()
-      ..moveTo(center.dx - 10, center.dy - 7)
-      ..lineTo(center.dx + 11, center.dy)
-      ..lineTo(center.dx - 10, center.dy + 7)
-      ..close();
-    canvas.drawPath(arrow, Paint()..color = JosiColors.white);
-  }
-
-  @override
-  bool shouldRepaint(covariant _RideMapPainter oldDelegate) {
-    return oldDelegate.showRoute != showRoute;
-  }
-}
-
 class CustomerActiveTripScreen extends StatelessWidget {
   const CustomerActiveTripScreen({super.key});
 
@@ -2816,8 +2711,8 @@ class CustomerActiveTripScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ActiveTripScaffold(
       key: const ValueKey<String>('customer-active-trip-shell'),
-      title: 'Driver Arrived',
-      subtitle: 'Driver arrived',
+      title: 'Rider Arrived',
+      subtitle: 'Rider arrived',
       child: AppScreenBody(
         children: <Widget>[
           const SizedBox(height: 300, child: _ActiveTripMapBackdrop()),
@@ -2934,7 +2829,7 @@ class _ActiveTripScaffold extends StatelessWidget {
             left: 0,
             right: 0,
             child: Text(
-              'Driver Arrived',
+              'Rider Arrived',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: JosiColors.ink,
@@ -3053,7 +2948,7 @@ class _ActiveTripSheet extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: Text(
-                    'Driver Arrived',
+                    'Rider Arrived',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -3123,9 +3018,9 @@ class _ActiveTripSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const _ContactRoundButton(icon: Icons.chat_bubble_rounded),
+                const _ContactRoundButton(asset: AppAssets.sms),
                 const SizedBox(width: 12),
-                const _ContactRoundButton(icon: Icons.call_rounded),
+                const _ContactRoundButton(asset: AppAssets.call),
               ],
             ),
             const SizedBox(height: 18),
@@ -3162,9 +3057,13 @@ class _ActiveTripSheet extends StatelessWidget {
 }
 
 class _ContactRoundButton extends StatelessWidget {
-  const _ContactRoundButton({required this.icon});
+  const _ContactRoundButton({
+    this.icon,
+    this.asset,
+  }) : assert(icon != null || asset != null);
 
-  final IconData icon;
+  final IconData? icon;
+  final String? asset;
 
   @override
   Widget build(BuildContext context) {
@@ -3177,7 +3076,9 @@ class _ContactRoundButton extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: JosiColors.line),
       ),
-      child: Icon(icon, color: JosiColors.red, size: 24),
+      child: asset != null
+          ? _AssetIcon(asset: asset!, color: JosiColors.red, size: 22)
+          : Icon(icon, color: JosiColors.red, size: 24),
     );
   }
 }
@@ -3515,7 +3416,7 @@ class _RateDriverHeader extends StatelessWidget {
         ),
         Expanded(
           child: Text(
-            'Rate Driver',
+            'Rate Rider',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: JosiColors.black,
@@ -3677,7 +3578,7 @@ const Map<_BookingActivityTab, List<_BookingActivityItem>>
   _BookingActivityTab.cancelled: <_BookingActivityItem>[
     _BookingActivityItem(
       id: 'TRP-2410',
-      statusLabel: 'Cancelled by Driver',
+      statusLabel: 'Cancelled by Rider',
       driverName: 'Cody Fisher',
       vehicle: 'MPV',
       seats: '5 Seater',
@@ -4117,6 +4018,8 @@ class _BookingActivityCard extends StatelessWidget {
                 const SizedBox(height: 14),
                 const _BookingMiniMap(),
                 const SizedBox(height: 18),
+                const _BookingContactRow(),
+                const SizedBox(height: 14),
                 const _BookingActionRow(),
               ] else
                 Icon(
@@ -4199,6 +4102,66 @@ class _BookingDriverRow extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _BookingContactRow extends StatelessWidget {
+  const _BookingContactRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: <Widget>[
+        _BookingContactButton(
+          key: ValueKey<String>('booking-sms-button'),
+          asset: AppAssets.sms,
+          label: 'SMS',
+        ),
+        SizedBox(width: 12),
+        _BookingContactButton(
+          key: ValueKey<String>('booking-call-button'),
+          asset: AppAssets.call,
+          label: 'Call',
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingContactButton extends StatelessWidget {
+  const _BookingContactButton({
+    required this.asset,
+    required this.label,
+    super.key,
+  });
+
+  final String asset;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: SizedBox(
+        height: 44,
+        child: OutlinedButton.icon(
+          onPressed: () {},
+          style: OutlinedButton.styleFrom(
+            backgroundColor: JosiColors.surface,
+            foregroundColor: JosiColors.red,
+            side: const BorderSide(color: JosiColors.line),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          icon: _AssetIcon(asset: asset, color: JosiColors.red, size: 18),
+          label: Text(label),
+        ),
+      ),
     );
   }
 }
@@ -5388,7 +5351,7 @@ class _CustomerDriverDetailsScreenState
               padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
               children: <Widget>[
                 _ProfileHeader(
-                  title: 'Driver Details',
+                  title: 'Rider Details',
                   onBack: () => _goBack(context),
                 ),
                 const SizedBox(height: 30),
@@ -5725,7 +5688,7 @@ class _DriverDetailsAbout extends StatelessWidget {
             children: <InlineSpan>[
               const TextSpan(
                 text:
-                    'Professional Josi driver with verified ride history, clean vehicle records, and a strong customer rating. ',
+                    'Professional Josi rider with verified ride history, clean vehicle records, and a strong customer rating. ',
               ),
               TextSpan(
                 text: 'Read more',
@@ -5741,7 +5704,7 @@ class _DriverDetailsAbout extends StatelessWidget {
         ),
         const SizedBox(height: 28),
         Text(
-          'Driver Contact',
+          'Rider Contact',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: JosiColors.ink,
                 fontSize: 18,
@@ -5769,7 +5732,7 @@ class _DriverDetailsAbout extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Driver',
+                    'Rider',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: JosiColors.softMuted,
                           fontSize: 14,
@@ -5778,9 +5741,9 @@ class _DriverDetailsAbout extends StatelessWidget {
                 ],
               ),
             ),
-            const _ContactRoundButton(icon: Icons.chat_bubble_rounded),
+            const _ContactRoundButton(asset: AppAssets.sms),
             const SizedBox(width: 12),
-            const _ContactRoundButton(icon: Icons.call_rounded),
+            const _ContactRoundButton(asset: AppAssets.call),
           ],
         ),
         const SizedBox(height: 30),
