@@ -74,7 +74,8 @@ void main() {
     expect(tester.widget<Text>(find.text('Office')).style?.fontSize, 16);
     expect(find.text('Last Trip'), findsOneWidget);
     _expectVisibleInViewport(tester, find.text('Home'));
-    _expectVisibleInViewport(tester, find.text('Bookings'));
+    _expectVisibleInViewport(tester, find.text('Activity'));
+    _expectVisibleInViewport(tester, find.text('Rider'));
 
     await tester.tap(find.byKey(const ValueKey<String>('home-last-trip-tile')));
     await tester.pumpAndSettle();
@@ -755,7 +756,7 @@ void main() {
                 .byKey(const ValueKey<String>('destination-confirm-button')))
             .height,
         52);
-    _expectCustomerNavLabelColor(tester, 'Home', JosiColors.red);
+    _expectCustomerNavLabelColor(tester, 'Rider', JosiColors.red);
 
     await tester
         .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
@@ -922,11 +923,11 @@ void main() {
     expect(find.text('Try Again'), findsOneWidget);
   });
 
-  testWidgets('customer fixed bottom navigation opens bookings',
+  testWidgets('customer fixed bottom navigation opens activity',
       (WidgetTester tester) async {
     await _loginAsCustomer(tester);
 
-    await tester.tap(find.text('Bookings').last);
+    await tester.tap(find.text('Activity').last);
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('customer-activity-screen')),
@@ -941,7 +942,7 @@ void main() {
     expect(find.text('Jenny Wilson'), findsOneWidget);
     expect(find.text('Reschedule'), findsOneWidget);
     expect(find.text('History and active requests'), findsNothing);
-    _expectCustomerNavLabelColor(tester, 'Bookings', JosiColors.red);
+    _expectCustomerNavLabelColor(tester, 'Activity', JosiColors.red);
 
     final Text bookingsTitle = tester.widget<Text>(find.text('Bookings').first);
     expect(bookingsTitle.style?.fontSize, 20);
@@ -983,20 +984,19 @@ void main() {
     expect(find.text('Cody Fisher'), findsOneWidget);
   });
 
-  testWidgets('customer wallet navigation opens wallet',
+  testWidgets('customer rider navigation opens destination screen',
       (WidgetTester tester) async {
     await _loginAsCustomer(tester);
 
-    await tester.tap(find.text('Wallet').last);
+    await tester.tap(find.text('Rider').last);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey<String>('customer-wallet-screen')),
+    expect(find.byKey(const ValueKey<String>('customer-destination-screen')),
         findsOneWidget);
-    expect(find.text('Available balance'), findsOneWidget);
-    expect(find.text('Transactions'), findsOneWidget);
-    expect(find.text('Payment methods'), findsOneWidget);
-    expect(find.text('Book a trip'), findsNothing);
-    _expectCustomerNavLabelColor(tester, 'Wallet', JosiColors.red);
+    expect(find.text('Destination'), findsOneWidget);
+    expect(find.text('Saved Places'), findsOneWidget);
+    expect(find.text('Confirm'), findsOneWidget);
+    _expectCustomerNavLabelColor(tester, 'Rider', JosiColors.red);
   });
 
   testWidgets('customer profile opens editable profile form',
@@ -1014,9 +1014,10 @@ void main() {
     expect(find.text('Notification'), findsNothing);
     expect(find.text('Pre-Booked Rides'), findsNothing);
     expect(find.text('Emergency Contact'), findsNothing);
-    expect(find.text('Bookings'), findsOneWidget);
-    expect(find.text('Wallet'), findsOneWidget);
-    expect(find.text('Activity'), findsNothing);
+    expect(find.text('Activity'), findsOneWidget);
+    expect(find.text('Rider'), findsOneWidget);
+    expect(find.text('Bookings'), findsNothing);
+    expect(find.text('Wallet'), findsNothing);
     expect(find.text('Rides'), findsNothing);
     _expectCustomerNavLabelColor(tester, 'Profile', JosiColors.red);
 

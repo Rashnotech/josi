@@ -804,8 +804,8 @@ class CustomerBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String activeTab = switch (selectedTab) {
-      'activity' || 'trips' => 'bookings',
-      'ride' || 'rides' => 'home',
+      'bookings' || 'trips' => 'activity',
+      'ride' || 'rides' || 'destination' || 'select-location' => 'rider',
       _ => selectedTab,
     };
 
@@ -828,17 +828,17 @@ class CustomerBottomNav extends StatelessWidget {
                 selectedTab: activeTab,
               ),
               _CustomerNavItem(
-                tab: 'bookings',
-                label: 'Bookings',
+                tab: 'activity',
+                label: 'Activity',
                 asset: AppAssets.history,
                 route: AppRoutes.customerTrips,
                 selectedTab: activeTab,
               ),
               _CustomerNavItem(
-                tab: 'wallet',
-                label: 'Wallet',
-                asset: AppAssets.card,
-                route: AppRoutes.customerWallet,
+                tab: 'rider',
+                label: 'Rider',
+                asset: AppAssets.bike,
+                route: AppRoutes.customerSelectLocation,
                 selectedTab: activeTab,
               ),
               _CustomerNavItem(

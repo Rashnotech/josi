@@ -1384,7 +1384,7 @@ class _DestinationBottomBar extends StatelessWidget {
               ),
             ),
           ),
-          const CustomerBottomNav(selectedTab: 'home'),
+          const CustomerBottomNav(selectedTab: 'rider'),
         ],
       ),
     );
@@ -3773,7 +3773,7 @@ class _CustomerTripsScreenState extends State<CustomerTripsScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: const CustomerBottomNav(selectedTab: 'bookings'),
+      bottomNavigationBar: const CustomerBottomNav(selectedTab: 'activity'),
     );
   }
 }
