@@ -97,6 +97,13 @@ class PasswordResetService
         });
     }
 
+    public function resetPasswordUsingCode(string $identifier, string $code, string $password): void
+    {
+        $resetToken = $this->verifyCode($identifier, $code);
+
+        $this->resetPassword($identifier, $resetToken, $password);
+    }
+
     private function findUserByIdentifier(string $identifier): ?User
     {
         return User::query()

@@ -70,4 +70,79 @@ class FleetApprovalService
             return $fleet->refresh();
         });
     }
+
+    public function markUnderReview(Fleet $fleet, User $actor): Fleet
+    {
+        return DB::transaction(function () use ($fleet, $actor) {
+            $oldValues = $fleet->only(['application_status']);
+
+            $fleet->forceFill([
+                'application_status' => ApplicationStatus::UnderReview,
+            ])->save();
+
+            $this->auditLogService->log(
+                'fleet.under_review',
+                $actor,
+                $fleet,
+                $oldValues,
+                $fleet->only(array_keys($oldValues))
+            );
+
+            return $fleet->refresh();
+        });
+    }
+
+    public function suspend(Fleet $fleet, User $actor, string $reason): Fleet
+    {
+        return DB::transaction(function () use ($fleet, $actor, $reason) {
+            $oldValues = $fleet->only([
+                'application_status',
+                'rejection_reason',
+            ]);
+
+            $fleet->forceFill([
+                'application_status' => ApplicationStatus::Suspended,
+                'rejection_reason' => $reason,
+            ])->save();
+
+            $this->auditLogService->log(
+                'fleet.suspended',
+                $actor,
+                $fleet,
+                $oldValues,
+                $fleet->only(array_keys($oldValues))
+            );
+
+            return $fleet->refresh();
+        });
+    }
+
+    public function reactivate(Fleet $fleet, User $actor): Fleet
+    {
+        return DB::transaction(function () use ($fleet, $actor) {
+            $oldValues = $fleet->only([
+                'application_status',
+                'approved_at',
+                'rejected_at',
+                'rejection_reason',
+            ]);
+
+            $fleet->forceFill([
+                'application_status' => ApplicationStatus::Approved,
+                'approved_at' => $fleet->approved_at ?? now(),
+                'rejected_at' => null,
+                'rejection_reason' => null,
+            ])->save();
+
+            $this->auditLogService->log(
+                'fleet.reactivated',
+                $actor,
+                $fleet,
+                $oldValues,
+                $fleet->only(array_keys($oldValues))
+            );
+
+            return $fleet->refresh();
+        });
+    }
 }

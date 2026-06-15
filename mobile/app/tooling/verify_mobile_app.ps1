@@ -66,7 +66,10 @@ $requiredFiles = @(
   "lib/main.dart",
   "lib/core/constants/app_assets.dart",
   "lib/core/constants/app_routes.dart",
+  "lib/core/config/api_config.dart",
+  "lib/core/auth/token_storage.dart",
   "lib/core/router/app_router.dart",
+  "lib/core/services/api_client.dart",
   "lib/core/services/device_location_service.dart",
   "lib/core/theme/josi_colors.dart",
   "lib/core/theme/josi_theme.dart",
@@ -113,6 +116,7 @@ Assert-MinBytes "assets/images/josi-logo.jpeg" 10000
 Assert-MinBytes "assets/fonts/Inter-Regular.ttf" 10000
 
 Assert-Contains "pubspec.yaml" "flutter_svg:\s+\^2\.3\.0" "pubspec.yaml must include flutter_svg."
+Assert-Contains "pubspec.yaml" "flutter_secure_storage:\s+\^10\.3\.1" "pubspec.yaml must include flutter_secure_storage."
 Assert-Contains "pubspec.yaml" "go_router:\s+\^14\.8\.1" "pubspec.yaml must include GoRouter."
 Assert-Contains "pubspec.yaml" "flutter_riverpod:\s+\^2\.6\.1" "pubspec.yaml must include Riverpod."
 Assert-Contains "pubspec.yaml" "assets/images/" "pubspec.yaml must bundle the images folder."
@@ -165,6 +169,18 @@ Assert-Contains "lib/features/auth/auth_screens.dart" "customer-register-screen"
 Assert-Contains "lib/features/auth/auth_screens.dart" "rider-register-screen" "Rider signup must expose a testable key."
 Assert-Contains "lib/core/router/app_router.dart" "queryParameters\['role'\]" "Login route must read the selected role."
 Assert-Contains "lib/core/constants/app_routes.dart" "loginFor" "Routes must expose role-aware login helper."
+Assert-Contains "lib/core/constants/app_routes.dart" "courierRegister" "Routes must expose courier registration."
+Assert-Contains "lib/core/config/api_config.dart" "JOSI_API_BASE_URL" "Mobile API base URL must come from dart-define."
+Assert-Contains "lib/core/services/api_client.dart" "dataFromEnvelope" "API client must parse Laravel response envelopes."
+Assert-Contains "lib/core/auth/token_storage.dart" "FlutterSecureStorage" "Auth tokens must use secure storage."
+Assert-Contains "lib/core/repositories/repositories.dart" "/auth/register" "AuthRepository must call Laravel register."
+Assert-Contains "lib/core/repositories/repositories.dart" "/auth/login" "AuthRepository must call Laravel login."
+Assert-Contains "lib/core/repositories/repositories.dart" "/auth/forgot-password" "AuthRepository must call Laravel forgot password."
+Assert-Contains "lib/core/repositories/repositories.dart" "/auth/verify-reset-code" "AuthRepository must call Laravel verify reset code."
+Assert-Contains "lib/core/repositories/repositories.dart" "/auth/reset-password" "AuthRepository must call Laravel reset password."
+Assert-Contains "lib/core/repositories/repositories.dart" "/auth/me" "AuthRepository must restore session through Laravel me endpoint."
+Assert-Contains "lib/core/providers/app_providers.dart" "apiClientProvider" "Providers must expose ApiClient."
+Assert-Contains "lib/core/providers/app_providers.dart" "tokenStorageProvider" "Providers must expose secure token storage."
 Assert-NotContains "lib/core/constants/app_routes.dart" "riderDocumentUpload" "Standalone rider driver-document route must be removed."
 Assert-NotContains "lib/core/router/app_router.dart" "RiderDocumentUploadScreen" "Router must not expose the removed rider driver-document screen."
 Assert-NotContains "lib/features/rider/rider_screens.dart" "class RiderDocumentUploadScreen" "Removed rider driver-document screen class must stay deleted."
@@ -172,7 +188,15 @@ Assert-NotContains "lib/features/rider/rider_screens.dart" "Government ID" "Ride
 Assert-NotContains "lib/features/rider/rider_screens.dart" "Attach Bank Account Details" "Bank account screen must not show an attachment section."
 Assert-NotContains "lib/features/rider/rider_screens.dart" "Upload Bank Document" "Bank account screen must not show bank-document upload instructions."
 Assert-Contains "lib/features/rider/rider_screens.dart" "rider-bottom-action-" "Rider flow fixed actions must expose testable medium-size buttons."
-Assert-Contains "lib/features/rider/rider_screens.dart" "onBottomPressed:\s+\(\) => context\.go\(AppRoutes\.riderApplicationStatus\)" "Bank account Done must return to application status after document screen removal."
+Assert-Contains "lib/features/rider/rider_screens.dart" "isUpdate \? AppRoutes\.riderProfile : AppRoutes\.riderApplicationStatus" "Bank account Done must return to application status after document screen removal."
+Assert-Contains "lib/features/rider/rider_screens.dart" "Riding Details" "Rider application status and profile must use Riding Details wording."
+Assert-Contains "lib/features/rider/rider_screens.dart" "rider-vehicle-setup-screen" "Riding Details screen must expose a testable key."
+Assert-Contains "lib/features/rider/rider_screens.dart" "Complete Your Riding Details" "Riding Details screen must use the uploaded centered form heading."
+Assert-Contains "lib/features/rider/rider_screens.dart" "City You Ride In" "Riding Details screen must replace driving language with riding language."
+Assert-NotContains "lib/features/rider/rider_screens.dart" "Driving Details" "Rider flow must not show Driving Details wording."
+Assert-NotContains "lib/features/rider/rider_screens.dart" "Vehicle setup" "Riding Details screen must not use the old vehicle setup title."
+Assert-NotContains "lib/features/rider/rider_screens.dart" "Vehicle documents" "Riding Details screen must not show the old vehicle document card."
+Assert-NotContains "lib/features/rider/rider_screens.dart" "Save vehicle" "Riding Details screen must use the medium Continue action instead of Save vehicle."
 Assert-Contains "lib/features/customer/customer_screens.dart" "customer-home-map" "Customer home must expose the full-screen map key."
 Assert-Contains "lib/features/customer/customer_screens.dart" "DraggableScrollableSheet" "Customer home where-to panel must be draggable."
 Assert-Contains "lib/features/customer/customer_screens.dart" "customer-where-to-sheet" "Customer home must expose the draggable where-to sheet key."
@@ -316,6 +340,9 @@ Assert-Contains "test/josi_ride_app_test.dart" "Submitted Steps'\), findsNothing
 Assert-Contains "test/josi_ride_app_test.dart" "Upload Bank Document'\), findsNothing" "Tests must cover removing bank-document upload instructions."
 Assert-Contains "test/josi_ride_app_test.dart" "rider-submission-got-it" "Tests must cover the rider submission bottom sheet action."
 Assert-Contains "test/josi_ride_app_test.dart" "resolve\(<WidgetState>\{\}\)\?\.fontSize,\s+16" "Tests must cover normal rider action button font sizing."
+Assert-Contains "test/josi_ride_app_test.dart" "rider riding details uses uploaded form structure" "Tests must cover the uploaded Riding Details form."
+Assert-Contains "test/josi_ride_app_test.dart" "Complete Your Riding Details" "Tests must cover the Riding Details form heading."
+Assert-Contains "test/josi_ride_app_test.dart" "Driving Details'\), findsNothing" "Tests must cover replacing Driving Details wording."
 Assert-Contains "evals/design_contract.md" "draggable where-to bottom sheet" "Design eval must include the customer home map and draggable sheet contract."
 Assert-Contains "evals/design_contract.md" "Last Trip tile to Activity" "Design eval must include the home Last Trip Activity behavior."
 Assert-Contains "evals/design_contract.md" "obsolete customer trip-detail route and screen" "Design eval must require removing the customer trip detail screen."
@@ -334,5 +361,7 @@ Assert-Contains "evals/design_contract.md" "Driver Arrived" "Design eval must re
 Assert-Contains "evals/design_contract.md" "Rate Driver" "Design eval must require the uploaded completed trip screen."
 Assert-Contains "evals/design_contract.md" "standalone driver document upload route and screen" "Design eval must require removing the rider driver-document screen."
 Assert-Contains "evals/design_contract.md" "bank-document upload instructions" "Design eval must require removing bank account upload instructions."
+Assert-Contains "evals/design_contract.md" "Riding Details" "Design eval must require Riding Details wording."
+Assert-Contains "evals/design_contract.md" "old vehicle document card" "Design eval must require removing the old vehicle document card."
 
 Write-Host "OK: Josi first-run redline, SVG assets, design tokens, tests, and eval contract are present."

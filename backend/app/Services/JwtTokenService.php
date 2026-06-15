@@ -20,6 +20,7 @@ class JwtTokenService
         );
 
         return [
+            'token' => $token->plainTextToken,
             'access_token' => $token->plainTextToken,
             'token_type' => 'bearer',
             'expires_in' => $this->expiresIn(),

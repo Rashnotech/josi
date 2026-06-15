@@ -9,6 +9,8 @@ import '../../core/constants/app_routes.dart';
 import '../../core/constants/map_constants.dart';
 import '../../core/location/location_providers.dart';
 import '../../core/location/location_service.dart';
+import '../../core/map/route_providers.dart';
+import '../../core/map/route_service.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
@@ -843,7 +845,10 @@ class _RiderActiveTripScreenState extends State<RiderActiveTripScreen> {
       body: Stack(
         children: <Widget>[
           Positioned.fill(
-            child: _RiderMapBackdrop(trip: trip),
+            child: _RiderMapBackdrop(
+              trip: trip,
+              stageIndex: stageIndex,
+            ),
           ),
           Positioned(
             left: 26,
@@ -4146,17 +4151,83 @@ class _RiderContactButton extends StatelessWidget {
   }
 }
 
-class _RiderMapBackdrop extends ConsumerWidget {
-  const _RiderMapBackdrop({required this.trip});
+class _RiderMapBackdrop extends ConsumerStatefulWidget {
+  const _RiderMapBackdrop({
+    required this.trip,
+    required this.stageIndex,
+  });
 
   final Trip trip;
+  final int stageIndex;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RiderMapBackdrop> createState() => _RiderMapBackdropState();
+}
+
+class _RiderMapBackdropState extends ConsumerState<_RiderMapBackdrop> {
+  GoogleMapController? _mapController;
+  String? _lastCameraFitKey;
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  void _fitCameraAfterRoute(RouteDetails? routeDetails) {
+    if (routeDetails == null || routeDetails.polylinePoints.length < 2) {
+      return;
+    }
+
+    final String routeKey = '${widget.stageIndex}:'
+        '${routeDetails.polylinePoints.first.latitude},'
+        '${routeDetails.polylinePoints.first.longitude}:'
+        '${routeDetails.polylinePoints.last.latitude},'
+        '${routeDetails.polylinePoints.last.longitude}:'
+        '${routeDetails.polylinePoints.length}';
+    if (_lastCameraFitKey == routeKey) {
+      return;
+    }
+    _lastCameraFitKey = routeKey;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _fitCameraToPoints(routeDetails.polylinePoints);
+    });
+  }
+
+  Future<void> _fitCameraToPoints(List<LatLng> points) async {
+    final GoogleMapController? controller = _mapController;
+    if (controller == null || points.length < 2) {
+      return;
+    }
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(MapConstants.boundsFor(points), 112),
+      );
+    } on Object {
+      // Bounds updates can race the platform map layout on first paint.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentLocation = ref.watch(currentLocationProvider);
     final LatLng riderLocation =
         currentLocation.valueOrNull?.latLng ?? MapConstants.mockRiderLocation;
     final ActiveTripMapState mapState = ref.watch(activeTripMapProvider);
+    final bool headingToPickup = widget.stageIndex == 0;
+    final MapRouteRequest routeRequest = MapRouteRequest(
+      origin: headingToPickup ? riderLocation : mapState.pickup,
+      destination: headingToPickup ? mapState.pickup : mapState.destination,
+    );
+    final AsyncValue<RouteDetails> route = ref.watch(
+      mapRouteProvider(routeRequest),
+    );
+    _fitCameraAfterRoute(route.valueOrNull);
 
     return JosiGoogleMap(
       key: const ValueKey<String>('rider-active-trip-map'),
@@ -4166,16 +4237,40 @@ class _RiderMapBackdrop extends ConsumerWidget {
       ),
       markers: <Marker>{
         MapConstants.riderMarker(riderLocation),
-        MapConstants.customerMarker(mapState.pickup, id: 'customer-${trip.id}'),
+        MapConstants.customerMarker(
+          mapState.pickup,
+          id: 'customer-${widget.trip.id}',
+        ),
         MapConstants.destinationMarker(
           mapState.destination,
-          id: 'destination-${trip.id}',
+          id: 'destination-${widget.trip.id}',
         ),
       },
+      polylines: _riderRoutePolylines(
+        route.valueOrNull,
+        id: headingToPickup ? 'rider-to-pickup-route' : 'rider-trip-route',
+      ),
       myLocationEnabled: currentLocation.hasValue,
       showCurrentLocationButton: true,
+      onMapCreated: (GoogleMapController controller) {
+        _mapController = controller;
+        _fitCameraAfterRoute(route.valueOrNull);
+      },
     );
   }
+}
+
+Set<Polyline> _riderRoutePolylines(
+  RouteDetails? routeDetails, {
+  required String id,
+}) {
+  if (routeDetails == null || routeDetails.polylinePoints.length < 2) {
+    return const <Polyline>{};
+  }
+
+  return <Polyline>{
+    MapConstants.routePolyline(routeDetails.polylinePoints, id: id),
+  };
 }
 
 // ignore: unused_element

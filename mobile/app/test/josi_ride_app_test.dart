@@ -723,7 +723,8 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('customer-destination-screen')),
         findsOneWidget);
-    expect(find.text('Destination'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('destination-screen-title')),
+        findsOneWidget);
     expect(find.text('Saved Places'), findsOneWidget);
     expect(find.text('Confirm'), findsOneWidget);
     _expectVisibleInViewport(
@@ -736,7 +737,7 @@ void main() {
 
     expect(locationCalls, 2);
     expect(find.text('Wuse 2, Abuja, Federal Capital Territory, Nigeria'),
-        findsOneWidget);
+        findsWidgets);
     expect(find.textContaining('9.07650'), findsNothing);
 
     await tester
@@ -745,7 +746,7 @@ void main() {
     await tester.tapAt(const Offset(80, 220));
     await tester.pumpAndSettle();
     expect(find.text('Jabi, Abuja, Federal Capital Territory, Nigeria'),
-        findsOneWidget);
+        findsWidgets);
     expect(find.textContaining('7.46340'), findsNothing);
 
     await tester.enterText(
@@ -1004,10 +1005,28 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('customer-destination-screen')),
         findsOneWidget);
-    expect(find.text('Destination'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('destination-screen-title')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('destination-route-summary-card')),
+        findsOneWidget);
+    expect(find.text('Estimated distance'), findsOneWidget);
+    expect(find.text('Estimated duration'), findsOneWidget);
     expect(find.text('Saved Places'), findsOneWidget);
     expect(find.text('Confirm'), findsOneWidget);
     _expectCustomerNavLabelColor(tester, 'Rider', JosiColors.red);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('customer-payment-methods-screen')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('confirm-trip-summary-card')),
+        findsOneWidget);
+    expect(find.text('Trip summary'), findsOneWidget);
+    expect(find.text('Estimated fare'), findsOneWidget);
+    expect(find.text('To be calculated'), findsOneWidget);
   });
 
   testWidgets('customer profile opens editable profile form',

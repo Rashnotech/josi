@@ -23,6 +23,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import Button from "../components/Button.jsx";
+import AuthRegistrationForm from "../components/AuthRegistrationForm.jsx";
 import applyImage from "../assets/apply.png";
 import bikesLifestyle from "../assets/bikes.png";
 import documentImage from "../assets/document.png";
@@ -326,53 +327,13 @@ function MobileCardCarousel({
 
 function CourierSignupForm() {
   return (
-    <form className="rounded-lg bg-white p-5 shadow-menu sm:p-6">
-      <h2 className="font-display text-2xl font-bold text-ink">
-        Start delivering with Josi
-      </h2>
-
-      <div className="mt-5 grid gap-4">
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">Email address</span>
-          <input
-            className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink"
-            placeholder="Enter email address"
-            type="email"
-          />
-        </label>
-
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">Phone number</span>
-          <div className="grid grid-cols-[6rem_1fr] gap-3">
-            <select className="focus-ring h-12 rounded-lg border border-line bg-paper px-3 font-normal text-ink">
-              <option value="+234">+234</option>
-            </select>
-            <input
-              className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink"
-              placeholder="Enter phone number"
-              type="tel"
-            />
-          </div>
-        </label>
-
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">City</span>
-          <select className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink">
-            <option value="Abuja">Abuja</option>
-            <option value="Nasarawa">Nasarawa</option>
-          </select>
-        </label>
-      </div>
-
-      <Button type="submit" variant="red" className="mt-5 w-full">
-        Register now
-      </Button>
-
-      <p className="mt-4 text-xs font-semibold leading-relaxed text-muted">
-        By registering, you agree to receive onboarding updates from Josi
-        Transport and Logistics.
-      </p>
-    </form>
+    <div className="w-full min-w-0">
+      <AuthRegistrationForm
+        role="courier"
+        title="Start delivering with Josi"
+        submitLabel="Register now"
+      />
+    </div>
   );
 }
 
@@ -531,7 +492,7 @@ export default function CourierPage() {
           <div className="absolute inset-0 bg-josi-red/10" />
         </div>
 
-        <div className="section-shell relative grid gap-8 py-10 sm:py-14 lg:grid-cols-[1fr_25rem] lg:items-center lg:py-20">
+        <div className="section-shell relative grid min-w-0 gap-8 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] lg:items-center lg:py-20">
           <div className="max-w-2xl">
             <h1 className="font-display text-[2.3rem] font-bold leading-[1.04] sm:text-6xl lg:text-[3.25rem]">
               Become a courier rider and deliver on your terms

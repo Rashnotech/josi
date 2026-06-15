@@ -66,9 +66,9 @@ final Provider<Map<String, Object>> tripLocationPayloadProvider =
 
 final Provider<ActiveTripMapState> activeTripMapProvider =
     Provider<ActiveTripMapState>((Ref ref) {
-  return const ActiveTripMapState(
-    pickup: MapConstants.defaultPickup,
-    destination: MapConstants.defaultDestination,
+  return ActiveTripMapState(
+    pickup: ref.watch(selectedPickupProvider),
+    destination: ref.watch(selectedDestinationProvider),
     rider: MapConstants.mockRiderLocation,
   );
 });

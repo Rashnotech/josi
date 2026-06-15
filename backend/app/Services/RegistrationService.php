@@ -22,6 +22,56 @@ class RegistrationService
     ) {
     }
 
+    public function registerPublicAccount(array $data): array
+    {
+        $role = UserRole::from($data['role']);
+
+        return DB::transaction(function () use ($data, $role) {
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => Hash::make($data['password']),
+                'role' => $role,
+                'status' => UserStatus::Active,
+            ]);
+
+            $profile = match ($role) {
+                UserRole::Rider,
+                UserRole::Courier => $this->createRiderOrCourierProfile($user, $data),
+                UserRole::PackOwner => $this->createPackOwnerFleet($user, $data),
+                default => null,
+            };
+
+            $this->rbacService->syncUserRole($user);
+            $this->notificationService->sendAccountCreated(
+                $user,
+                $role->requiresDashboard() ? null : ApplicationStatus::Pending->value
+            );
+            $this->auditLogService->log('auth.public_registered', null, $profile ?? $user, [], [
+                'user_id' => $user->getKey(),
+                'role' => $role->value,
+                'application_status' => $role->requiresDashboard() ? null : ApplicationStatus::Pending->value,
+            ]);
+
+            $user = $user->refresh()->load(['riderProfile', 'fleet']);
+            $payload = [
+                'user' => $this->rbacService->userSummary($user),
+                'role' => $role->value,
+                'redirect_to' => $role->requiresDashboard() ? '/login' : $this->rbacService->redirectPathForUser($user),
+                'requires_dashboard' => $role->requiresDashboard(),
+                'login_required' => $role->requiresDashboard(),
+                'approval_status' => $role->requiresDashboard() ? null : ApplicationStatus::Pending->value,
+            ];
+
+            $payload['message'] = $role->requiresDashboard()
+                ? 'Account created successfully. Please sign in to access your dashboard.'
+                : 'Account created successfully. Please check your email.';
+
+            return $payload;
+        });
+    }
+
     public function registerDriver(array $data): array
     {
         return DB::transaction(function () use ($data) {
@@ -146,5 +196,35 @@ class RegistrationService
             $this->tokenService->issueToken($user),
             $this->rbacService->authPayload($user)
         );
+    }
+
+    private function createRiderOrCourierProfile(User $user, array $data): RiderProfile
+    {
+        return RiderProfile::create([
+            'user_id' => $user->getKey(),
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'phone' => $data['phone'],
+            'address' => $data['address'] ?? 'Pending onboarding',
+            'city' => $data['city'] ?? 'Pending onboarding',
+            'state' => $data['state'] ?? 'Pending onboarding',
+            'application_status' => ApplicationStatus::Pending,
+        ]);
+    }
+
+    private function createPackOwnerFleet(User $user, array $data): Fleet
+    {
+        return Fleet::create([
+            'user_id' => $user->getKey(),
+            'business_name' => $data['business_name'] ?? $data['name']."'s pack",
+            'business_email' => $data['business_email'] ?? $data['email'],
+            'business_phone' => $data['business_phone'] ?? $data['phone'],
+            'business_address' => $data['business_address'] ?? $data['address'] ?? 'Pending onboarding',
+            'vehicle_count' => $data['vehicle_count'] ?? null,
+            'city' => $data['city'] ?? 'Pending onboarding',
+            'state' => $data['state'] ?? 'Pending onboarding',
+            'registration_number' => $data['registration_number'] ?? null,
+            'application_status' => ApplicationStatus::Pending,
+        ]);
     }
 }

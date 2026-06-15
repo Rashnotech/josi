@@ -39,6 +39,14 @@ class RbacService
             'manage_cash_ledger',
             'view_reports',
         ],
+        'pack_owner' => [
+            'view_own_fleet',
+            'update_own_fleet',
+            'manage_own_vehicles',
+            'view_own_drivers',
+            'upload_fleet_documents',
+            'view_fleet_application_status',
+        ],
         'fleet_owner' => [
             'view_own_fleet',
             'update_own_fleet',
@@ -46,6 +54,24 @@ class RbacService
             'view_own_drivers',
             'upload_fleet_documents',
             'view_fleet_application_status',
+        ],
+        'courier' => [
+            'view_profile',
+            'update_profile',
+            'upload_documents',
+            'view_application_status',
+            'view_assigned_trips',
+            'update_location',
+            'view_cash_ledger',
+        ],
+        'rider' => [
+            'view_profile',
+            'update_profile',
+            'upload_documents',
+            'view_application_status',
+            'view_assigned_trips',
+            'update_location',
+            'view_cash_ledger',
         ],
         'driver' => [
             'view_profile',
@@ -138,6 +164,9 @@ class RbacService
             'role' => $this->roleValue($user),
             'permissions' => $this->permissionsForUser($user),
             'profile' => $this->profileSummary($user),
+            'redirect_to' => $this->redirectPathForUser($user),
+            'dashboard_url' => $this->dashboardUrlForUser($user),
+            'requires_dashboard' => $this->requiresDashboard($user),
         ];
     }
 
@@ -151,13 +180,17 @@ class RbacService
             'role' => $this->roleValue($user),
             'status' => $this->enumValue($user->status),
             'last_login_at' => $user->last_login_at?->toISOString(),
+            'created_at' => $user->created_at?->toISOString(),
         ];
     }
 
     public function profileSummary(User $user): array
     {
         return match ($this->roleValue($user)) {
+            UserRole::Rider->value,
+            UserRole::Courier->value,
             UserRole::Driver->value => $this->driverProfileSummary($user),
+            UserRole::PackOwner->value,
             UserRole::FleetOwner->value => $this->fleetSummary($user),
             UserRole::Admin->value,
             UserRole::SuperAdmin->value => [
@@ -174,6 +207,33 @@ class RbacService
     public function roleValue(User $user): string
     {
         return $this->enumValue($user->role);
+    }
+
+    public function redirectPathForUser(User $user): string
+    {
+        $role = $user->role instanceof UserRole
+            ? $user->role
+            : UserRole::tryFrom((string) $user->role);
+
+        return $role?->dashboardRedirect() ?? '/';
+    }
+
+    public function requiresDashboard(User $user): bool
+    {
+        $role = $user->role instanceof UserRole
+            ? $user->role
+            : UserRole::tryFrom((string) $user->role);
+
+        return $role?->requiresDashboard() ?? false;
+    }
+
+    public function dashboardUrlForUser(User $user): ?string
+    {
+        if (! $this->requiresDashboard($user)) {
+            return null;
+        }
+
+        return url($this->redirectPathForUser($user));
     }
 
     private function driverProfileSummary(User $user): ?array
@@ -212,6 +272,7 @@ class RbacService
             'business_name' => $fleet->business_name,
             'business_phone' => $fleet->business_phone,
             'business_email' => $fleet->business_email,
+            'vehicle_count' => $fleet->vehicle_count,
             'city' => $fleet->city,
             'state' => $fleet->state,
             'application_status' => $this->enumValue($fleet->application_status),

@@ -42,7 +42,11 @@ class JosiGoogleMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget map = debugUseStaticMap
-        ? _StaticJosiMap(markers: markers, onTap: onTap)
+        ? _StaticJosiMap(
+            markers: markers,
+            polylines: polylines,
+            onTap: onTap,
+          )
         : GoogleMap(
             initialCameraPosition: initialCameraPosition,
             markers: markers,
@@ -214,10 +218,12 @@ class _MapErrorOverlay extends StatelessWidget {
 class _StaticJosiMap extends StatelessWidget {
   const _StaticJosiMap({
     required this.markers,
+    required this.polylines,
     this.onTap,
   });
 
   final Set<Marker> markers;
+  final Set<Polyline> polylines;
   final ValueChanged<LatLng>? onTap;
 
   @override
@@ -227,7 +233,10 @@ class _StaticJosiMap extends StatelessWidget {
         onTap?.call(const LatLng(9.0816, 7.4634));
       },
       child: CustomPaint(
-        painter: _StaticJosiMapPainter(markers: markers.toList()),
+        painter: _StaticJosiMapPainter(
+          markers: markers.toList(),
+          polylines: polylines.toList(),
+        ),
         child: const SizedBox.expand(),
       ),
     );
@@ -235,9 +244,13 @@ class _StaticJosiMap extends StatelessWidget {
 }
 
 class _StaticJosiMapPainter extends CustomPainter {
-  const _StaticJosiMapPainter({required this.markers});
+  const _StaticJosiMapPainter({
+    required this.markers,
+    required this.polylines,
+  });
 
   final List<Marker> markers;
+  final List<Polyline> polylines;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -270,22 +283,115 @@ class _StaticJosiMapPainter extends CustomPainter {
       );
     }
 
-    final List<Offset> slots = <Offset>[
-      Offset(size.width * 0.32, size.height * 0.42),
-      Offset(size.width * 0.62, size.height * 0.34),
-      Offset(size.width * 0.50, size.height * 0.56),
-      Offset(size.width * 0.72, size.height * 0.60),
-    ];
+    final _StaticMapBounds? bounds = _boundsForMapContent();
+
+    for (final Polyline polyline in polylines) {
+      if (polyline.points.length < 2) {
+        continue;
+      }
+      final Path path = Path();
+      for (int index = 0; index < polyline.points.length; index += 1) {
+        final Offset point =
+            _project(polyline.points[index], size, bounds, index);
+        if (index == 0) {
+          path.moveTo(point.dx, point.dy);
+        } else {
+          path.lineTo(point.dx, point.dy);
+        }
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = polyline.color
+          ..strokeWidth = polyline.width.toDouble()
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..style = PaintingStyle.stroke,
+      );
+    }
 
     for (int index = 0; index < markers.length; index++) {
       final Marker marker = markers[index];
-      final Offset point = slots[index % slots.length];
+      final Offset point = _project(marker.position, size, bounds, index);
       final Color color = _colorForMarker(marker);
       canvas.drawCircle(point.translate(0, 12), 17,
           Paint()..color = color.withValues(alpha: 0.18));
       canvas.drawCircle(point, 15, Paint()..color = color);
       canvas.drawCircle(point, 5, Paint()..color = JosiColors.white);
     }
+  }
+
+  _StaticMapBounds? _boundsForMapContent() {
+    final List<LatLng> points = <LatLng>[
+      for (final Marker marker in markers) marker.position,
+      for (final Polyline polyline in polylines) ...polyline.points,
+    ];
+    if (points.isEmpty) {
+      return null;
+    }
+
+    double minLatitude = points.first.latitude;
+    double maxLatitude = points.first.latitude;
+    double minLongitude = points.first.longitude;
+    double maxLongitude = points.first.longitude;
+
+    for (final LatLng point in points.skip(1)) {
+      if (point.latitude < minLatitude) {
+        minLatitude = point.latitude;
+      }
+      if (point.latitude > maxLatitude) {
+        maxLatitude = point.latitude;
+      }
+      if (point.longitude < minLongitude) {
+        minLongitude = point.longitude;
+      }
+      if (point.longitude > maxLongitude) {
+        maxLongitude = point.longitude;
+      }
+    }
+
+    if (minLatitude == maxLatitude) {
+      minLatitude -= 0.002;
+      maxLatitude += 0.002;
+    }
+    if (minLongitude == maxLongitude) {
+      minLongitude -= 0.002;
+      maxLongitude += 0.002;
+    }
+
+    return _StaticMapBounds(
+      minLatitude: minLatitude,
+      maxLatitude: maxLatitude,
+      minLongitude: minLongitude,
+      maxLongitude: maxLongitude,
+    );
+  }
+
+  Offset _project(
+    LatLng position,
+    Size size,
+    _StaticMapBounds? bounds,
+    int fallbackIndex,
+  ) {
+    if (bounds == null) {
+      final List<Offset> slots = <Offset>[
+        Offset(size.width * 0.32, size.height * 0.42),
+        Offset(size.width * 0.62, size.height * 0.34),
+        Offset(size.width * 0.50, size.height * 0.56),
+        Offset(size.width * 0.72, size.height * 0.60),
+      ];
+      return slots[fallbackIndex % slots.length];
+    }
+
+    final double x = (position.longitude - bounds.minLongitude) /
+        (bounds.maxLongitude - bounds.minLongitude);
+    final double y = 1 -
+        (position.latitude - bounds.minLatitude) /
+            (bounds.maxLatitude - bounds.minLatitude);
+    return Offset(
+      size.width * (0.18 + x * 0.64),
+      size.height * (0.18 + y * 0.64),
+    );
   }
 
   Color _colorForMarker(Marker marker) {
@@ -304,6 +410,20 @@ class _StaticJosiMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StaticJosiMapPainter oldDelegate) {
-    return oldDelegate.markers != markers;
+    return oldDelegate.markers != markers || oldDelegate.polylines != polylines;
   }
+}
+
+class _StaticMapBounds {
+  const _StaticMapBounds({
+    required this.minLatitude,
+    required this.maxLatitude,
+    required this.minLongitude,
+    required this.maxLongitude,
+  });
+
+  final double minLatitude;
+  final double maxLatitude;
+  final double minLongitude;
+  final double maxLongitude;
 }

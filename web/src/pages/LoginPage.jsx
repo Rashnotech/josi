@@ -1,10 +1,46 @@
 import { useState } from "react";
-import { Eye, EyeOff, LockKeyhole } from "lucide-react";
-import { Link } from "react-router-dom";
-import logoUrl from "../assets/josi-logo.jpeg";
+import { Eye, EyeOff, Loader2, LockKeyhole } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import logoUrl from "../assets/josi-logo.png";
+import { useAuth } from "../auth/AuthContext.jsx";
+import {
+  dashboardUrlFromResponse,
+  firstValidationMessage,
+  redirectForRole,
+} from "../services/authApi.js";
 
 export default function LoginPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = location.state?.message;
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    try {
+      const data = await login({ emailOrPhone, password });
+      if (["pack_owner", "fleet_owner", "admin", "super_admin"].includes(data.user?.role)) {
+        window.location.assign(dashboardUrlFromResponse(data));
+        return;
+      }
+
+      navigate(data.redirect_to || redirectForRole(data.user?.role, "/continue-in-mobile-app"), {
+        replace: true,
+      });
+    } catch (error) {
+      setErrorMessage(firstValidationMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-white px-5 py-7 text-ink sm:px-8 lg:py-9">
@@ -26,16 +62,25 @@ export default function LoginPage() {
             Sign in to your account
           </h1>
 
-          <form className="auth-form mt-8 grid gap-5">
+          <form className="auth-form mt-8 grid gap-5" onSubmit={handleSubmit}>
+            {successMessage && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-semibold leading-relaxed text-green-800">
+                {successMessage}
+              </div>
+            )}
+
             <label className="grid gap-2.5">
               <span className="text-sm font-extrabold sm:text-base">
-                Email or username <span className="text-josi-red">*</span>
+                Email or phone <span className="text-josi-red">*</span>
               </span>
               <input
                 type="text"
                 autoComplete="username"
+                value={emailOrPhone}
+                onChange={(event) => setEmailOrPhone(event.target.value)}
                 className="focus-ring h-14 rounded-lg border-0 bg-[#edf0ef] px-5 text-base font-semibold text-ink outline-none"
-                aria-label="Email or username"
+                aria-label="Email or phone"
+                required
               />
             </label>
 
@@ -47,12 +92,15 @@ export default function LoginPage() {
                 <input
                   type={isPasswordVisible ? "text" : "password"}
                   autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   className={`h-full min-w-0 rounded-lg border-0 bg-transparent px-5 font-semibold leading-none text-ink outline-none ${
                     isPasswordVisible
                       ? "text-base"
                       : "text-2xl tracking-[0.18em]"
                   }`}
                   aria-label="Password"
+                  required
                 />
                 <button
                   type="button"
@@ -74,11 +122,22 @@ export default function LoginPage() {
               Forgot password?
             </Link>
 
+            {errorMessage && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold leading-relaxed text-josi-darkRed">
+                {errorMessage}
+              </div>
+            )}
+
             <button
               type="submit"
+              disabled={isSubmitting}
               className="focus-ring mt-5 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-josi-red px-6 text-base font-extrabold text-white shadow-soft transition hover:bg-josi-darkRed"
             >
-              <LockKeyhole size={20} />
+              {isSubmitting ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <LockKeyhole size={20} />
+              )}
               Sign in
             </button>
           </form>

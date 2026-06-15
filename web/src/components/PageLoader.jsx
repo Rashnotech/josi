@@ -1,3 +1,5 @@
+import Logo from '../assets/josi_logo.png';
+
 export default function PageLoader({ isVisible }) {
   return (
     <div
@@ -8,7 +10,7 @@ export default function PageLoader({ isVisible }) {
     >
       <div className="loading-card">
         <div className="loading-mark">
-          <img src="/src/assets/josi-logo.png" alt="Josi Logo" style={{ width: "50px", height: "auto" }} />
+          <img src={Logo} alt="Josi Logo" style={{ width: "50px", height: "auto" }} />
         </div>
         <div className="loading-spinner" aria-hidden="true" />
       </div>

@@ -5,14 +5,25 @@ namespace App\Http\Controllers\Api\V1;
 use App\Exceptions\LoginLockedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Auth\LoginRequest;
+use App\Http\Requests\Api\V1\Auth\RegisterRequest;
 use App\Http\Responses\ApiResponse;
 use App\Services\AuthService;
+use App\Services\RegistrationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function register(RegisterRequest $request, RegistrationService $registrationService)
+    {
+        $payload = $registrationService->registerPublicAccount($request->validated());
+        $message = $payload['message'];
+        unset($payload['message']);
+
+        return ApiResponse::success($message, $payload, 201);
+    }
+
     public function login(LoginRequest $request, AuthService $authService)
     {
         try {

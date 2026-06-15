@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/token_storage.dart';
 import '../mock/josi_models.dart';
 import '../repositories/repositories.dart';
+import '../services/api_client.dart';
 
 class AuthSession {
   const AuthSession({
@@ -50,31 +52,75 @@ class AuthController extends StateNotifier<AuthSession> {
   }
 
   Future<void> signIn(
-      {required String identity, required String password}) async {
+      {required String identity,
+      required String password,
+      String role = 'customer'}) async {
     state =
         state.copyWith(isLoading: true, errorMessage: null, clearUser: true);
     try {
-      final JosiUser user =
-          await _repository.signIn(identity: identity, password: password);
+      final JosiUser user = await _repository.signIn(
+        identity: identity,
+        password: password,
+        role: role,
+      );
       state = AuthSession(isLoading: false, user: user);
-    } on Object {
-      state = const AuthSession(
-          isLoading: false, errorMessage: 'Invalid email, phone, or password.');
+    } on Object catch (error) {
+      state = AuthSession(
+        isLoading: false,
+        errorMessage:
+            _friendlyError(error, 'Invalid email, phone, or password.'),
+      );
     }
   }
 
-  Future<void> registerCustomer() async {
+  Future<void> registerCustomer({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
     state =
         state.copyWith(isLoading: true, errorMessage: null, clearUser: true);
-    final JosiUser user = await _repository.registerCustomer();
-    state = AuthSession(isLoading: false, user: user);
+    try {
+      final JosiUser user = await _repository.registerCustomer(
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        password: password,
+      );
+      state = AuthSession(isLoading: false, user: user);
+    } on Object catch (error) {
+      state = AuthSession(
+        isLoading: false,
+        errorMessage: _friendlyError(error, 'Unable to create account.'),
+      );
+    }
   }
 
-  Future<void> registerRider() async {
+  Future<void> registerRider({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    String role = 'rider',
+  }) async {
     state =
         state.copyWith(isLoading: true, errorMessage: null, clearUser: true);
-    final JosiUser user = await _repository.registerRider();
-    state = AuthSession(isLoading: false, user: user);
+    try {
+      final JosiUser user = await _repository.registerRider(
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        password: password,
+        role: role,
+      );
+      state = AuthSession(isLoading: false, user: user);
+    } on Object catch (error) {
+      state = AuthSession(
+        isLoading: false,
+        errorMessage: _friendlyError(error, 'Unable to create account.'),
+      );
+    }
   }
 
   Future<void> signOut() async {
@@ -82,11 +128,36 @@ class AuthController extends StateNotifier<AuthSession> {
     await _repository.signOut();
     state = const AuthSession.guest();
   }
+
+  String _friendlyError(Object error, String fallback) {
+    if (error is ApiException) {
+      final Object? first =
+          error.errors.values.isEmpty ? null : error.errors.values.first;
+      if (first is List<Object?> && first.isNotEmpty) {
+        return '${first.first}';
+      }
+      return error.message;
+    }
+
+    return fallback;
+  }
 }
+
+final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((Ref ref) {
+  return ApiClient();
+});
+
+final Provider<TokenStorage> tokenStorageProvider =
+    Provider<TokenStorage>((Ref ref) {
+  return const SecureTokenStorage();
+});
 
 final Provider<AuthRepository> authRepositoryProvider =
     Provider<AuthRepository>((Ref ref) {
-  return const AuthRepository();
+  return AuthRepository(
+    apiClient: ref.watch(apiClientProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
+  );
 });
 
 final Provider<CustomerRepository> customerRepositoryProvider =

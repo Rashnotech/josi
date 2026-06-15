@@ -9,8 +9,10 @@ import {
   WalletCards,
 } from "lucide-react";
 import Button from "../components/Button.jsx";
+import AuthRegistrationForm from "../components/AuthRegistrationForm.jsx";
 import applyImage from "../assets/apply.png";
 import documentImage from "../assets/document.png";
+import driverArrivedImage from "../assets/driver_arrived.png";
 import passengerHero from "../assets/passenger.jpg";
 import rideImage from "../assets/ride.png";
 import rideEarnImage from "../assets/ride_earn.png";
@@ -106,84 +108,15 @@ const faqs = [
   },
 ];
 
-function ImagePlaceholder({ label, className = "", children }) {
-  return (
-    <div
-      className={`grid place-items-center overflow-hidden rounded-lg border border-dashed border-josi-red/35 bg-[linear-gradient(135deg,#fff,#f3f3f3)] text-center ${className}`}
-    >
-      <div className="grid justify-items-center gap-3 px-5 text-josi-red/70">
-        {children && <span className="text-josi-red">{children}</span>}
-        <span className="text-sm font-extrabold uppercase tracking-normal">
-          {label}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 function RiderSignupForm() {
   return (
-    <form className="rounded-lg bg-white p-5 shadow-menu sm:p-6">
-      <h2 className="font-display text-2xl font-bold text-ink">
-        Become a rider
-      </h2>
-
-      <div className="mt-5 grid gap-4">
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">Email address</span>
-          <input
-            className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink"
-            placeholder="Enter email address"
-            type="email"
-          />
-        </label>
-
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">Phone number</span>
-          <div className="grid grid-cols-[6rem_1fr] gap-3">
-            <select className="focus-ring h-12 rounded-lg border border-line bg-paper text-black px-3 font-normal">
-              <option>+234</option>
-            </select>
-            <input
-              className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink"
-              placeholder="Enter phone number"
-              type="tel"
-            />
-          </div>
-        </label>
-
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">City</span>
-          <select className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink">
-            <option value="abuja">Abuja</option>
-            <option value="nasarawa">Nasarawa</option>
-          </select>
-        </label>
-
-        <label className="flex items-start gap-3 text-xs font-semibold leading-relaxed text-muted">
-          <input
-            className="mt-1 size-4 accent-josi-red"
-            type="checkbox"
-            defaultChecked
-          />
-          <span>
-            I agree to Josi contacting me with updates about rider onboarding,
-            safety checks, and account setup.
-          </span>
-        </label>
-      </div>
-
-      <Button type="submit" variant="red" className="mt-5 w-full">
-        Register as a rider
-      </Button>
-
-      <p className="mt-4 text-center text-xs font-semibold text-muted">
-        Already have an account?{" "}
-        <a href="#faq" className="font-extrabold text-josi-red">
-          Log in
-        </a>
-      </p>
-    </form>
+    <div className="w-full min-w-0">
+      <AuthRegistrationForm
+        role="rider"
+        title="Become a rider"
+        submitLabel="Register as a rider"
+      />
+    </div>
   );
 }
 
@@ -239,10 +172,14 @@ function RiderAppPreview() {
   return (
     <div className="mx-auto w-full max-w-[18rem] rounded-[2.5rem] border-[0.75rem] border-ink bg-white p-3 shadow-soft">
       <div className="mx-auto mb-3 h-5 w-24 rounded-full bg-ink" />
-      <ImagePlaceholder
-        label="App image placeholder"
-        className="aspect-[9/16] rounded-[1.7rem]"
-      />
+      <div className="aspect-[9/16] overflow-hidden rounded-[1.7rem] bg-paper">
+        <img
+          src={driverArrivedImage}
+          alt="Josi rider app driver arrived screen"
+          className="h-full w-full object-cover object-top"
+          loading="lazy"
+        />
+      </div>
     </div>
   );
 }
@@ -283,9 +220,9 @@ export default function RiderPage() {
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.9)_0%,rgba(0,0,0,0.64)_48%,rgba(0,0,0,0.22)_100%)]" />
           <div className="absolute inset-0 bg-josi-red/10" />
         </div>
-        <div className="section-shell relative grid gap-8 py-10 sm:py-14 lg:grid-cols-[1fr_25rem] lg:items-center lg:py-20">
+        <div className="section-shell relative grid min-w-0 gap-8 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] lg:items-center lg:py-20">
           <div className="max-w-2xl">
-            <h1 className="font-display text-[2rem] font-bold leading-[1.02] sm:text-6xl lg:text-[3rem]">
+            <h1 className="font-display text-[3rem] font-bold leading-[1.02] sm:text-6xl lg:text-[4rem]">
               Make money riding with Josi
             </h1>
             <p className="mt-5 max-w-xl text-base font-semibold leading-relaxed text-white/85 sm:text-lg">

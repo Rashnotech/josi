@@ -4,6 +4,21 @@
 
 The mobile/API auth layer uses Laravel Sanctum personal access tokens. The service is named `JwtTokenService` and middleware alias is `jwt.auth` to match the product contract, but the issued tokens are Sanctum bearer tokens, not self-contained JWTs.
 
+## Mail Configuration
+
+Account creation and password reset notifications use Laravel notifications over SMTP. Configure these in `.env`; do not hardcode mailbox credentials:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_HOST=jositransport.com
+MAIL_PORT=465
+MAIL_USERNAME=support@jositransport.com
+MAIL_PASSWORD=
+MAIL_ENCRYPTION=ssl
+MAIL_FROM_ADDRESS=support@jositransport.com
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
 Install Sanctum in the full Laravel runtime before running this API:
 
 ```powershell
@@ -23,6 +38,55 @@ Register these aliases in Laravel 10 `app/Http/Kernel.php` or Laravel 11 `bootst
 - `approved.fleet` => `App\Http\Middleware\EnsureFleetIsApproved`
 
 ## Public Endpoints
+
+`POST /api/v1/auth/register`
+
+Required JSON fields: `first_name`, `last_name`, `email`, `phone`, `password`, `password_confirmation`, `role`.
+
+Accepted public roles: `rider`, `courier`, `pack_owner`.
+
+Optional JSON fields: `address`, `city`, `state`, `business_name`, `business_email`, `business_phone`, `business_address`, `registration_number`.
+
+Creates a public Josi account, sends an account creation email, and returns role-aware metadata:
+
+- `rider` and `courier`: creates a pending application profile, does not return a token, and returns `requires_dashboard: false`.
+- `pack_owner`: creates the account and pack/fleet record, stores `vehicle_count` when supplied, sends the account email, and returns `redirect_to: "/login"` plus `login_required: true`. The user signs in from the web app before opening the Laravel dashboard.
+
+Example rider/courier payload:
+
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john@example.com",
+  "phone": "08000000000",
+  "password": "password123",
+  "password_confirmation": "password123",
+  "role": "rider"
+}
+```
+
+Example pack owner response:
+
+```json
+{
+  "status": true,
+  "message": "Account created successfully. Please sign in to access your dashboard.",
+  "data": {
+    "redirect_to": "/login",
+    "requires_dashboard": true,
+    "login_required": true,
+    "user": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "owner@example.com",
+      "phone": "08000000000",
+      "role": "pack_owner",
+      "status": "active"
+    }
+  }
+}
+```
 
 `POST /api/v1/auth/register/driver`
 
@@ -48,25 +112,25 @@ Creates a user with role `customer` and active status.
 
 Required JSON fields: `identifier`, `password`.
 
-`identifier` accepts email or phone. The backend detects the user role and returns permissions and profile data. Five failed attempts lock the identifier plus IP for 5 minutes.
+`identifier` accepts email or phone. Frontend and mobile clients may also send `email_or_phone`; the request layer normalizes it to `identifier`. The backend detects the user role and returns permissions, profile data, `redirect_to`, `dashboard_url`, and `requires_dashboard`. Pack owner/admin web login should redirect to `dashboard_url`. Five failed attempts lock the identifier plus IP for 5 minutes.
 
 `POST /api/v1/auth/forgot-password`
 
-Required JSON fields: `identifier`.
+Required JSON fields: `email_or_phone`.
 
 Always returns a generic success response. If the account exists, a hashed 6-digit reset code is stored and the plain code is emailed.
 
 `POST /api/v1/auth/verify-reset-code`
 
-Required JSON fields: `identifier`, `code`.
+Required JSON fields: `email_or_phone`, `code`.
 
-Returns a temporary `reset_token` when the code is valid.
+Returns `verified: true` and a temporary `reset_token` when the code is valid. New clients can reset with the 6-digit `code`; older clients may still use `reset_token`.
 
 `POST /api/v1/auth/reset-password`
 
-Required JSON fields: `identifier`, `reset_token`, `password`, `password_confirmation`.
+Required JSON fields: `email_or_phone`, `code`, `password`, `password_confirmation`.
 
-Updates the password, clears reset fields, and emails a password reset confirmation.
+Updates the password, clears reset fields, and emails a password reset confirmation. `reset_token` is still accepted for backwards compatibility.
 
 ## Protected Auth Endpoints
 
@@ -77,6 +141,19 @@ All require `Authorization: Bearer <access_token>`.
 - `GET /api/v1/auth/me`
 
 Refresh deletes the current Sanctum token and issues a new one.
+
+## Laravel Dashboard Scaffold
+
+`GET /dashboard` and `GET /admin` render the Laravel-side dashboard scaffold in `resources/views/dashboard/index.blade.php`.
+
+The scaffold currently supports:
+
+- `super_admin`
+- `admin`
+- `pack_owner`
+- legacy `fleet_owner`
+
+The web login stores the Sanctum token and writes a `josi_auth_token` browser cookie so the Laravel dashboard controller can resolve the user with `Laravel\Sanctum\PersonalAccessToken::findToken()`. This is a temporary bridge for the Filament dashboard. When Filament is installed, use the same role split for super admin, admin, and pack owner panels/resources.
 
 ## Driver Endpoints
 
@@ -130,8 +207,12 @@ Success:
   "message": "Login successful",
   "data": {
     "access_token": "sanctum_token_here",
+    "token": "sanctum_token_here",
     "token_type": "bearer",
     "expires_in": 3600,
+    "redirect_to": "/rider/application-status",
+    "dashboard_url": null,
+    "requires_dashboard": false,
     "user": {
       "id": 1,
       "name": "John Doe",

@@ -13,6 +13,7 @@ DB_PORT=3306
 DB_DATABASE=josi_db
 DB_USERNAME=root
 DB_PASSWORD=
+SESSION_DRIVER=database
 ```
 
 Production/cPanel example:
@@ -143,6 +144,8 @@ Run migrations:
 ```powershell
 php artisan migrate
 ```
+
+Filament browser login uses Laravel sessions. With `SESSION_DRIVER=database`, confirm the `sessions` table exists after migration.
 
 Run seeders:
 
@@ -280,6 +283,7 @@ Core tables:
 - `payments`
 - `rider_cash_ledgers`
 - `audit_logs`
+- `sessions`
 - `personal_access_tokens`
 - `roles`
 - `permissions`
@@ -348,4 +352,5 @@ Use a strong `SUPER_ADMIN_PASSWORD` outside local development.
 - Store uploaded document paths only, not raw file bytes.
 - Keep KYC files in private storage.
 - Confirm `personal_access_tokens` exists before mobile login testing.
+- Confirm `sessions` exists before Filament admin login testing.
 - Confirm RBAC tables exist before admin/API permission testing.

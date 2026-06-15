@@ -7,6 +7,7 @@ import CourierPage from "./pages/CourierPage.jsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import Home from "./pages/Home.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import MobileAppContinuePage from "./pages/MobileAppContinuePage.jsx";
 import PackOwnerPage from "./pages/PackOwnerPage.jsx";
 import RegistrationPage from "./pages/RegistrationPage.jsx";
 import RiderPage from "./pages/RiderPage.jsx";
@@ -21,6 +22,7 @@ export default function App() {
     "/forgot-password",
     "/forgotPassword",
     "/forget-password",
+    "/continue-in-mobile-app",
   ].includes(location.pathname);
 
   useEffect(() => {
@@ -46,6 +48,10 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sign-in" element={<Navigate to="/login" replace />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route
+            path="/continue-in-mobile-app"
+            element={<MobileAppContinuePage />}
+          />
           <Route
             path="/forgotPassword"
             element={<Navigate to="/forgot-password" replace />}

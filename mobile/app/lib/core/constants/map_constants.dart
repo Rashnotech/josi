@@ -1,5 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../theme/josi_colors.dart';
+
 class MapConstants {
   const MapConstants._();
 
@@ -17,6 +19,63 @@ class MapConstants {
     double zoom = cityZoom,
   }) {
     return CameraPosition(target: target, zoom: zoom);
+  }
+
+  static LatLngBounds boundsFor(Iterable<LatLng> points) {
+    final List<LatLng> values = points.toList();
+    if (values.isEmpty) {
+      return LatLngBounds(southwest: abuja, northeast: abuja);
+    }
+
+    double minLatitude = values.first.latitude;
+    double maxLatitude = values.first.latitude;
+    double minLongitude = values.first.longitude;
+    double maxLongitude = values.first.longitude;
+
+    for (final LatLng point in values.skip(1)) {
+      if (point.latitude < minLatitude) {
+        minLatitude = point.latitude;
+      }
+      if (point.latitude > maxLatitude) {
+        maxLatitude = point.latitude;
+      }
+      if (point.longitude < minLongitude) {
+        minLongitude = point.longitude;
+      }
+      if (point.longitude > maxLongitude) {
+        maxLongitude = point.longitude;
+      }
+    }
+
+    if (minLatitude == maxLatitude) {
+      minLatitude -= 0.002;
+      maxLatitude += 0.002;
+    }
+    if (minLongitude == maxLongitude) {
+      minLongitude -= 0.002;
+      maxLongitude += 0.002;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLatitude, minLongitude),
+      northeast: LatLng(maxLatitude, maxLongitude),
+    );
+  }
+
+  static Polyline routePolyline(
+    List<LatLng> points, {
+    String id = 'route',
+  }) {
+    return Polyline(
+      polylineId: PolylineId(id),
+      points: points,
+      color: JosiColors.red,
+      width: 6,
+      geodesic: true,
+      startCap: Cap.roundCap,
+      endCap: Cap.roundCap,
+      jointType: JointType.round,
+    );
   }
 
   static Marker pickupMarker(LatLng position, {String id = 'pickup'}) {

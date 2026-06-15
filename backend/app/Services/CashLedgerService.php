@@ -117,4 +117,61 @@ class CashLedgerService
             return $ledger->refresh();
         });
     }
+
+    public function markFullyRemitted(RiderCashLedger $ledger, User $actor, ?string $notes = null): RiderCashLedger
+    {
+        $remaining = max(0, round((float) $ledger->amount_to_remit - (float) $ledger->amount_remitted, 2));
+
+        if ($remaining <= 0) {
+            return $this->addAdminNote($ledger, $actor, $notes ?? 'Marked as fully remitted.');
+        }
+
+        return $this->recordRemittance($ledger, $actor, $remaining, $notes);
+    }
+
+    public function markDisputed(RiderCashLedger $ledger, User $actor, ?string $notes = null): RiderCashLedger
+    {
+        return DB::transaction(function () use ($ledger, $actor, $notes) {
+            $oldValues = $ledger->only([
+                'remittance_status',
+                'notes',
+            ]);
+
+            $ledger->forceFill([
+                'remittance_status' => RemittanceStatus::Disputed,
+                'notes' => $notes ?? $ledger->notes,
+            ])->save();
+
+            $this->auditLogService->log(
+                'cash_ledger.disputed',
+                $actor,
+                $ledger,
+                $oldValues,
+                $ledger->only(array_keys($oldValues))
+            );
+
+            return $ledger->refresh();
+        });
+    }
+
+    public function addAdminNote(RiderCashLedger $ledger, User $actor, ?string $notes): RiderCashLedger
+    {
+        return DB::transaction(function () use ($ledger, $actor, $notes) {
+            $oldValues = $ledger->only(['notes']);
+
+            $ledger->forceFill([
+                'notes' => $notes,
+            ])->save();
+
+            $this->auditLogService->log(
+                'cash_ledger.note_updated',
+                $actor,
+                $ledger,
+                $oldValues,
+                $ledger->only(array_keys($oldValues))
+            );
+
+            return $ledger->refresh();
+        });
+    }
 }

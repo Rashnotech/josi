@@ -18,6 +18,7 @@ class Fleet extends Model
         'business_email',
         'business_phone',
         'business_address',
+        'vehicle_count',
         'city',
         'state',
         'registration_number',

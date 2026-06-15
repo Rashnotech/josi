@@ -46,6 +46,16 @@ On Windows PowerShell, use `npm.cmd` if script execution policy blocks `npm`:
 npm.cmd run build
 ```
 
+## API Configuration
+
+Create a local `.env` file for the Laravel API base URL:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+```
+
+Auth forms use `src/services/authApi.js`; do not call `fetch` directly from pages.
+
 ## Routes
 
 | Route | Page |
@@ -73,8 +83,12 @@ npm.cmd run build
 - Account section login button links to `/login`.
 - Rider, courier, and pack owner pages use mobile-first responsive sections.
 - Courier earnings and delivery steps use button-controlled mobile carousels.
-- Login page uses the company logo, email/password form, password visibility toggle, and red brand actions.
-- Forgot password page includes email, phone number, reset password, and return-to-sign-in actions.
+- Login page calls `/api/v1/auth/login`, stores the returned token in the shared auth provider, and redirects by role.
+- Rider and courier registration call `/api/v1/auth/register` and show the email-check success state without dashboard navigation.
+- Pack owner registration calls `/api/v1/auth/register`, keeps the vehicle-count field, and redirects to `/login` after account creation.
+- Pack owner login calls `/api/v1/auth/login`, stores the returned token, writes a dashboard cookie, and redirects to the Laravel dashboard URL returned by the backend.
+- Forgot password calls `/api/v1/auth/forgot-password`, `/api/v1/auth/verify-reset-code`, and `/api/v1/auth/reset-password`.
+- The dashboard UI is not in this React app. It is served by Laravel from the backend.
 - Page loader and route transition animations are included.
 - Route navigation resets scroll position to the top of the new page.
 
@@ -95,6 +109,9 @@ src/
 
 - `src/App.jsx` defines routes, redirects, auth-page layout behavior, loader timing, and scroll reset.
 - `src/components/Header.jsx` renders the Josi header, register dropdown trigger, and mobile menu.
+- `src/auth/AuthContext.jsx` restores the session through `/auth/me`, stores auth state, and handles logout.
+- `src/services/authApi.js` is the single Laravel API client for web auth.
+- `src/components/AuthRegistrationForm.jsx` powers rider, courier, and pack owner registration.
 - `src/components/RegisterDropdown.jsx` renders the registration option menu.
 - `src/data/registerOptions.jsx` stores the register dropdown options.
 - `src/pages/Home.jsx` composes the landing page sections.

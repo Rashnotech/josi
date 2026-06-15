@@ -7,6 +7,7 @@ class AppRoutes {
   static const String login = '/login';
   static const String customerRegister = '/register/customer';
   static const String riderRegister = '/register/rider';
+  static const String courierRegister = '/register/courier';
   static const String forgotPassword = '/forgot-password';
   static const String verifyResetCode = '/verify-reset-code';
   static const String resetPassword = '/reset-password';
@@ -63,10 +64,28 @@ class AppRoutes {
 
   static String forgotPasswordFor(String role) => '$forgotPassword?role=$role';
 
-  static String verifyResetCodeFor(String role) =>
-      '$verifyResetCode?role=$role';
+  static String verifyResetCodeFor(String role, {String? identity}) {
+    final Map<String, String> query = <String, String>{'role': role};
+    if (identity != null && identity.trim().isNotEmpty) {
+      query['identity'] = identity.trim();
+    }
+    return Uri(path: verifyResetCode, queryParameters: query).toString();
+  }
 
-  static String resetPasswordFor(String role) => '$resetPassword?role=$role';
+  static String resetPasswordFor(
+    String role, {
+    String? identity,
+    String? code,
+  }) {
+    final Map<String, String> query = <String, String>{'role': role};
+    if (identity != null && identity.trim().isNotEmpty) {
+      query['identity'] = identity.trim();
+    }
+    if (code != null && code.trim().isNotEmpty) {
+      query['code'] = code.trim();
+    }
+    return Uri(path: resetPassword, queryParameters: query).toString();
+  }
 
   static String riderTripRequestPath(String id) => '/rider/trip-request/$id';
 

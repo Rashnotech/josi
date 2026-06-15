@@ -56,6 +56,7 @@ if ($authFieldMigration.Contains('Schema::hasColumn')) {
 Assert-Contains 'database/migrations/2026_06_04_000018_create_permission_role_table.php' 'role_has_permissions' 'Spatie role permission table'
 Assert-Contains 'database/migrations/2026_06_04_000019_create_role_user_table.php' 'model_has_roles' 'Spatie model role table'
 Assert-Contains 'database/migrations/2026_06_04_000020_create_model_has_permissions_table.php' 'model_has_permissions' 'Spatie model permission table'
+Assert-Contains 'database/migrations/2026_06_14_000002_create_sessions_table.php' "Schema::create('sessions'" 'Laravel database sessions table'
 Assert-Contains 'database/migrations/2026_06_04_000015_create_personal_access_tokens_table.php' 'personal_access_tokens' 'Sanctum tokens table'
 
 $superAdminSeeder = Get-Content -LiteralPath (Resolve-RepoPath 'database/seeders/SuperAdminSeeder.php') -Raw

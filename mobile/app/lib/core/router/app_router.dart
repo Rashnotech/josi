@@ -44,6 +44,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const RiderRegistrationScreen(),
       ),
       GoRoute(
+        path: AppRoutes.courierRegister,
+        builder: (BuildContext context, GoRouterState state) =>
+            const RiderRegistrationScreen(role: 'courier'),
+      ),
+      GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (BuildContext context, GoRouterState state) =>
             ForgotPasswordScreen(
@@ -53,13 +58,18 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         path: AppRoutes.verifyResetCode,
         builder: (BuildContext context, GoRouterState state) =>
             VerifyResetCodeScreen(
-                role: state.uri.queryParameters['role'] ?? 'customer'),
+          role: state.uri.queryParameters['role'] ?? 'customer',
+          emailOrPhone: state.uri.queryParameters['identity'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.resetPassword,
         builder: (BuildContext context, GoRouterState state) =>
             ResetPasswordScreen(
-                role: state.uri.queryParameters['role'] ?? 'customer'),
+          role: state.uri.queryParameters['role'] ?? 'customer',
+          emailOrPhone: state.uri.queryParameters['identity'] ?? '',
+          code: state.uri.queryParameters['code'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.editProfile,
@@ -95,7 +105,10 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         path: AppRoutes.customerConfirmTrip,
         builder: (BuildContext context, GoRouterState state) =>
             const CustomerPaymentMethodsScreen(
-                confirmRoute: AppRoutes.customerSearchingRider),
+          confirmRoute: AppRoutes.customerSearchingRider,
+          backRoute: AppRoutes.customerSelectLocation,
+          showTripSummary: true,
+        ),
       ),
       GoRoute(
         path: AppRoutes.customerSearchingRider,

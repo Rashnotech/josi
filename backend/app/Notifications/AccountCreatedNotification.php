@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -25,20 +26,35 @@ class AccountCreatedNotification extends Notification
 
     public function toMail(User $notifiable): MailMessage
     {
+        $role = $this->role($notifiable);
+        $accountType = $role?->accountTypeLabel() ?? $this->roleValue($notifiable);
+        $nextStep = match ($role) {
+            UserRole::PackOwner, UserRole::FleetOwner => 'Your account has been created successfully. You can now access your dashboard.',
+            UserRole::Rider, UserRole::Courier, UserRole::Driver => 'Your account has been created successfully. We will notify you when the next step is available.',
+            default => 'Your account has been created successfully. Sign in to continue.',
+        };
+
         $mail = (new MailMessage())
             ->subject('Your Josi account has been created')
             ->greeting("Hello {$notifiable->name},")
             ->line('Your Josi account was created successfully.')
-            ->line('Account role: '.$this->roleValue($notifiable));
+            ->line('Account role: '.$accountType)
+            ->line($nextStep);
 
         if ($this->applicationStatus) {
-            $mail->line('Application status: '.$this->applicationStatus)
-                ->line('Next step: upload the required KYC documents and wait for admin review.');
-        } else {
-            $mail->line('Next step: sign in and complete your profile.');
+            $mail->line('Application status: '.$this->applicationStatus);
         }
 
         return $mail->line('If you did not create this account, contact Josi support immediately.');
+    }
+
+    private function role(User $user): ?UserRole
+    {
+        if ($user->role instanceof UserRole) {
+            return $user->role;
+        }
+
+        return UserRole::tryFrom((string) $user->role);
     }
 
     private function roleValue(User $user): string

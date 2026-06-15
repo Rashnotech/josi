@@ -9,6 +9,8 @@ import '../../core/constants/map_constants.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/location/location_providers.dart';
 import '../../core/location/location_service.dart';
+import '../../core/map/route_providers.dart';
+import '../../core/map/route_service.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
@@ -608,6 +610,7 @@ class _CustomerSelectLocationScreenState
   bool _isFetchingDestinationAddress = false;
   String? _mapErrorMessage;
   bool _isPermissionPermanentlyDenied = false;
+  String? _lastCameraFitKey;
 
   @override
   void initState() {
@@ -754,6 +757,57 @@ class _CustomerSelectLocationScreenState
     );
   }
 
+  void _fitCameraAfterRoute(RouteDetails? routeDetails) {
+    if (routeDetails == null || routeDetails.polylinePoints.length < 2) {
+      return;
+    }
+
+    final String routeKey =
+        '${_selectedPickup.latitude},${_selectedPickup.longitude}:'
+        '${_selectedDestination.latitude},${_selectedDestination.longitude}:'
+        '${routeDetails.polylinePoints.length}';
+    if (_lastCameraFitKey == routeKey) {
+      return;
+    }
+    _lastCameraFitKey = routeKey;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _fitCameraToPoints(routeDetails.polylinePoints);
+    });
+  }
+
+  Future<void> _fitCameraToPoints(List<LatLng> points) async {
+    final GoogleMapController? controller = _mapController;
+    if (controller == null || points.length < 2) {
+      return;
+    }
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          MapConstants.boundsFor(points),
+          118,
+        ),
+      );
+    } on Object {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      try {
+        await controller.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            MapConstants.boundsFor(points),
+            118,
+          ),
+        );
+      } on Object {
+        // GoogleMap can reject bounds before layout finishes; the next route
+        // update will try again.
+      }
+    }
+  }
+
   void _handleMapTap(LatLng location) {
     if (_selectingDestination) {
       _setDestination(location);
@@ -771,6 +825,10 @@ class _CustomerSelectLocationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final AsyncValue<RouteDetails> route = ref.watch(selectedTripRouteProvider);
+    final RouteDetails? routeDetails = route.valueOrNull;
+    _fitCameraAfterRoute(routeDetails);
+
     return Scaffold(
       key: const ValueKey<String>('customer-destination-screen'),
       backgroundColor: JosiColors.surface,
@@ -784,6 +842,7 @@ class _CustomerSelectLocationScreenState
                 MapConstants.pickupMarker(_selectedPickup),
                 MapConstants.destinationMarker(_selectedDestination),
               },
+              polylines: _routePolylines(routeDetails, id: 'selected-route'),
               myLocationEnabled: true,
               showCurrentLocationButton: true,
               isLoading: _isMapLoading,
@@ -791,6 +850,7 @@ class _CustomerSelectLocationScreenState
               isPermissionPermanentlyDenied: _isPermissionPermanentlyDenied,
               onMapCreated: (GoogleMapController controller) {
                 _mapController = controller;
+                _fitCameraAfterRoute(route.valueOrNull);
               },
               onTap: _handleMapTap,
               onCurrentLocationPressed: _useCurrentLocation,
@@ -862,6 +922,12 @@ class _CustomerSelectLocationScreenState
                           selectingDestination: _selectingDestination,
                         ),
                         const SizedBox(height: 18),
+                        _TripRouteSummaryCard(
+                          pickupAddress: _pickupController.text,
+                          destinationAddress: _destinationController.text,
+                          route: route,
+                        ),
+                        const SizedBox(height: 18),
                         _SavedPlacesCard(
                           onTap: () => context.go(AppRoutes.customerProfile),
                         ),
@@ -888,6 +954,19 @@ class _CustomerSelectLocationScreenState
       ),
     );
   }
+}
+
+Set<Polyline> _routePolylines(
+  RouteDetails? routeDetails, {
+  required String id,
+}) {
+  if (routeDetails == null || routeDetails.polylinePoints.length < 2) {
+    return const <Polyline>{};
+  }
+
+  return <Polyline>{
+    MapConstants.routePolyline(routeDetails.polylinePoints, id: id),
+  };
 }
 
 class _HomePlaceTile extends StatelessWidget {
@@ -1325,6 +1404,258 @@ class _MapSelectionHint extends StatelessWidget {
   }
 }
 
+class _TripRouteSummaryCard extends StatelessWidget {
+  const _TripRouteSummaryCard({
+    required this.pickupAddress,
+    required this.destinationAddress,
+    required this.route,
+  });
+
+  final String pickupAddress;
+  final String destinationAddress;
+  final AsyncValue<RouteDetails> route;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey<String>('destination-route-summary-card'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _RouteAddressRow(label: 'Pickup', value: pickupAddress),
+          const SizedBox(height: 10),
+          _RouteAddressRow(label: 'Destination', value: destinationAddress),
+          const SizedBox(height: 12),
+          const Divider(color: JosiColors.line, height: 1),
+          const SizedBox(height: 12),
+          route.when(
+            data: (RouteDetails details) => _RouteEstimateGrid(
+              distance: details.distanceLabel,
+              duration: details.durationLabel,
+            ),
+            error: (Object error, StackTrace stackTrace) =>
+                const _RouteStatusMessage(
+              icon: Icons.error_outline_rounded,
+              label:
+                  'Unable to calculate route. Please check the selected locations.',
+              color: JosiColors.red,
+            ),
+            loading: () => const _RouteStatusMessage(
+              icon: Icons.route_rounded,
+              label: 'Calculating route...',
+              color: JosiColors.softMuted,
+              isLoading: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteAddressRow extends StatelessWidget {
+  const _RouteAddressRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: JosiColors.redSoft,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            label == 'Pickup'
+                ? Icons.radio_button_checked_rounded
+                : Icons.location_on_rounded,
+            color: label == 'Pickup' ? JosiColors.ink : JosiColors.red,
+            size: 16,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: JosiColors.softMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      height: 1.24,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RouteEstimateGrid extends StatelessWidget {
+  const _RouteEstimateGrid({
+    required this.distance,
+    required this.duration,
+  });
+
+  final String distance;
+  final String duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: _RouteStat(
+            label: 'Estimated distance',
+            value: distance,
+            icon: Icons.route_rounded,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _RouteStat(
+            label: 'Estimated duration',
+            value: duration,
+            icon: Icons.schedule_rounded,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RouteStat extends StatelessWidget {
+  const _RouteStat({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 58),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: JosiColors.surface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, color: JosiColors.red, size: 17),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: JosiColors.softMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteStatusMessage extends StatelessWidget {
+  const _RouteStatusMessage({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.isLoading = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        if (isLoading)
+          const SizedBox.square(
+            dimension: 18,
+            child: CircularProgressIndicator(strokeWidth: 2.2),
+          )
+        else
+          Icon(icon, color: color, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SavedPlacesCard extends StatelessWidget {
   const _SavedPlacesCard({required this.onTap});
 
@@ -1541,10 +1872,12 @@ class CustomerPaymentMethodsScreen extends StatefulWidget {
     required this.confirmRoute,
     super.key,
     this.backRoute = AppRoutes.customerProfile,
+    this.showTripSummary = false,
   });
 
   final String confirmRoute;
   final String backRoute;
+  final bool showTripSummary;
 
   @override
   State<CustomerPaymentMethodsScreen> createState() =>
@@ -1581,6 +1914,10 @@ class _CustomerPaymentMethodsScreenState
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(0, 22, 0, 24),
                       children: <Widget>[
+                        if (widget.showTripSummary) ...<Widget>[
+                          const _ConfirmTripSummaryCard(),
+                          const SizedBox(height: 22),
+                        ],
                         const _PaymentSectionTitle('Cash'),
                         const SizedBox(height: 10),
                         _PaymentOptionTile(
@@ -1662,6 +1999,75 @@ class _CustomerPaymentMethodsScreenState
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ConfirmTripSummaryCard extends ConsumerWidget {
+  const _ConfirmTripSummaryCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final String pickupAddress = ref.watch(selectedPickupAddressProvider);
+    final String destinationAddress =
+        ref.watch(selectedDestinationAddressProvider);
+    final AsyncValue<RouteDetails> route = ref.watch(selectedTripRouteProvider);
+
+    return Container(
+      key: const ValueKey<String>('confirm-trip-summary-card'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: JosiColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            'Trip summary',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 14),
+          _RouteAddressRow(label: 'Pickup', value: pickupAddress),
+          const SizedBox(height: 10),
+          _RouteAddressRow(label: 'Destination', value: destinationAddress),
+          const SizedBox(height: 14),
+          route.when(
+            data: (RouteDetails details) => Column(
+              children: <Widget>[
+                _RouteEstimateGrid(
+                  distance: details.distanceLabel,
+                  duration: details.durationLabel,
+                ),
+                const SizedBox(height: 10),
+                const _RouteStat(
+                  label: 'Estimated fare',
+                  value: 'To be calculated',
+                  icon: Icons.payments_rounded,
+                ),
+              ],
+            ),
+            error: (Object error, StackTrace stackTrace) =>
+                const _RouteStatusMessage(
+              icon: Icons.error_outline_rounded,
+              label:
+                  'Unable to calculate route. Please check the selected locations.',
+              color: JosiColors.red,
+            ),
+            loading: () => const _RouteStatusMessage(
+              icon: Icons.route_rounded,
+              label: 'Calculating route...',
+              color: JosiColors.softMuted,
+              isLoading: true,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2640,6 +3046,16 @@ class _RideMapBackdrop extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ActiveTripMapState mapState = ref.watch(activeTripMapProvider);
+    final AsyncValue<RouteDetails> route = showRoute
+        ? ref.watch(
+            mapRouteProvider(
+              MapRouteRequest(
+                origin: mapState.pickup,
+                destination: mapState.destination,
+              ),
+            ),
+          )
+        : const AsyncValue<RouteDetails>.loading();
     final List<Offset> bikes = showRoute
         ? const <Offset>[Offset(0.58, 0.43)]
         : const <Offset>[
@@ -2684,6 +3100,12 @@ class _RideMapBackdrop extends ConsumerWidget {
                       showRoute ? MapConstants.tripZoom : MapConstants.cityZoom,
                 ),
                 markers: markers,
+                polylines: showRoute
+                    ? _routePolylines(
+                        route.valueOrNull,
+                        id: 'customer-preview-route',
+                      )
+                    : const <Polyline>{},
                 myLocationEnabled: true,
                 showCurrentLocationButton: false,
               ),
@@ -2855,12 +3277,75 @@ class _ActiveTripScaffold extends StatelessWidget {
   }
 }
 
-class _ActiveTripMapBackdrop extends ConsumerWidget {
+class _ActiveTripMapBackdrop extends ConsumerStatefulWidget {
   const _ActiveTripMapBackdrop();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ActiveTripMapBackdrop> createState() =>
+      _ActiveTripMapBackdropState();
+}
+
+class _ActiveTripMapBackdropState
+    extends ConsumerState<_ActiveTripMapBackdrop> {
+  GoogleMapController? _mapController;
+  String? _lastCameraFitKey;
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  void _fitCameraAfterRoute(RouteDetails? routeDetails) {
+    if (routeDetails == null || routeDetails.polylinePoints.length < 2) {
+      return;
+    }
+
+    final String routeKey = '${routeDetails.polylinePoints.first.latitude},'
+        '${routeDetails.polylinePoints.first.longitude}:'
+        '${routeDetails.polylinePoints.last.latitude},'
+        '${routeDetails.polylinePoints.last.longitude}:'
+        '${routeDetails.polylinePoints.length}';
+    if (_lastCameraFitKey == routeKey) {
+      return;
+    }
+    _lastCameraFitKey = routeKey;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _fitCameraToPoints(routeDetails.polylinePoints);
+    });
+  }
+
+  Future<void> _fitCameraToPoints(List<LatLng> points) async {
+    final GoogleMapController? controller = _mapController;
+    if (controller == null || points.length < 2) {
+      return;
+    }
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(MapConstants.boundsFor(points), 112),
+      );
+    } on Object {
+      // Bounds updates can race the platform map layout on first paint.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final ActiveTripMapState mapState = ref.watch(activeTripMapProvider);
+    final AsyncValue<RouteDetails> route = ref.watch(
+      mapRouteProvider(
+        MapRouteRequest(
+          origin: mapState.pickup,
+          destination: mapState.destination,
+        ),
+      ),
+    );
+    _fitCameraAfterRoute(route.valueOrNull);
 
     return JosiGoogleMap(
       key: const ValueKey<String>('customer-active-trip-map'),
@@ -2869,8 +3354,16 @@ class _ActiveTripMapBackdrop extends ConsumerWidget {
         zoom: MapConstants.tripZoom,
       ),
       markers: mapState.customerTripMarkers,
+      polylines: _routePolylines(
+        route.valueOrNull,
+        id: 'customer-active-route',
+      ),
       myLocationEnabled: true,
       showCurrentLocationButton: true,
+      onMapCreated: (GoogleMapController controller) {
+        _mapController = controller;
+        _fitCameraAfterRoute(route.valueOrNull);
+      },
     );
   }
 }
@@ -3083,11 +3576,17 @@ class _ContactRoundButton extends StatelessWidget {
   }
 }
 
-class _ActiveTripRouteSummary extends StatelessWidget {
+class _ActiveTripRouteSummary extends ConsumerWidget {
   const _ActiveTripRouteSummary();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final String pickupAddress = ref.watch(selectedPickupAddressProvider);
+    final String destinationAddress =
+        ref.watch(selectedDestinationAddressProvider);
+    final RouteDetails? route =
+        ref.watch(selectedTripRouteProvider).valueOrNull;
+
     return Stack(
       children: <Widget>[
         const Positioned(
@@ -3101,7 +3600,7 @@ class _ActiveTripRouteSummary extends StatelessWidget {
             _ActiveRoutePoint(
               icon: Icons.radio_button_checked_rounded,
               iconColor: JosiColors.ink,
-              label: '6391 Elgin St. Celina, Delswa...',
+              label: pickupAddress,
               trailing: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -3120,11 +3619,30 @@ class _ActiveTripRouteSummary extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const _ActiveRoutePoint(
+            _ActiveRoutePoint(
               icon: Icons.location_on_rounded,
               iconColor: JosiColors.red,
-              label: '1901 Thornridge Cir. Sh...',
+              label: destinationAddress,
             ),
+            if (route != null) ...<Widget>[
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _ActiveTripStat(
+                      label: 'Distance',
+                      value: route.distanceLabel,
+                    ),
+                  ),
+                  Expanded(
+                    child: _ActiveTripStat(
+                      label: 'Duration',
+                      value: route.durationLabel,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ],

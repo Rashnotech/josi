@@ -1,4 +1,4 @@
-import logoUrl from "../assets/josi-logo.jpeg";
+import logoUrl from "../assets/josi_logo.png";
 
 function RoadLine() {
   return <span className="h-1 w-10 rounded-full bg-white/70" />;

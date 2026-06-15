@@ -1,5 +1,5 @@
 import { Facebook, Instagram, Linkedin, MapPin, Twitter } from "lucide-react";
-import logoUrl from "../assets/josi-logo.jpeg";
+import logoUrl from "../assets/josi_logo.png";
 
 const footerColumns = [
   {

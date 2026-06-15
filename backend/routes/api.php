@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
+        Route::post('/register', [AuthController::class, 'register']);
         Route::post('/register/driver', DriverRegistrationController::class);
         Route::post('/register/fleet', FleetRegistrationController::class);
         Route::post('/register/customer', CustomerRegistrationController::class);
@@ -30,7 +31,7 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    Route::prefix('driver')->middleware(['jwt.auth', 'active', 'role:driver'])->group(function () {
+    Route::prefix('driver')->middleware(['jwt.auth', 'active', 'role:rider,courier,driver'])->group(function () {
         Route::get('/profile', [DriverProfileController::class, 'profile']);
         Route::put('/profile', [DriverProfileController::class, 'update'])->middleware('permission:update_profile');
         Route::get('/application-status', [DriverProfileController::class, 'applicationStatus'])->middleware('permission:view_application_status');
@@ -38,7 +39,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/documents', [DriverProfileController::class, 'documents'])->middleware('permission:upload_documents');
     });
 
-    Route::prefix('fleet')->middleware(['jwt.auth', 'active', 'role:fleet_owner'])->group(function () {
+    Route::prefix('fleet')->middleware(['jwt.auth', 'active', 'role:pack_owner,fleet_owner'])->group(function () {
         Route::get('/profile', [FleetProfileController::class, 'profile']);
         Route::put('/profile', [FleetProfileController::class, 'update'])->middleware('permission:update_own_fleet');
         Route::get('/application-status', [FleetProfileController::class, 'applicationStatus'])->middleware('permission:view_fleet_application_status');

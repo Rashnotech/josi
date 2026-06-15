@@ -16,7 +16,7 @@ class ForgotPasswordController extends Controller
     {
         $passwordResetService->requestReset($request->validated('identifier'));
 
-        return ApiResponse::success('If this account exists, a password reset code has been sent.');
+        return ApiResponse::success('If this account exists, a reset code has been sent.');
     }
 
     public function verifyResetCode(VerifyResetCodeRequest $request, PasswordResetService $passwordResetService)
@@ -28,6 +28,7 @@ class ForgotPasswordController extends Controller
             );
 
             return ApiResponse::success('Reset code verified successfully', [
+                'verified' => true,
                 'reset_token' => $resetToken,
             ]);
         } catch (ValidationException $exception) {
@@ -38,15 +39,23 @@ class ForgotPasswordController extends Controller
     public function resetPassword(ResetPasswordRequest $request, PasswordResetService $passwordResetService)
     {
         try {
-            $passwordResetService->resetPassword(
-                $request->validated('identifier'),
-                $request->validated('reset_token'),
-                $request->validated('password')
-            );
+            if ($request->validated('code')) {
+                $passwordResetService->resetPasswordUsingCode(
+                    $request->validated('identifier'),
+                    $request->validated('code'),
+                    $request->validated('password')
+                );
+            } else {
+                $passwordResetService->resetPassword(
+                    $request->validated('identifier'),
+                    $request->validated('reset_token'),
+                    $request->validated('password')
+                );
+            }
 
             return ApiResponse::success('Password reset successful');
         } catch (ValidationException $exception) {
-            return ApiResponse::error('Invalid or expired reset token.', $exception->errors(), 422);
+            return ApiResponse::error('Invalid or expired reset code.', $exception->errors(), 422);
         }
     }
 }

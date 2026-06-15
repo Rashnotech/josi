@@ -88,8 +88,8 @@ foreach ($entry in $routes.GetEnumerator()) {
 }
 
 Assert-Contains 'routes/api.php' "'jwt.auth'" 'Protected auth route middleware'
-Assert-Contains 'routes/api.php' "'role:driver'" 'Driver role route protection'
-Assert-Contains 'routes/api.php' "'role:fleet_owner'" 'Fleet owner role route protection'
+Assert-Contains 'routes/api.php' "'role:rider,courier,driver'" 'Driver role route protection'
+Assert-Contains 'routes/api.php' "'role:pack_owner,fleet_owner'" 'Fleet owner role route protection'
 Assert-Contains 'routes/api.php' "'role:super_admin'" 'Super admin create-admin route protection'
 Assert-Contains 'routes/api.php' "'permission:manage_admins'" 'Create admin permission route protection'
 

@@ -9,6 +9,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'web_login_url' => env('WEB_LOGIN_URL', '/login'),
+
     'timezone' => env('APP_TIMEZONE', 'Africa/Lagos'),
 
     'locale' => env('APP_LOCALE', 'en'),
@@ -46,6 +48,12 @@ return [
         Illuminate\View\ViewServiceProvider::class,
 
         App\Providers\AppServiceProvider::class,
+        App\Providers\AuthServiceProvider::class,
+        Filament\FilamentServiceProvider::class,
+        Livewire\LivewireServiceProvider::class,
+        Spatie\Permission\PermissionServiceProvider::class,
+        App\Providers\Filament\AdminPanelProvider::class,
+        App\Providers\Filament\FleetPanelProvider::class,
         App\Providers\RouteServiceProvider::class,
     ],
 

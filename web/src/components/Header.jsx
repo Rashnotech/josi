@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import RegisterDropdown from "./RegisterDropdown.jsx";
+import Logo from '../assets/josi_logo.png';
 
 const menuLinks = [
   { label: "Home", href: "/" },
@@ -43,7 +44,7 @@ export default function Header() {
           className="focus-ring font-display text-[2rem] font-bold leading-none text-white"
           aria-label="Josi home"
         >
-          <img src="/src/assets/josi-logo.jpeg" alt="Josi Logo" style={{ width: "50px", height: "auto" }} />
+          <img src={Logo} alt="Josi Logo" style={{ width: "50px", height: "auto" }} />
         </Link>
 
         <div className="relative flex items-center gap-2 sm:gap-3" ref={registerRef}>

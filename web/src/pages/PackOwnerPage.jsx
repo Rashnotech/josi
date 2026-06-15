@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Button from "../components/Button.jsx";
+import AuthRegistrationForm from "../components/AuthRegistrationForm.jsx";
 import courierImage from "../assets/courier.png";
 import scooterImage from "../assets/scooter.png";
 
@@ -85,66 +86,20 @@ function ImagePlaceholder({ label, className = "", children }) {
 
 function PackSignupForm() {
   return (
-    <form className="rounded-lg bg-white p-5 shadow-menu sm:p-6">
-      <h2 className="font-display text-2xl font-bold text-ink">
-        Add your pack
-      </h2>
-
-      <div className="mt-5 grid gap-4">
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">Email</span>
-          <input
-            className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink"
-            placeholder="Enter email address"
-            type="email"
-          />
-        </label>
-
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">Phone number</span>
-          <div className="grid grid-cols-[6rem_1fr] gap-3">
-            <select className="focus-ring h-12 rounded-lg border border-line bg-paper px-3 font-normal text-ink">
-              <option>+234</option>
-              <option>+233</option>
-              <option>+44</option>
-            </select>
-            <input
-              className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink"
-              placeholder="Mobile number"
-              type="tel"
-            />
-          </div>
-        </label>
-
-        <label className="grid gap-2">
-          <span className="text-xs font-extrabold text-muted">
-            Vehicles in your pack
-          </span>
-          <select className="focus-ring h-12 rounded-lg border border-line bg-paper px-4 font-normal text-ink">
-            <option>2 - 10</option>
-            <option>11 - 25</option>
-            <option>26 - 50</option>
-            <option>51+</option>
-          </select>
-        </label>
-      </div>
-
-      <Button type="submit" variant="red" className="mt-5 w-full">
-        Continue
-      </Button>
-
-      <p className="mt-4 text-sm font-semibold text-muted">
+    <div className="w-full min-w-0">
+      <AuthRegistrationForm
+        role="pack_owner"
+        title="Add your pack"
+        submitLabel="Continue"
+        business
+      />
+      <p className="mt-4 text-sm font-semibold text-white/82">
         Already have an account?{" "}
         <Link to="/login" className="font-extrabold text-josi-red">
           Log in
         </Link>
       </p>
-
-      <p className="mt-5 text-xs font-medium leading-relaxed text-muted">
-        By signing up, you agree to Josi contacting you about pack owner
-        onboarding, safety checks, and account setup.
-      </p>
-    </form>
+    </div>
   );
 }
 
@@ -234,7 +189,7 @@ export default function PackOwnerPage() {
           <div className="absolute inset-0 bg-josi-red/10" />
         </div>
 
-        <div className="section-shell relative grid gap-8 py-10 sm:py-14 lg:grid-cols-[1fr_25rem] lg:items-center lg:py-20">
+        <div className="section-shell relative grid min-w-0 gap-8 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] lg:items-center lg:py-20">
           <div className="max-w-2xl">
             <h1 className="font-display text-[2rem] font-bold leading-[1.04] sm:text-6xl lg:text-[3rem]">
               Join Josi with your pack and earn more

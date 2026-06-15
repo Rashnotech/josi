@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_routes.dart';
+import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/services/api_client.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 
@@ -116,6 +118,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool get _isRider => widget.role.toLowerCase() == 'rider';
+  bool get _isCourier => widget.role.toLowerCase() == 'courier';
+  bool get _isWorker => _isRider || _isCourier;
 
   @override
   void dispose() {
@@ -128,11 +132,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref.read(authControllerProvider.notifier).signIn(
           identity: _identityController.text.trim(),
           password: _passwordController.text,
+          role: widget.role,
         );
     if (!mounted) {
       return;
     }
-    if (_isRider) {
+    final AuthSession session = ref.read(authControllerProvider);
+    if (!session.isAuthenticated) {
+      return;
+    }
+    if (session.user?.role == AppRole.fleetOwner) {
+      context.go(AppRoutes.fleetDashboard);
+      return;
+    }
+    if (session.user?.role == AppRole.rider || _isWorker) {
       context.go(AppRoutes.riderApplicationStatus);
       return;
     }
@@ -142,12 +155,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final AuthSession session = ref.watch(authControllerProvider);
-    final String title = _isRider ? 'Rider Login' : 'Customer Login';
-    final String subtitle = _isRider
-        ? 'Rider Dashboard Access'
-        : 'Secure your ride. Enter your details below.';
-    final String emailLabel = _isRider ? 'EMAIL' : 'EMAIL ADDRESS';
-    final String buttonLabel = _isRider ? 'Login' : 'LOGIN';
+    final String title = _isCourier
+        ? 'Courier Login'
+        : _isRider
+            ? 'Rider Login'
+            : 'Customer Login';
+    final String subtitle = _isCourier
+        ? 'Courier Dashboard Access'
+        : _isRider
+            ? 'Rider Dashboard Access'
+            : 'Secure your ride. Enter your details below.';
+    final String emailLabel = _isWorker ? 'EMAIL' : 'EMAIL ADDRESS';
+    final String buttonLabel = _isWorker ? 'Login' : 'LOGIN';
 
     return Scaffold(
       key: const ValueKey<String>('login-screen'),
@@ -164,13 +183,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: _BackSquareButton(
-                      outlined: !_isRider,
+                      outlined: !_isWorker,
                       onPressed: () => context.go(AppRoutes.roleSelection),
                     ),
                   ),
                   const SizedBox(height: 18),
                   Center(
-                    child: _isRider
+                    child: _isWorker
                         ? const _LogoCard(
                             size: 72, innerSize: 58, framed: false)
                         : const _LogoCard(
@@ -179,7 +198,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 24),
                   Text(
                     title,
-                    textAlign: _isRider ? TextAlign.left : TextAlign.center,
+                    textAlign: _isWorker ? TextAlign.left : TextAlign.center,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                           color: JosiColors.ink,
                           fontSize: 22,
@@ -190,10 +209,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 8),
                   Text(
                     subtitle,
-                    textAlign: _isRider ? TextAlign.left : TextAlign.center,
+                    textAlign: _isWorker ? TextAlign.left : TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: JosiColors.softMuted,
-                          fontSize: _isRider ? 17 : 16,
+                          fontSize: _isWorker ? 17 : 16,
                           height: 1.18,
                         ),
                   ),
@@ -238,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: session.isLoading ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
-                            _isRider ? JosiColors.red : JosiColors.redDark,
+                            _isWorker ? JosiColors.red : JosiColors.redDark,
                         foregroundColor: JosiColors.white,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(4)),
@@ -277,7 +296,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: OutlinedButton.styleFrom(
                         backgroundColor: JosiColors.white,
                         side: BorderSide(
-                            color: _isRider
+                            color: _isWorker
                                 ? JosiColors.outlineVariant
                                 : JosiColors.outline),
                         shape: RoundedRectangleBorder(
@@ -332,14 +351,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: GestureDetector(
                           onTap: () => context.go(_isRider
                               ? AppRoutes.riderRegister
-                              : AppRoutes.customerRegister),
+                              : _isCourier
+                                  ? AppRoutes.courierRegister
+                                  : AppRoutes.customerRegister),
                           child: Text(
                             'Create account',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style:
                                 Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                      color: _isRider
+                                      color: _isWorker
                                           ? JosiColors.ink
                                           : JosiColors.redDark,
                                       fontSize: 17,
@@ -385,8 +406,13 @@ class _CustomerRegistrationScreenState
   }
 
   Future<void> _submit() async {
-    await ref.read(authControllerProvider.notifier).registerCustomer();
-    if (mounted) {
+    await ref.read(authControllerProvider.notifier).registerCustomer(
+          fullName: _fullNameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          password: _passwordController.text,
+        );
+    if (mounted && ref.read(authControllerProvider).isAuthenticated) {
       context.go(AppRoutes.customerHome);
     }
   }
@@ -438,6 +464,10 @@ class _CustomerRegistrationScreenState
           isLoading: session.isLoading,
           onPressed: _submit,
         ),
+        if (session.errorMessage != null) ...<Widget>[
+          const SizedBox(height: 10),
+          _InlineAuthError(message: session.errorMessage!),
+        ],
         const SizedBox(height: 26),
         const _SignupOrDivider(),
         const SizedBox(height: 18),
@@ -452,7 +482,12 @@ class _CustomerRegistrationScreenState
 }
 
 class RiderRegistrationScreen extends ConsumerStatefulWidget {
-  const RiderRegistrationScreen({super.key});
+  const RiderRegistrationScreen({
+    super.key,
+    this.role = 'rider',
+  });
+
+  final String role;
 
   @override
   ConsumerState<RiderRegistrationScreen> createState() =>
@@ -477,8 +512,14 @@ class _RiderRegistrationScreenState
   }
 
   Future<void> _submit() async {
-    await ref.read(authControllerProvider.notifier).registerRider();
-    if (mounted) {
+    await ref.read(authControllerProvider.notifier).registerRider(
+          fullName: _fullNameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          password: _passwordController.text,
+          role: widget.role,
+        );
+    if (mounted && ref.read(authControllerProvider).isAuthenticated) {
       context.go(AppRoutes.riderApplicationStatus);
     }
   }
@@ -489,8 +530,12 @@ class _RiderRegistrationScreenState
 
     return _SignupScaffold(
       key: const ValueKey<String>('rider-register-screen'),
-      title: 'Drive with Josi Ride',
-      subtitle: 'Start earning on your own schedule',
+      title: widget.role == 'courier'
+          ? 'Deliver with Josi'
+          : 'Drive with Josi Ride',
+      subtitle: widget.role == 'courier'
+          ? 'Start earning with deliveries'
+          : 'Start earning on your own schedule',
       logoSize: 60,
       logoInnerSize: 60,
       titleFontSize: 26,
@@ -558,6 +603,10 @@ class _RiderRegistrationScreenState
           isLoading: session.isLoading,
           onPressed: _submit,
         ),
+        if (session.errorMessage != null) ...<Widget>[
+          const SizedBox(height: 10),
+          _InlineAuthError(message: session.errorMessage!),
+        ],
         const SizedBox(height: 16),
         const _SignupOrDivider(),
         const SizedBox(height: 12),
@@ -884,6 +933,33 @@ class _SignupPrimaryButton extends StatelessWidget {
   }
 }
 
+class _InlineAuthError extends StatelessWidget {
+  const _InlineAuthError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: JosiColors.redSoft,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: JosiColors.red.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: JosiColors.redDark,
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+}
+
 class _SignupOrDivider extends StatelessWidget {
   const _SignupOrDivider();
 
@@ -993,7 +1069,7 @@ class _SignupLoginLink extends StatelessWidget {
   }
 }
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({
     super.key,
     this.role = 'customer',
@@ -1002,17 +1078,51 @@ class ForgotPasswordScreen extends StatefulWidget {
   final String role;
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final TextEditingController _identityController = TextEditingController();
   bool _sent = false;
+  bool _loading = false;
+  String? _message;
+  String? _errorMessage;
 
   @override
   void dispose() {
     _identityController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+      _message = null;
+    });
+    try {
+      final String message = await ref
+          .read(authRepositoryProvider)
+          .requestPasswordReset(_identityController.text.trim());
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _sent = true;
+        _message = message;
+      });
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _errorMessage =
+          _recoveryErrorMessage(error, 'Unable to send reset code.'));
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   @override
@@ -1046,19 +1156,32 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _RecoveryButton(
           key: const ValueKey<String>('send-reset-code-button'),
           label: 'SEND CODE',
-          onPressed: () => setState(() => _sent = true),
+          isLoading: _loading,
+          onPressed: _submit,
         ),
+        if (_errorMessage != null) ...<Widget>[
+          const SizedBox(height: 16),
+          _RecoveryStatusCard(
+            message: _errorMessage!,
+            icon: Icons.error_outline_rounded,
+            foregroundColor: JosiColors.redDark,
+            backgroundColor: JosiColors.redSoft,
+          ),
+        ],
         if (_sent) ...<Widget>[
           const SizedBox(height: 16),
-          const _RecoveryStatusCard(
-            message: 'If this account exists, a reset code has been sent.',
+          _RecoveryStatusCard(
+            message: _message ??
+                'If this account exists, a reset code has been sent.',
           ),
           const SizedBox(height: 12),
           _RecoveryButton(
             label: 'ENTER CODE',
             isPrimary: false,
-            onPressed: () =>
-                context.go(AppRoutes.verifyResetCodeFor(widget.role)),
+            onPressed: () => context.go(AppRoutes.verifyResetCodeFor(
+              widget.role,
+              identity: _identityController.text.trim(),
+            )),
           ),
         ],
       ],
@@ -1066,13 +1189,68 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 }
 
-class VerifyResetCodeScreen extends StatelessWidget {
+class VerifyResetCodeScreen extends ConsumerStatefulWidget {
   const VerifyResetCodeScreen({
     super.key,
     this.role = 'customer',
+    this.emailOrPhone = '',
   });
 
   final String role;
+  final String emailOrPhone;
+
+  @override
+  ConsumerState<VerifyResetCodeScreen> createState() =>
+      _VerifyResetCodeScreenState();
+}
+
+class _VerifyResetCodeScreenState extends ConsumerState<VerifyResetCodeScreen> {
+  late final List<TextEditingController> _codeControllers =
+      List<TextEditingController>.generate(
+    6,
+    (_) => TextEditingController(),
+  );
+  bool _loading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    for (final TextEditingController controller in _codeControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final String code =
+        _codeControllers.map((TextEditingController item) => item.text).join();
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+    try {
+      await ref.read(authRepositoryProvider).verifyResetCode(
+            emailOrPhone: widget.emailOrPhone,
+            code: code,
+          );
+      if (mounted) {
+        context.go(AppRoutes.resetPasswordFor(
+          widget.role,
+          identity: widget.emailOrPhone,
+          code: code,
+        ));
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() => _errorMessage =
+            _recoveryErrorMessage(error, 'Invalid or expired reset code.'));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1080,12 +1258,17 @@ class VerifyResetCodeScreen extends StatelessWidget {
       screenKey: const ValueKey<String>('verify-reset-code-screen'),
       title: 'Verify Code',
       subtitle: 'Enter the 6-digit code sent to your account.',
-      onBack: () => context.go(AppRoutes.forgotPasswordFor(role)),
+      onBack: () => context.go(AppRoutes.forgotPasswordFor(widget.role)),
       children: <Widget>[
         Row(
           children: <Widget>[
             for (int index = 0; index < 6; index++) ...<Widget>[
-              Expanded(child: _OtpCodeField(index: index)),
+              Expanded(
+                child: _OtpCodeField(
+                  index: index,
+                  controller: _codeControllers[index],
+                ),
+              ),
               if (index < 5) const SizedBox(width: 8),
             ],
           ],
@@ -1112,30 +1295,48 @@ class VerifyResetCodeScreen extends StatelessWidget {
         _RecoveryButton(
           key: const ValueKey<String>('verify-reset-code-button'),
           label: 'VERIFY',
-          onPressed: () => context.go(AppRoutes.resetPasswordFor(role)),
+          isLoading: _loading,
+          onPressed: _submit,
         ),
+        if (_errorMessage != null) ...<Widget>[
+          const SizedBox(height: 16),
+          _RecoveryStatusCard(
+            message: _errorMessage!,
+            icon: Icons.error_outline_rounded,
+            foregroundColor: JosiColors.redDark,
+            backgroundColor: JosiColors.redSoft,
+          ),
+        ],
       ],
     );
   }
 }
 
-class ResetPasswordScreen extends StatefulWidget {
+class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({
     super.key,
     this.role = 'customer',
+    this.emailOrPhone = '',
+    this.code = '',
   });
 
   final String role;
+  final String emailOrPhone;
+  final String code;
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   bool _reset = false;
+  bool _loading = false;
+  String? _message;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -1144,13 +1345,49 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
+  Future<void> _submit() async {
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+      _message = null;
+    });
+    try {
+      final String message =
+          await ref.read(authRepositoryProvider).resetPassword(
+                emailOrPhone: widget.emailOrPhone,
+                code: widget.code,
+                password: _passwordController.text,
+                passwordConfirmation: _confirmPasswordController.text,
+              );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _reset = true;
+        _message = message;
+      });
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() => _errorMessage =
+            _recoveryErrorMessage(error, 'Unable to reset password.'));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return _RecoveryScaffold(
       screenKey: const ValueKey<String>('reset-password-screen'),
       title: 'Reset Password',
       subtitle: 'Choose a new secure password.',
-      onBack: () => context.go(AppRoutes.verifyResetCodeFor(widget.role)),
+      onBack: () => context.go(AppRoutes.verifyResetCodeFor(
+        widget.role,
+        identity: widget.emailOrPhone,
+      )),
       children: <Widget>[
         _RedlineTextField(
           key: const ValueKey<String>('new-password-field'),
@@ -1183,12 +1420,22 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         _RecoveryButton(
           key: const ValueKey<String>('reset-password-button'),
           label: 'RESET PASSWORD',
-          onPressed: () => setState(() => _reset = true),
+          isLoading: _loading,
+          onPressed: _submit,
         ),
+        if (_errorMessage != null) ...<Widget>[
+          const SizedBox(height: 16),
+          _RecoveryStatusCard(
+            message: _errorMessage!,
+            icon: Icons.error_outline_rounded,
+            foregroundColor: JosiColors.redDark,
+            backgroundColor: JosiColors.redSoft,
+          ),
+        ],
         if (_reset) ...<Widget>[
           const SizedBox(height: 16),
-          const _RecoveryStatusCard(
-            message: 'Password reset. You can now log in securely.',
+          _RecoveryStatusCard(
+            message: _message ?? 'Password reset. You can now log in securely.',
           ),
           const SizedBox(height: 12),
           _RecoveryButton(
@@ -1285,11 +1532,13 @@ class _RecoveryButton extends StatelessWidget {
     required this.onPressed,
     super.key,
     this.isPrimary = true,
+    this.isLoading = false,
   });
 
   final String label;
   final VoidCallback onPressed;
   final bool isPrimary;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -1297,7 +1546,7 @@ class _RecoveryButton extends StatelessWidget {
       height: 56,
       child: isPrimary
           ? ElevatedButton(
-              onPressed: onPressed,
+              onPressed: isLoading ? null : onPressed,
               style: ElevatedButton.styleFrom(
                 backgroundColor: JosiColors.redDark,
                 foregroundColor: JosiColors.white,
@@ -1310,17 +1559,25 @@ class _RecoveryButton extends StatelessWidget {
                       letterSpacing: 1.2,
                     ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(label),
-                  const SizedBox(width: 12),
-                  const Icon(Icons.arrow_forward_rounded, size: 24),
-                ],
-              ),
+              child: isLoading
+                  ? const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: JosiColors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Text(label),
+                        const SizedBox(width: 12),
+                        const Icon(Icons.arrow_forward_rounded, size: 24),
+                      ],
+                    ),
             )
           : OutlinedButton(
-              onPressed: onPressed,
+              onPressed: isLoading ? null : onPressed,
               style: OutlinedButton.styleFrom(
                 backgroundColor: JosiColors.white,
                 foregroundColor: JosiColors.ink,
@@ -1382,10 +1639,27 @@ class _RecoveryStatusCard extends StatelessWidget {
   }
 }
 
+String _recoveryErrorMessage(Object error, String fallback) {
+  if (error is ApiException) {
+    final Object? first =
+        error.errors.values.isEmpty ? null : error.errors.values.first;
+    if (first is List<Object?> && first.isNotEmpty) {
+      return '${first.first}';
+    }
+    return error.message;
+  }
+
+  return fallback;
+}
+
 class _OtpCodeField extends StatelessWidget {
-  const _OtpCodeField({required this.index});
+  const _OtpCodeField({
+    required this.index,
+    required this.controller,
+  });
 
   final int index;
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -1393,9 +1667,15 @@ class _OtpCodeField extends StatelessWidget {
       height: 56,
       child: TextField(
         key: ValueKey<String>('otp-$index'),
+        controller: controller,
         textAlign: TextAlign.center,
         maxLength: 1,
         keyboardType: TextInputType.number,
+        onChanged: (String value) {
+          if (value.isNotEmpty) {
+            FocusScope.of(context).nextFocus();
+          }
+        },
         inputFormatters: <TextInputFormatter>[
           FilteringTextInputFormatter.digitsOnly,
         ],
