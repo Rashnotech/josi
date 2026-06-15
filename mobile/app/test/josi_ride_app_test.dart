@@ -7,6 +7,10 @@ import 'package:josi_ride/core/constants/app_routes.dart';
 import 'package:josi_ride/core/location/location_providers.dart';
 import 'package:josi_ride/core/location/location_service.dart';
 import 'package:josi_ride/core/location/reverse_geocoding_service.dart';
+import 'package:josi_ride/core/mock/josi_mock_data.dart';
+import 'package:josi_ride/core/mock/josi_models.dart';
+import 'package:josi_ride/core/providers/app_providers.dart';
+import 'package:josi_ride/core/repositories/repositories.dart';
 import 'package:josi_ride/core/theme/josi_colors.dart';
 import 'package:josi_ride/core/theme/josi_theme.dart';
 import 'package:josi_ride/core/widgets/josi_google_map.dart';
@@ -38,6 +42,20 @@ void main() {
     _expectVisibleInViewport(tester, find.text('POWERED BY JOSI RIDE'));
   });
 
+  testWidgets('guest customer dashboard access redirects to customer login',
+      (WidgetTester tester) async {
+    await _pumpToRoleSelection(tester);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('role-selection-screen')),
+    );
+    context.go(AppRoutes.customerHome);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('login-screen')), findsOneWidget);
+    expect(find.text('Customer Login'), findsOneWidget);
+  });
+
   testWidgets('customer role opens customer login and signs into customer home',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
@@ -60,6 +78,8 @@ void main() {
     _expectVisibleInViewport(tester, find.text('Continue with Google'));
     _expectVisibleInViewport(tester, find.text('Create account'));
 
+    await tester.enterText(find.byType(TextField).at(0), 'customer@josi.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Password123!');
     await tester.tap(find.byKey(const ValueKey<String>('login-button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 650));
@@ -72,19 +92,18 @@ void main() {
     expect(
         tester.widget<Text>(find.text('Current Location')).style?.fontSize, 14);
     expect(tester.widget<Text>(find.text('Destination')).style?.fontSize, 16);
-    expect(tester.widget<Text>(find.text('Office')).style?.fontSize, 16);
-    expect(find.text('Last Trip'), findsOneWidget);
+    expect(find.text('No recent locations yet.'), findsOneWidget);
     _expectVisibleInViewport(tester, find.text('Home'));
     _expectVisibleInViewport(tester, find.text('Activity'));
     _expectVisibleInViewport(tester, find.text('Rider'));
 
-    await tester.tap(find.byKey(const ValueKey<String>('home-last-trip-tile')));
+    await tester.tap(find.text('Activity').last);
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('customer-activity-screen')),
         findsOneWidget);
     expect(find.text('Bookings'), findsWidgets);
-    expect(find.text('Trip detail'), findsNothing);
+    expect(find.text('No trips yet.'), findsOneWidget);
   });
 
   testWidgets('customer home map fills screen and where to sheet drags up',
@@ -120,6 +139,9 @@ void main() {
     final double expandedTop = tester.getTopLeft(sheet).dy;
     expect(expandedTop, lessThan(collapsedTop - 180));
     _expectVisibleInViewport(tester, find.text('Where to?'));
+    expect(find.text('No recent locations yet.'), findsOneWidget);
+    expect(find.text('No trips yet.'), findsOneWidget);
+    expect(find.text('No saved addresses yet.'), findsOneWidget);
 
     await tester.tap(
         find.byKey(const ValueKey<String>('home-current-location-button')));
@@ -600,8 +622,9 @@ void main() {
         find.byKey(const ValueKey<String>('rider-bottom-action-save-changes')));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Logout'));
-    await tester.tap(find.text('Logout'));
+    await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('rider-logout-button')));
+    await tester.tap(find.byKey(const ValueKey<String>('rider-logout-button')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('login-screen')), findsOneWidget);
@@ -626,12 +649,19 @@ void main() {
     expect(find.text('Create Account'), findsOneWidget);
     expect(find.text('Join Josi Ride today'), findsOneWidget);
     expect(find.text('Full Name'), findsOneWidget);
+    expect(find.text('Confirm Password'), findsOneWidget);
     expect(find.text('Sign Up'), findsOneWidget);
     _expectVisibleInViewport(
         tester, find.byKey(const ValueKey<String>('customer-sign-up-button')));
-    _expectVisibleInViewport(tester, find.text('Continue with Google'));
     _expectVisibleInViewport(tester, find.text('Log in'));
 
+    await tester.enterText(find.byType(TextField).at(0), 'Abdulrasheed Aliyu');
+    await tester.enterText(find.byType(TextField).at(1), 'abdul@example.com');
+    await tester.enterText(find.byType(TextField).at(2), '+2348012345678');
+    await tester.enterText(find.byType(TextField).at(3), 'Password123!');
+    await tester.enterText(find.byType(TextField).at(4), 'Password123!');
+    await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('customer-sign-up-button')));
     await tester
         .tap(find.byKey(const ValueKey<String>('customer-sign-up-button')));
     await tester.pump();
@@ -663,6 +693,7 @@ void main() {
     _expectVisibleInViewport(
         tester, find.byKey(const ValueKey<String>('send-reset-code-button')));
 
+    await tester.enterText(find.byType(TextField).first, 'abdul@example.com');
     await tester
         .tap(find.byKey(const ValueKey<String>('send-reset-code-button')));
     await tester.pumpAndSettle();
@@ -681,6 +712,12 @@ void main() {
     _expectVisibleInViewport(
         tester, find.byKey(const ValueKey<String>('verify-reset-code-button')));
 
+    for (int index = 0; index < 6; index += 1) {
+      await tester.enterText(
+        find.byKey(ValueKey<String>('otp-$index')),
+        '${index + 1}',
+      );
+    }
     await tester
         .tap(find.byKey(const ValueKey<String>('verify-reset-code-button')));
     await tester.pumpAndSettle();
@@ -695,13 +732,14 @@ void main() {
     _expectVisibleInViewport(
         tester, find.byKey(const ValueKey<String>('reset-password-button')));
 
+    await tester.enterText(find.byType(TextField).at(0), 'Password123!');
+    await tester.enterText(find.byType(TextField).at(1), 'Password123!');
     await tester
         .tap(find.byKey(const ValueKey<String>('reset-password-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Password reset. You can now log in securely.'),
-        findsOneWidget);
-    _expectVisibleInViewport(tester, find.text('BACK TO LOGIN'));
+    expect(find.byKey(const ValueKey<String>('login-screen')), findsOneWidget);
+    expect(find.text('Customer Login'), findsOneWidget);
   });
 
   testWidgets('customer destination screen confirms trip',
@@ -947,12 +985,9 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey<String>('activity-tab-cancelled')),
         findsOneWidget);
-    expect(find.text('Jenny Wilson'), findsOneWidget);
-    expect(find.text('Reschedule'), findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('booking-sms-button')),
-        findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('booking-call-button')),
-        findsOneWidget);
+    expect(find.text('No trips yet.'), findsOneWidget);
+    expect(find.text('Jenny Wilson'), findsNothing);
+    expect(find.text('Reschedule'), findsNothing);
     expect(find.text('History and active requests'), findsNothing);
     _expectCustomerNavLabelColor(tester, 'Activity', JosiColors.red);
 
@@ -961,39 +996,21 @@ void main() {
     final Text activeTab = tester.widget<Text>(find.text('Active'));
     expect(activeTab.style?.fontSize, 16);
 
-    await tester.tap(find.byKey(
-        const ValueKey<String>('activity-driver-details-link-TRP-2409')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const ValueKey<String>('customer-driver-details-screen')),
-        findsOneWidget);
-    expect(find.text('Rider Details'), findsOneWidget);
-    expect(find.text('Jenny Wilson'), findsWidgets);
-
-    final BuildContext activityDriverContext = tester.element(
-      find.byKey(const ValueKey<String>('customer-driver-details-screen')),
-    );
-    activityDriverContext.pop();
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const ValueKey<String>('customer-activity-screen')),
-        findsOneWidget);
-
     await tester
         .tap(find.byKey(const ValueKey<String>('activity-tab-completed')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Byron Barlow'), findsOneWidget);
-    expect(find.text('Robert Fox'), findsOneWidget);
-    expect(find.text('Date & Time'), findsWidgets);
+    expect(find.text('No trips yet.'), findsOneWidget);
+    expect(find.text('Byron Barlow'), findsNothing);
+    expect(find.text('Robert Fox'), findsNothing);
 
     await tester
         .tap(find.byKey(const ValueKey<String>('activity-tab-cancelled')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Cancelled by Rider'), findsOneWidget);
-    expect(find.text('Cancelled by You'), findsOneWidget);
-    expect(find.text('Cody Fisher'), findsOneWidget);
+    expect(find.text('No trips yet.'), findsOneWidget);
+    expect(find.text('Cancelled by Rider'), findsNothing);
+    expect(find.text('Cody Fisher'), findsNothing);
   });
 
   testWidgets('customer rider navigation opens destination screen',
@@ -1083,12 +1100,7 @@ void main() {
     expect(find.byKey(const ValueKey<String>('customer-manage-address-screen')),
         findsOneWidget);
     expect(find.text('Manage Address'), findsOneWidget);
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Office'), findsOneWidget);
-    expect(find.text("Parent's House"), findsOneWidget);
-    expect(find.text("Friend's House"), findsOneWidget);
-    expect(
-        find.text('1901 Thornridge Cir. Shiloh, Hawaii 81063'), findsOneWidget);
+    expect(find.text('No saved addresses yet.'), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('add-new-address-button')),
         findsOneWidget);
     expect(find.text('Add New Address'), findsOneWidget);
@@ -1247,7 +1259,10 @@ Future<void> _pumpApp(WidgetTester tester) async {
   });
   await tester.pumpWidget(
     ProviderScope(
-      overrides: <Override>[
+      overrides: [
+        authRepositoryProvider.overrideWithValue(const _FakeAuthRepository()),
+        customerRepositoryProvider
+            .overrideWithValue(const _FakeCustomerRepository()),
         locationServiceProvider.overrideWithValue(
           _FakeLocationService(onCall: () => _mockLocationCall?.call()),
         ),
@@ -1258,6 +1273,100 @@ Future<void> _pumpApp(WidgetTester tester) async {
       child: const JosiApp(),
     ),
   );
+}
+
+class _FakeAuthRepository extends AuthRepository {
+  const _FakeAuthRepository();
+
+  @override
+  Future<JosiUser?> restoreSession() async => null;
+
+  @override
+  Future<AuthResult> signIn({
+    required String identity,
+    required String password,
+    String role = 'customer',
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return AuthResult.authenticated(
+      role == 'rider' || role == 'courier'
+          ? JosiMockData.rider
+          : JosiMockData.customer,
+      message: 'Login successful',
+    );
+  }
+
+  @override
+  Future<AuthResult> registerCustomer({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return const AuthResult.authenticated(
+      JosiMockData.customer,
+      message: 'Customer registration successful',
+    );
+  }
+
+  @override
+  Future<JosiUser> registerRider({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    String role = 'rider',
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return JosiMockData.rider;
+  }
+
+  @override
+  Future<String> requestPasswordReset(String emailOrPhone) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return 'If this account exists, a reset code has been sent.';
+  }
+
+  @override
+  Future<void> verifyResetCode({
+    required String emailOrPhone,
+    required String code,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
+
+  @override
+  Future<String> resetPassword({
+    required String emailOrPhone,
+    required String code,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return 'Password reset. You can now log in securely.';
+  }
+
+  @override
+  Future<void> signOut() async {}
+}
+
+class _FakeCustomerRepository extends CustomerRepository {
+  const _FakeCustomerRepository();
+
+  @override
+  Future<JosiUser> profile() async => JosiMockData.customer;
+
+  @override
+  Future<List<String>> recentLocations() async => const <String>[];
+
+  @override
+  Future<List<CustomerSavedAddress>> savedAddresses() async =>
+      const <CustomerSavedAddress>[];
+
+  @override
+  Future<List<Trip>> trips() async => const <Trip>[];
 }
 
 Future<void> _finishSplash(WidgetTester tester) async {
@@ -1277,6 +1386,8 @@ Future<void> _loginAsCustomer(WidgetTester tester) async {
   await tester.pumpAndSettle();
   _expectVisibleInViewport(
       tester, find.byKey(const ValueKey<String>('login-button')));
+  await tester.enterText(find.byType(TextField).at(0), 'customer@josi.test');
+  await tester.enterText(find.byType(TextField).at(1), 'Password123!');
   await tester.tap(find.byKey(const ValueKey<String>('login-button')));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 650));
@@ -1290,6 +1401,8 @@ Future<void> _loginAsRider(WidgetTester tester) async {
   await tester.pumpAndSettle();
   _expectVisibleInViewport(
       tester, find.byKey(const ValueKey<String>('login-button')));
+  await tester.enterText(find.byType(TextField).at(0), 'rider@josi.test');
+  await tester.enterText(find.byType(TextField).at(1), 'Password123!');
   await tester.tap(find.byKey(const ValueKey<String>('login-button')));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 650));

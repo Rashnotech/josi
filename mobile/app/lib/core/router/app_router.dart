@@ -9,11 +9,66 @@ import '../../features/rider/rider_screens.dart';
 import '../../features/shared/shared_screens.dart';
 import '../../features/splash/splash_screen.dart';
 import '../constants/app_routes.dart';
+import '../mock/josi_models.dart';
+import '../providers/app_providers.dart';
 import '../widgets/app_components.dart';
 
 final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
+  final ValueNotifier<AuthSession> authState =
+      ValueNotifier<AuthSession>(ref.read(authControllerProvider));
+  ref
+    ..listen<AuthSession>(authControllerProvider,
+        (AuthSession? previous, AuthSession next) {
+      authState.value = next;
+    })
+    ..onDispose(authState.dispose);
+
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    refreshListenable: authState,
+    redirect: (BuildContext context, GoRouterState state) {
+      final AuthSession session = authState.value;
+      final String path = state.uri.path;
+      final bool isCustomerRoute = path == AppRoutes.customerHome ||
+          path == AppRoutes.editProfile ||
+          path.startsWith('/customer/');
+      final bool isRiderRoute = path.startsWith('/rider/');
+      final bool isCustomerAuthRoute = (path == AppRoutes.login &&
+              (state.uri.queryParameters['role'] ?? 'customer') ==
+                  'customer') ||
+          path == AppRoutes.customerRegister;
+
+      if (session.isLoading) {
+        return isCustomerRoute ? AppRoutes.splash : null;
+      }
+
+      final JosiUser? user = session.user;
+      if (isCustomerRoute) {
+        if (user == null) {
+          return AppRoutes.loginFor('customer');
+        }
+
+        if (user.role != AppRole.customer) {
+          return _homeForRole(user);
+        }
+      }
+
+      if (isRiderRoute) {
+        if (user == null) {
+          return AppRoutes.loginFor('rider');
+        }
+
+        if (user.role != AppRole.rider) {
+          return _homeForRole(user);
+        }
+      }
+
+      if (isCustomerAuthRoute && user?.role == AppRole.customer) {
+        return AppRoutes.customerHome;
+      }
+
+      return null;
+    },
     routes: <RouteBase>[
       GoRoute(
           path: AppRoutes.splash,
@@ -281,3 +336,13 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
     ],
   );
 });
+
+String _homeForRole(JosiUser user) {
+  return switch (user.role) {
+    AppRole.customer => AppRoutes.customerHome,
+    AppRole.rider => user.applicationStatus == RiderApplicationStatus.approved
+        ? AppRoutes.riderHome
+        : AppRoutes.riderApplicationStatus,
+    AppRole.fleetOwner => AppRoutes.fleetDashboard,
+  };
+}

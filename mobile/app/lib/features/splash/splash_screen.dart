@@ -34,6 +34,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       return;
     }
     final AuthSession session = ref.read(authControllerProvider);
+    if (session.isLoading) {
+      _timer = Timer(const Duration(milliseconds: 250), _finish);
+      return;
+    }
+
     final JosiUser? user = session.user;
     if (user == null) {
       context.go(AppRoutes.roleSelection);

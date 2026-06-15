@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -1574,14 +1576,14 @@ class RiderProfileScreen extends ConsumerWidget {
               route: AppRoutes.riderSettings),
           const SizedBox(height: 10),
           AppButton(
+            key: const ValueKey<String>('rider-logout-button'),
             label: 'Logout',
             icon: Icons.logout_rounded,
             variant: AppButtonVariant.danger,
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).signOut();
-              if (context.mounted) {
-                context.go(AppRoutes.loginFor('rider'));
-              }
+            onPressed: () {
+              final GoRouter router = GoRouter.of(context);
+              router.go(AppRoutes.loginFor('rider'));
+              unawaited(ref.read(authControllerProvider.notifier).signOut());
             },
           ),
         ],
@@ -3055,7 +3057,7 @@ class _RiderDashboardMapBackdrop extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentLocation = ref.watch(currentLocationProvider);
     final LatLng riderLocation =
-        currentLocation.valueOrNull?.latLng ?? MapConstants.mockRiderLocation;
+        currentLocation.value?.latLng ?? MapConstants.mockRiderLocation;
     final Set<Marker> markers = <Marker>{
       MapConstants.riderMarker(riderLocation),
       if (activeTrip != null) ...<Marker>{
@@ -4217,7 +4219,7 @@ class _RiderMapBackdropState extends ConsumerState<_RiderMapBackdrop> {
   Widget build(BuildContext context) {
     final currentLocation = ref.watch(currentLocationProvider);
     final LatLng riderLocation =
-        currentLocation.valueOrNull?.latLng ?? MapConstants.mockRiderLocation;
+        currentLocation.value?.latLng ?? MapConstants.mockRiderLocation;
     final ActiveTripMapState mapState = ref.watch(activeTripMapProvider);
     final bool headingToPickup = widget.stageIndex == 0;
     final MapRouteRequest routeRequest = MapRouteRequest(
@@ -4227,7 +4229,7 @@ class _RiderMapBackdropState extends ConsumerState<_RiderMapBackdrop> {
     final AsyncValue<RouteDetails> route = ref.watch(
       mapRouteProvider(routeRequest),
     );
-    _fitCameraAfterRoute(route.valueOrNull);
+    _fitCameraAfterRoute(route.value);
 
     return JosiGoogleMap(
       key: const ValueKey<String>('rider-active-trip-map'),
@@ -4247,14 +4249,14 @@ class _RiderMapBackdropState extends ConsumerState<_RiderMapBackdrop> {
         ),
       },
       polylines: _riderRoutePolylines(
-        route.valueOrNull,
+        route.value,
         id: headingToPickup ? 'rider-to-pickup-route' : 'rider-trip-route',
       ),
       myLocationEnabled: currentLocation.hasValue,
       showCurrentLocationButton: true,
       onMapCreated: (GoogleMapController controller) {
         _mapController = controller;
-        _fitCameraAfterRoute(route.valueOrNull);
+        _fitCameraAfterRoute(route.value);
       },
     );
   }

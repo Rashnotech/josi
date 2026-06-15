@@ -25,6 +25,8 @@ class JosiUser {
     required this.role,
     this.applicationStatus,
     this.city = 'Abuja',
+    this.firstName,
+    this.lastName,
   });
 
   final String id;
@@ -34,6 +36,35 @@ class JosiUser {
   final AppRole role;
   final RiderApplicationStatus? applicationStatus;
   final String city;
+  final String? firstName;
+  final String? lastName;
+
+  String get displayName {
+    final String trimmedName = name.trim();
+    if (trimmedName.isNotEmpty) {
+      return trimmedName;
+    }
+
+    return <String?>[firstName, lastName]
+        .whereType<String>()
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .join(' ');
+  }
+
+  String get greetingName {
+    final String trimmedFirstName = firstName?.trim() ?? '';
+    if (trimmedFirstName.isNotEmpty) {
+      return trimmedFirstName;
+    }
+
+    final String fallbackName = displayName;
+    if (fallbackName.isEmpty) {
+      return 'there';
+    }
+
+    return fallbackName.split(RegExp(r'\s+')).first;
+  }
 }
 
 class RiderProfile {
@@ -196,4 +227,14 @@ class QuickAction {
   final String label;
   final IconData icon;
   final String route;
+}
+
+class CustomerSavedAddress {
+  const CustomerSavedAddress({
+    required this.title,
+    required this.address,
+  });
+
+  final String title;
+  final String address;
 }

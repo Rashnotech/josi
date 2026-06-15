@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../auth/token_storage.dart';
 import '../mock/josi_models.dart';
@@ -10,6 +11,8 @@ class AuthSession {
     required this.isLoading,
     this.user,
     this.errorMessage,
+    this.successMessage,
+    this.fieldErrors = const <String, String>{},
   });
 
   const AuthSession.unknown() : this(isLoading: true);
@@ -19,6 +22,8 @@ class AuthSession {
   final bool isLoading;
   final JosiUser? user;
   final String? errorMessage;
+  final String? successMessage;
+  final Map<String, String> fieldErrors;
 
   bool get isAuthenticated => user != null;
 
@@ -26,12 +31,16 @@ class AuthSession {
     bool? isLoading,
     JosiUser? user,
     String? errorMessage,
+    String? successMessage,
+    Map<String, String>? fieldErrors,
     bool clearUser = false,
   }) {
     return AuthSession(
       isLoading: isLoading ?? this.isLoading,
       user: clearUser ? null : user ?? this.user,
       errorMessage: errorMessage,
+      successMessage: successMessage,
+      fieldErrors: fieldErrors ?? const <String, String>{},
     );
   }
 }
@@ -58,17 +67,28 @@ class AuthController extends StateNotifier<AuthSession> {
     state =
         state.copyWith(isLoading: true, errorMessage: null, clearUser: true);
     try {
-      final JosiUser user = await _repository.signIn(
+      final AuthResult result = await _repository.signIn(
         identity: identity,
         password: password,
         role: role,
       );
-      state = AuthSession(isLoading: false, user: user);
+      final JosiUser? user = result.user;
+      state = user == null || !result.isAuthenticated
+          ? const AuthSession(
+              isLoading: false,
+              errorMessage: 'Unable to verify your session. Please try again.',
+            )
+          : AuthSession(
+              isLoading: false,
+              user: user,
+              successMessage: result.message,
+            );
     } on Object catch (error) {
       state = AuthSession(
         isLoading: false,
         errorMessage:
             _friendlyError(error, 'Invalid email, phone, or password.'),
+        fieldErrors: _fieldErrors(error),
       );
     }
   }
@@ -78,21 +98,28 @@ class AuthController extends StateNotifier<AuthSession> {
     required String email,
     required String phone,
     required String password,
+    required String passwordConfirmation,
   }) async {
     state =
         state.copyWith(isLoading: true, errorMessage: null, clearUser: true);
     try {
-      final JosiUser user = await _repository.registerCustomer(
+      final AuthResult result = await _repository.registerCustomer(
         fullName: fullName,
         email: email,
         phone: phone,
         password: password,
+        passwordConfirmation: passwordConfirmation,
       );
-      state = AuthSession(isLoading: false, user: user);
+      state = AuthSession(
+        isLoading: false,
+        user: result.isAuthenticated ? result.user : null,
+        successMessage: result.message,
+      );
     } on Object catch (error) {
       state = AuthSession(
         isLoading: false,
         errorMessage: _friendlyError(error, 'Unable to create account.'),
+        fieldErrors: _fieldErrors(error),
       );
     }
   }
@@ -119,12 +146,12 @@ class AuthController extends StateNotifier<AuthSession> {
       state = AuthSession(
         isLoading: false,
         errorMessage: _friendlyError(error, 'Unable to create account.'),
+        fieldErrors: _fieldErrors(error),
       );
     }
   }
 
   Future<void> signOut() async {
-    state = state.copyWith(isLoading: true);
     await _repository.signOut();
     state = const AuthSession.guest();
   }
@@ -140,6 +167,20 @@ class AuthController extends StateNotifier<AuthSession> {
     }
 
     return fallback;
+  }
+
+  Map<String, String> _fieldErrors(Object error) {
+    if (error is! ApiException || error.errors.isEmpty) {
+      return const <String, String>{};
+    }
+
+    return error.errors.map((String key, Object? value) {
+      if (value is List && value.isNotEmpty) {
+        return MapEntry<String, String>(key, '${value.first}');
+      }
+
+      return MapEntry<String, String>(key, '$value');
+    });
   }
 }
 
@@ -162,7 +203,10 @@ final Provider<AuthRepository> authRepositoryProvider =
 
 final Provider<CustomerRepository> customerRepositoryProvider =
     Provider<CustomerRepository>((Ref ref) {
-  return const CustomerRepository();
+  return CustomerRepository(
+    apiClient: ref.watch(apiClientProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
+  );
 });
 
 final Provider<RiderRepository> riderRepositoryProvider =
@@ -194,6 +238,22 @@ final StateNotifierProvider<AuthController, AuthSession>
 final FutureProvider<JosiUser> currentCustomerProvider =
     FutureProvider<JosiUser>((Ref ref) {
   return ref.watch(customerRepositoryProvider).profile();
+});
+
+final FutureProvider<List<String>> customerRecentLocationsProvider =
+    FutureProvider<List<String>>((Ref ref) {
+  return ref.watch(customerRepositoryProvider).recentLocations();
+});
+
+final FutureProvider<List<CustomerSavedAddress>>
+    customerSavedAddressesProvider =
+    FutureProvider<List<CustomerSavedAddress>>((Ref ref) {
+  return ref.watch(customerRepositoryProvider).savedAddresses();
+});
+
+final FutureProvider<List<Trip>> customerTripsProvider =
+    FutureProvider<List<Trip>>((Ref ref) {
+  return ref.watch(customerRepositoryProvider).trips();
 });
 
 final FutureProvider<JosiUser> currentRiderProvider =

@@ -21,8 +21,7 @@ final FutureProvider<RouteDetails> selectedTripRouteProvider =
       );
 });
 
-final FutureProviderFamily<RouteDetails, MapRouteRequest> mapRouteProvider =
-    FutureProvider.family<RouteDetails, MapRouteRequest>(
+final mapRouteProvider = FutureProvider.family<RouteDetails, MapRouteRequest>(
   (Ref ref, MapRouteRequest request) {
     return ref.watch(routeServiceProvider).routeLatLng(
           pickup: request.origin,

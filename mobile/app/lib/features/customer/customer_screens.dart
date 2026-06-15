@@ -11,7 +11,6 @@ import '../../core/location/location_providers.dart';
 import '../../core/location/location_service.dart';
 import '../../core/map/route_providers.dart';
 import '../../core/map/route_service.dart';
-import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/theme/josi_colors.dart';
@@ -24,15 +23,14 @@ class CustomerHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<JosiUser> user = ref.watch(currentCustomerProvider);
-    final AsyncValue<List<Trip>> trips = ref.watch(tripsProvider);
+    final AsyncValue<List<Trip>> trips = ref.watch(customerTripsProvider);
+    final AsyncValue<List<String>> recentLocations =
+        ref.watch(customerRecentLocationsProvider);
+    final AsyncValue<List<CustomerSavedAddress>> savedAddresses =
+        ref.watch(customerSavedAddressesProvider);
     final String firstName = user.maybeWhen(
-      data: (JosiUser value) => value.name.split(' ').first,
+      data: (JosiUser value) => value.greetingName,
       orElse: () => 'there',
-    );
-    final Trip lastTrip = trips.maybeWhen(
-      data: (List<Trip> values) =>
-          values.isEmpty ? JosiMockData.trips.first : values.first,
-      orElse: () => JosiMockData.trips.first,
     );
 
     return Scaffold(
@@ -83,7 +81,9 @@ class CustomerHomeScreen extends ConsumerWidget {
                       width: constraints.maxWidth.clamp(0.0, 430.0).toDouble(),
                       height: constraints.maxHeight,
                       child: _WhereToPanel(
-                        lastTrip: lastTrip,
+                        trips: trips,
+                        recentLocations: recentLocations,
+                        savedAddresses: savedAddresses,
                         scrollController: scrollController,
                       ),
                     ),
@@ -120,7 +120,7 @@ class _HomeHeader extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Hi, $firstName',
+            'Hi $firstName',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -396,11 +396,15 @@ class _CurrentLocationBarState extends ConsumerState<_CurrentLocationBar> {
 
 class _WhereToPanel extends StatelessWidget {
   const _WhereToPanel({
-    required this.lastTrip,
+    required this.trips,
+    required this.recentLocations,
+    required this.savedAddresses,
     required this.scrollController,
   });
 
-  final Trip lastTrip;
+  final AsyncValue<List<Trip>> trips;
+  final AsyncValue<List<String>> recentLocations;
+  final AsyncValue<List<CustomerSavedAddress>> savedAddresses;
   final ScrollController scrollController;
 
   @override
@@ -459,50 +463,141 @@ class _WhereToPanel extends StatelessWidget {
                   onTap: () => context.go(AppRoutes.customerSelectLocation),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _HomePlaceTile(
-                  title: 'Office',
-                  subtitle: '35 KM Away',
-                  asset: AppAssets.office,
-                  onTap: () => context.go(AppRoutes.customerSelectLocation),
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 12),
-          _LastTripTile(trip: lastTrip),
           const SizedBox(height: 18),
-          Text(
-            'Saved Places',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: JosiColors.ink,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
+          const _HomeSectionTitle(title: 'Recently visited'),
           const SizedBox(height: 10),
-          _SavedPlaceButton(
-            icon: Icons.home_rounded,
-            title: 'Home address',
-            subtitle: '2715 Ash Dr. San Jose',
-            onTap: () => context.go(AppRoutes.customerSelectLocation),
+          recentLocations.when(
+            data: (List<String> values) => values.isEmpty
+                ? const _HomeEmptyState(message: 'No recent locations yet.')
+                : Column(
+                    children: values
+                        .map(
+                          (String location) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _SavedPlaceButton(
+                              icon: Icons.history_rounded,
+                              title: location,
+                              subtitle: 'Recent location',
+                              onTap: () =>
+                                  context.go(AppRoutes.customerSelectLocation),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+            error: (Object error, StackTrace stackTrace) =>
+                const _HomeEmptyState(message: 'No recent locations yet.'),
+            loading: () => const _HomeLoadingState(label: 'Loading locations'),
           ),
-          const SizedBox(height: 10),
-          _SavedPlaceButton(
-            icon: Icons.work_rounded,
-            title: 'Work',
-            subtitle: 'Central Business District',
-            onTap: () => context.go(AppRoutes.customerSelectLocation),
+          const SizedBox(height: 12),
+          trips.when(
+            data: (List<Trip> values) => values.isEmpty
+                ? const _HomeEmptyState(message: 'No trips yet.')
+                : _LastTripTile(trip: values.first),
+            error: (Object error, StackTrace stackTrace) =>
+                const _HomeEmptyState(message: 'No trips yet.'),
+            loading: () => const _HomeLoadingState(label: 'Loading trips'),
           ),
+          const SizedBox(height: 18),
+          const _HomeSectionTitle(title: 'Saved Places'),
           const SizedBox(height: 10),
-          _SavedPlaceButton(
-            icon: Icons.add_location_alt_rounded,
-            title: 'Add a new stop',
-            subtitle: 'Save another frequent destination',
-            onTap: () => context.go(AppRoutes.customerSelectLocation),
+          savedAddresses.when(
+            data: (List<CustomerSavedAddress> values) => values.isEmpty
+                ? const _HomeEmptyState(message: 'No saved addresses yet.')
+                : Column(
+                    children: values
+                        .map(
+                          (CustomerSavedAddress address) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _SavedPlaceButton(
+                              icon: Icons.location_on_rounded,
+                              title: address.title,
+                              subtitle: address.address,
+                              onTap: () =>
+                                  context.go(AppRoutes.customerSelectLocation),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+            error: (Object error, StackTrace stackTrace) =>
+                const _HomeEmptyState(message: 'No saved addresses yet.'),
+            loading: () => const _HomeLoadingState(label: 'Loading addresses'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HomeSectionTitle extends StatelessWidget {
+  const _HomeSectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: JosiColors.ink,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
+    );
+  }
+}
+
+class _HomeEmptyState extends StatelessWidget {
+  const _HomeEmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: BoxDecoration(
+        color: JosiColors.surface,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: JosiColors.muted,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+}
+
+class _HomeLoadingState extends StatelessWidget {
+  const _HomeLoadingState({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 54,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: JosiColors.surface,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: JosiColors.line),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: JosiColors.muted,
+              fontSize: 14,
+            ),
       ),
     );
   }
@@ -826,7 +921,7 @@ class _CustomerSelectLocationScreenState
   @override
   Widget build(BuildContext context) {
     final AsyncValue<RouteDetails> route = ref.watch(selectedTripRouteProvider);
-    final RouteDetails? routeDetails = route.valueOrNull;
+    final RouteDetails? routeDetails = route.value;
     _fitCameraAfterRoute(routeDetails);
 
     return Scaffold(
@@ -850,7 +945,7 @@ class _CustomerSelectLocationScreenState
               isPermissionPermanentlyDenied: _isPermissionPermanentlyDenied,
               onMapCreated: (GoogleMapController controller) {
                 _mapController = controller;
-                _fitCameraAfterRoute(route.valueOrNull);
+                _fitCameraAfterRoute(route.value);
               },
               onTap: _handleMapTap,
               onCurrentLocationPressed: _useCurrentLocation,
@@ -3102,7 +3197,7 @@ class _RideMapBackdrop extends ConsumerWidget {
                 markers: markers,
                 polylines: showRoute
                     ? _routePolylines(
-                        route.valueOrNull,
+                        route.value,
                         id: 'customer-preview-route',
                       )
                     : const <Polyline>{},
@@ -3345,7 +3440,7 @@ class _ActiveTripMapBackdropState
         ),
       ),
     );
-    _fitCameraAfterRoute(route.valueOrNull);
+    _fitCameraAfterRoute(route.value);
 
     return JosiGoogleMap(
       key: const ValueKey<String>('customer-active-trip-map'),
@@ -3355,14 +3450,14 @@ class _ActiveTripMapBackdropState
       ),
       markers: mapState.customerTripMarkers,
       polylines: _routePolylines(
-        route.valueOrNull,
+        route.value,
         id: 'customer-active-route',
       ),
       myLocationEnabled: true,
       showCurrentLocationButton: true,
       onMapCreated: (GoogleMapController controller) {
         _mapController = controller;
-        _fitCameraAfterRoute(route.valueOrNull);
+        _fitCameraAfterRoute(route.value);
       },
     );
   }
@@ -3584,8 +3679,7 @@ class _ActiveTripRouteSummary extends ConsumerWidget {
     final String pickupAddress = ref.watch(selectedPickupAddressProvider);
     final String destinationAddress =
         ref.watch(selectedDestinationAddressProvider);
-    final RouteDetails? route =
-        ref.watch(selectedTripRouteProvider).valueOrNull;
+    final RouteDetails? route = ref.watch(selectedTripRouteProvider).value;
 
     return Stack(
       children: <Widget>[
@@ -4044,97 +4138,15 @@ class _BookingActivityItem {
   final bool expanded;
 }
 
-const Map<_BookingActivityTab, List<_BookingActivityItem>>
-    _bookingActivityItems = <_BookingActivityTab, List<_BookingActivityItem>>{
-  _BookingActivityTab.active: <_BookingActivityItem>[
-    _BookingActivityItem(
-      id: 'TRP-2409',
-      driverName: 'Jenny Wilson',
-      vehicle: 'Sedan',
-      seats: '4 Seater',
-      rating: '5.0',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6391 Elgin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carNumber: 'GR 678-UVWX',
-      expanded: true,
-    ),
-  ],
-  _BookingActivityTab.completed: <_BookingActivityItem>[
-    _BookingActivityItem(
-      id: 'TRP-2408',
-      driverName: 'Byron Barlow',
-      vehicle: 'MPV',
-      seats: '5 Seater',
-      rating: '5.0',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6391 Elgin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carNumber: 'GR 678-UVWX',
-    ),
-    _BookingActivityItem(
-      id: 'TRP-2411',
-      driverName: 'Robert Fox',
-      vehicle: 'MPV',
-      seats: '5 Seater',
-      rating: '5.0',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6391 Elgin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carNumber: 'GR 678-UVWX',
-    ),
-  ],
-  _BookingActivityTab.cancelled: <_BookingActivityItem>[
-    _BookingActivityItem(
-      id: 'TRP-2410',
-      statusLabel: 'Cancelled by Rider',
-      driverName: 'Cody Fisher',
-      vehicle: 'MPV',
-      seats: '5 Seater',
-      rating: '5.0',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6391 Elgin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carNumber: 'GR 678-UVWX',
-    ),
-    _BookingActivityItem(
-      id: 'TRP-2412',
-      statusLabel: 'Cancelled by You',
-      driverName: 'Ralph Edwards',
-      vehicle: 'MPV',
-      seats: '5 Seater',
-      rating: '5.0',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6391 Elgin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carNumber: 'GR 678-UVWX',
-    ),
-  ],
-};
-
-class CustomerTripsScreen extends StatefulWidget {
+class CustomerTripsScreen extends ConsumerStatefulWidget {
   const CustomerTripsScreen({super.key});
 
   @override
-  State<CustomerTripsScreen> createState() => _CustomerTripsScreenState();
+  ConsumerState<CustomerTripsScreen> createState() =>
+      _CustomerTripsScreenState();
 }
 
-class _CustomerTripsScreenState extends State<CustomerTripsScreen> {
+class _CustomerTripsScreenState extends ConsumerState<CustomerTripsScreen> {
   _BookingActivityTab _selectedTab = _BookingActivityTab.active;
 
   void _selectTab(_BookingActivityTab tab) {
@@ -4145,8 +4157,7 @@ class _CustomerTripsScreenState extends State<CustomerTripsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<_BookingActivityItem> items =
-        _bookingActivityItems[_selectedTab] ?? <_BookingActivityItem>[];
+    final AsyncValue<List<Trip>> trips = ref.watch(customerTripsProvider);
 
     return Scaffold(
       key: const ValueKey<String>('customer-activity-screen'),
@@ -4170,21 +4181,52 @@ class _CustomerTripsScreenState extends State<CustomerTripsScreen> {
                   onSelected: _selectTab,
                 ),
                 Expanded(
-                  child: ListView.separated(
-                    key: const ValueKey<String>('booking-activity-list'),
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                    itemBuilder: (BuildContext context, int index) {
-                      final _BookingActivityItem item = items[index];
-                      return _BookingActivityCard(
-                        item: item,
-                        tab: _selectedTab,
-                        onTap: () =>
-                            context.push(AppRoutes.customerDriverDetails),
+                  child: trips.when(
+                    data: (List<Trip> values) {
+                      final List<_BookingActivityItem> items =
+                          _bookingItemsFromTrips(values, _selectedTab);
+                      if (items.isEmpty) {
+                        return const AppScreenBody(
+                          children: <Widget>[
+                            EmptyState(
+                              title: 'No trips yet.',
+                              message:
+                                  'Your customer trips will appear here once booking history is available.',
+                              icon: Icons.history_rounded,
+                            ),
+                          ],
+                        );
+                      }
+
+                      return ListView.separated(
+                        key: const ValueKey<String>('booking-activity-list'),
+                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                        itemBuilder: (BuildContext context, int index) {
+                          final _BookingActivityItem item = items[index];
+                          return _BookingActivityCard(
+                            item: item,
+                            tab: _selectedTab,
+                            onTap: () =>
+                                context.push(AppRoutes.customerDriverDetails),
+                          );
+                        },
+                        separatorBuilder: (BuildContext context, int index) =>
+                            const SizedBox(height: 16),
+                        itemCount: items.length,
                       );
                     },
-                    separatorBuilder: (BuildContext context, int index) =>
-                        const SizedBox(height: 16),
-                    itemCount: items.length,
+                    error: (Object error, StackTrace stackTrace) =>
+                        const AppScreenBody(
+                      children: <Widget>[
+                        EmptyState(
+                          title: 'No trips yet.',
+                          message:
+                              'Your customer trips will appear here once booking history is available.',
+                          icon: Icons.history_rounded,
+                        ),
+                      ],
+                    ),
+                    loading: () => const LoadingState(label: 'Loading trips'),
                   ),
                 ),
               ],
@@ -4194,6 +4236,45 @@ class _CustomerTripsScreenState extends State<CustomerTripsScreen> {
       ),
       bottomNavigationBar: const CustomerBottomNav(selectedTab: 'activity'),
     );
+  }
+
+  List<_BookingActivityItem> _bookingItemsFromTrips(
+    List<Trip> trips,
+    _BookingActivityTab tab,
+  ) {
+    return trips
+        .where((Trip trip) {
+          return switch (tab) {
+            _BookingActivityTab.active => trip.status == TripStatus.active ||
+                trip.status == TripStatus.searching,
+            _BookingActivityTab.completed =>
+              trip.status == TripStatus.completed,
+            _BookingActivityTab.cancelled =>
+              trip.status == TripStatus.cancelled,
+          };
+        })
+        .map(
+          (Trip trip) => _BookingActivityItem(
+            id: trip.id,
+            statusLabel:
+                trip.status == TripStatus.cancelled ? 'Cancelled' : null,
+            driverName: trip.riderName.trim().isEmpty
+                ? 'Rider pending'
+                : trip.riderName,
+            vehicle: 'Assigned vehicle',
+            seats: 'Capacity pending',
+            rating: '-',
+            distance: trip.distance,
+            duration: trip.duration,
+            rate: trip.fare,
+            dateTime: trip.dateLabel,
+            pickup: trip.pickup,
+            destination: trip.destination,
+            carNumber: 'Pending',
+            expanded: tab == _BookingActivityTab.active,
+          ),
+        )
+        .toList();
   }
 }
 
@@ -5122,40 +5203,14 @@ class _BookingDivider extends StatelessWidget {
   }
 }
 
-class _ManagedAddress {
-  const _ManagedAddress({
-    required this.title,
-    required this.address,
-  });
-
-  final String title;
-  final String address;
-}
-
-const List<_ManagedAddress> _managedAddresses = <_ManagedAddress>[
-  _ManagedAddress(
-    title: 'Home',
-    address: '1901 Thornridge Cir. Shiloh, Hawaii 81063',
-  ),
-  _ManagedAddress(
-    title: 'Office',
-    address: '4517 Washington Ave. Manchester, Kentucky 39495',
-  ),
-  _ManagedAddress(
-    title: "Parent's House",
-    address: '8502 Preston Rd. Inglewood, Maine 98380',
-  ),
-  _ManagedAddress(
-    title: "Friend's House",
-    address: '2464 Royal Ln, Mesa, New Jersey 45463',
-  ),
-];
-
-class CustomerManageAddressScreen extends StatelessWidget {
+class CustomerManageAddressScreen extends ConsumerWidget {
   const CustomerManageAddressScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<CustomerSavedAddress>> savedAddresses =
+        ref.watch(customerSavedAddressesProvider);
+
     return Scaffold(
       key: const ValueKey<String>('customer-manage-address-screen'),
       backgroundColor: JosiColors.white,
@@ -5174,13 +5229,40 @@ class CustomerManageAddressScreen extends StatelessWidget {
                         onBack: () => context.go(AppRoutes.customerProfile),
                       ),
                       const SizedBox(height: 40),
-                      for (int index = 0;
-                          index < _managedAddresses.length;
-                          index += 1) ...<Widget>[
-                        _ManagedAddressRow(address: _managedAddresses[index]),
-                        if (index != _managedAddresses.length - 1)
-                          const Divider(height: 30, color: JosiColors.line),
-                      ],
+                      savedAddresses.when(
+                        data: (List<CustomerSavedAddress> values) {
+                          if (values.isEmpty) {
+                            return const EmptyState(
+                              title: 'No saved addresses yet.',
+                              message:
+                                  'Saved customer addresses will appear here when the backend endpoint is available.',
+                              icon: Icons.location_on_outlined,
+                            );
+                          }
+
+                          return Column(
+                            children: <Widget>[
+                              for (int index = 0;
+                                  index < values.length;
+                                  index += 1) ...<Widget>[
+                                _ManagedAddressRow(address: values[index]),
+                                if (index != values.length - 1)
+                                  const Divider(
+                                      height: 30, color: JosiColors.line),
+                              ],
+                            ],
+                          );
+                        },
+                        error: (Object error, StackTrace stackTrace) =>
+                            const EmptyState(
+                          title: 'No saved addresses yet.',
+                          message:
+                              'Saved customer addresses will appear here when the backend endpoint is available.',
+                          icon: Icons.location_on_outlined,
+                        ),
+                        loading: () =>
+                            const LoadingState(label: 'Loading addresses'),
+                      ),
                       const SizedBox(height: 42),
                       _AddNewAddressButton(
                         onTap: () => context.go(AppRoutes.customerAddAddress),
@@ -5203,7 +5285,7 @@ class CustomerManageAddressScreen extends StatelessWidget {
 class _ManagedAddressRow extends StatelessWidget {
   const _ManagedAddressRow({required this.address});
 
-  final _ManagedAddress address;
+  final CustomerSavedAddress address;
 
   @override
   Widget build(BuildContext context) {
@@ -6438,11 +6520,16 @@ class CustomerProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 18),
                     Center(
-                      child: _CustomerProfilePhoto(name: value.name, size: 104),
+                      child: _CustomerProfilePhoto(
+                        name: value.displayName,
+                        size: 104,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      value.name,
+                      value.displayName.isEmpty
+                          ? 'Josi customer'
+                          : value.displayName,
                       textAlign: TextAlign.center,
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -6480,12 +6567,11 @@ class CustomerProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     TextButton.icon(
                       onPressed: () async {
+                        final GoRouter router = GoRouter.of(context);
                         await ref
                             .read(authControllerProvider.notifier)
                             .signOut();
-                        if (context.mounted) {
-                          context.go(AppRoutes.login);
-                        }
+                        router.go(AppRoutes.loginFor('customer'));
                       },
                       icon: const Icon(Icons.logout_rounded),
                       label: const Text('Logout'),

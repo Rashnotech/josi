@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -67,42 +68,66 @@ class ApiClient {
       throw const ApiException('API base URL is not configured.');
     }
 
-    final ApiHttpResponse response = await _httpRequest(
-      Uri.parse('$_baseUrl$path'),
-      method: method,
-      headers: <String, String>{
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      },
-      body: method == 'GET' ? null : jsonEncode(body),
-    );
+    final ApiHttpResponse response;
+    try {
+      response = await _httpRequest(
+        Uri.parse('$_baseUrl$path'),
+        method: method,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        },
+        body: method == 'GET' ? null : jsonEncode(body),
+      );
+    } on SocketException {
+      throw const ApiException(
+          'Network connection failed. Please check your internet and try again.');
+    } on HandshakeException {
+      throw const ApiException(
+          'Secure connection failed. Please try again later.');
+    } on TimeoutException {
+      throw const ApiException('The request timed out. Please try again.');
+    }
 
-    final Object? decoded =
-        response.body.isEmpty ? <String, Object?>{} : jsonDecode(response.body);
-
-    if (decoded is! Map<String, Object?>) {
+    final Object? decoded;
+    try {
+      decoded = response.body.isEmpty
+          ? <String, Object?>{}
+          : jsonDecode(response.body);
+    } on FormatException {
       throw const ApiException('Unexpected server response.');
     }
 
+    if (decoded is! Map) {
+      throw const ApiException('Unexpected server response.');
+    }
+    final Map<String, Object?> envelope = decoded.map(
+      (Object? key, Object? value) => MapEntry<String, Object?>('$key', value),
+    );
+
     final bool ok = response.statusCode >= 200 &&
         response.statusCode < 300 &&
-        decoded['status'] != false;
+        envelope['status'] != false;
     if (!ok) {
       throw ApiException(
-        (decoded['message'] as String?) ??
-            'Something went wrong. Please try again.',
-        errors: _errorsFromJson(decoded['errors']),
+        (envelope['message'] as String?) ??
+            _messageForStatus(response.statusCode),
+        errors: _errorsFromJson(envelope['errors']),
       );
     }
 
-    return decoded;
+    return envelope;
   }
 
   static Map<String, Object?> dataFromEnvelope(Map<String, Object?> envelope) {
     final Object? data = envelope['data'];
-    if (data is Map<String, Object?>) {
-      return data;
+    if (data is Map) {
+      return data.map(
+        (Object? key, Object? value) =>
+            MapEntry<String, Object?>('$key', value),
+      );
     }
 
     return envelope;
@@ -113,11 +138,24 @@ class ApiClient {
   }
 
   static Map<String, Object?> _errorsFromJson(Object? value) {
-    if (value is Map<String, Object?>) {
-      return value;
+    if (value is Map) {
+      return value.map(
+        (Object? key, Object? fieldValue) =>
+            MapEntry<String, Object?>('$key', fieldValue),
+      );
     }
 
     return const <String, Object?>{};
+  }
+
+  static String _messageForStatus(int statusCode) {
+    return switch (statusCode) {
+      401 => 'Please sign in again to continue.',
+      403 => 'You do not have permission to access this resource.',
+      422 => 'Please check the highlighted fields and try again.',
+      >= 500 => 'The server could not complete the request. Please try again.',
+      _ => 'Something went wrong. Please try again.',
+    };
   }
 
   static Future<ApiHttpResponse> _defaultHttpRequest(

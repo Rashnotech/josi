@@ -3,6 +3,45 @@ import '../mock/josi_models.dart';
 import '../services/api_client.dart';
 import '../auth/token_storage.dart';
 
+class AuthResult {
+  const AuthResult._({
+    required this.isAuthenticated,
+    required this.message,
+    this.user,
+  });
+
+  const AuthResult.authenticated(
+    JosiUser user, {
+    String message = '',
+  }) : this._(isAuthenticated: true, user: user, message: message);
+
+  const AuthResult.unauthenticated({
+    required String message,
+    JosiUser? user,
+  }) : this._(isAuthenticated: false, user: user, message: message);
+
+  final bool isAuthenticated;
+  final JosiUser? user;
+  final String message;
+}
+
+class CustomerNameParts {
+  const CustomerNameParts({
+    required this.firstName,
+    required this.lastName,
+  });
+
+  final String firstName;
+  final String lastName;
+
+  String get fullName {
+    return <String>[firstName, lastName]
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .join(' ');
+  }
+}
+
 class AuthRepository {
   const AuthRepository({
     ApiClient? apiClient,
@@ -18,70 +57,82 @@ class AuthRepository {
   TokenStorage get _tokens => _tokenStorage ?? const SecureTokenStorage();
 
   Future<JosiUser?> restoreSession() async {
-    if (!_api.isConfigured) {
-      await Future<void>.delayed(const Duration(milliseconds: 250));
-      return null;
-    }
-
     final String? token = await _tokens.readToken();
     if (token == null || token.isEmpty) {
       return null;
     }
 
+    if (!_api.isConfigured) {
+      await _tokens.clearToken();
+      return null;
+    }
+
     try {
-      final Map<String, Object?> envelope =
-          await _api.get('/auth/me', token: token);
-      final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
-      return _userFromPayload(data['user']);
+      return _fetchAuthenticatedUser(token);
     } on Object {
       await _tokens.clearToken();
       return null;
     }
   }
 
-  Future<JosiUser> signIn(
-      {required String identity,
-      required String password,
-      String role = 'customer'}) async {
+  Future<AuthResult> signIn({
+    required String identity,
+    required String password,
+    String role = 'customer',
+  }) async {
     if (!_api.isConfigured) {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      return _mockUserForRole(role);
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
     }
 
     final Map<String, Object?> envelope = await _api.post(
       '/auth/login',
       body: <String, Object?>{
-        'email_or_phone': identity,
+        'identifier': identity,
         'password': password,
       },
     );
-    return _persistAuthPayload(ApiClient.dataFromEnvelope(envelope));
+    return _persistAuthPayload(
+      ApiClient.dataFromEnvelope(envelope),
+      message: ApiClient.messageFromEnvelope(envelope),
+      requireToken: true,
+    );
   }
 
-  Future<JosiUser> registerCustomer({
+  Future<AuthResult> registerCustomer({
     required String fullName,
     required String email,
     required String phone,
     required String password,
+    required String passwordConfirmation,
   }) async {
     if (!_api.isConfigured) {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      return JosiMockData.customer;
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
     }
 
-    final List<String> parts = _splitName(fullName);
+    final CustomerNameParts parts = splitFullName(fullName);
+    final Map<String, Object?> body = <String, Object?>{
+      // Existing Laravel RegisterCustomerRequest requires `name`.
+      'name': parts.fullName,
+      'first_name': parts.firstName,
+      if (parts.lastName.isNotEmpty) 'last_name': parts.lastName,
+      'email': email,
+      'phone': phone,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+    };
     final Map<String, Object?> envelope = await _api.post(
       '/auth/register/customer',
-      body: <String, Object?>{
-        'name': fullName,
-        'email': email,
-        'phone': phone,
-        'password': password,
-        'password_confirmation': password,
-      },
+      body: body,
     );
     final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
-    return _persistAuthPayload(data, fallbackNameParts: parts);
+    return _persistAuthPayload(
+      data,
+      message: ApiClient.messageFromEnvelope(envelope),
+      fallbackNameParts: parts,
+      requireToken: false,
+    );
   }
 
   Future<JosiUser> registerRider({
@@ -92,16 +143,16 @@ class AuthRepository {
     String role = 'rider',
   }) async {
     if (!_api.isConfigured) {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      return _mockUserForRole(role);
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
     }
 
-    final List<String> parts = _splitName(fullName);
+    final CustomerNameParts parts = splitFullName(fullName);
     final Map<String, Object?> envelope = await _api.post(
       '/auth/register',
       body: <String, Object?>{
-        'first_name': parts.first,
-        'last_name': parts.last,
+        'first_name': parts.firstName,
+        'last_name': parts.lastName,
         'email': email,
         'phone': phone,
         'password': password,
@@ -110,20 +161,22 @@ class AuthRepository {
       },
     );
     final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
-    return _userFromPayload(data['user']);
+    return userFromPayload(data['user']);
   }
 
   Future<String> requestPasswordReset(String emailOrPhone) async {
     if (!_api.isConfigured) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      return 'If this account exists, a reset code has been sent.';
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
     }
 
     final Map<String, Object?> envelope = await _api.post(
       '/auth/forgot-password',
-      body: <String, Object?>{'email_or_phone': emailOrPhone},
+      body: <String, Object?>{'identifier': emailOrPhone},
     );
-    return ApiClient.messageFromEnvelope(envelope);
+    return ApiClient.messageFromEnvelope(envelope).isEmpty
+        ? 'If this account exists, a reset code has been sent.'
+        : ApiClient.messageFromEnvelope(envelope);
   }
 
   Future<void> verifyResetCode({
@@ -131,14 +184,14 @@ class AuthRepository {
     required String code,
   }) async {
     if (!_api.isConfigured) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      return;
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
     }
 
     await _api.post(
       '/auth/verify-reset-code',
       body: <String, Object?>{
-        'email_or_phone': emailOrPhone,
+        'identifier': emailOrPhone,
         'code': code,
       },
     );
@@ -151,72 +204,136 @@ class AuthRepository {
     required String passwordConfirmation,
   }) async {
     if (!_api.isConfigured) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      return 'Password reset. You can now log in securely.';
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
     }
 
     final Map<String, Object?> envelope = await _api.post(
       '/auth/reset-password',
       body: <String, Object?>{
-        'email_or_phone': emailOrPhone,
+        'identifier': emailOrPhone,
         'code': code,
         'password': password,
         'password_confirmation': passwordConfirmation,
       },
     );
-    return ApiClient.messageFromEnvelope(envelope);
+    final String message = ApiClient.messageFromEnvelope(envelope);
+    return message.isEmpty
+        ? 'Password reset. You can now log in securely.'
+        : message;
   }
 
   Future<void> signOut() async {
-    if (!_api.isConfigured) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      return;
-    }
-
     final String? token = await _tokens.readToken();
     await _tokens.clearToken();
     if (token == null || token.isEmpty) {
       return;
     }
 
+    if (!_api.isConfigured) {
+      return;
+    }
+
     await _api.post('/auth/logout', token: token);
   }
 
-  Future<JosiUser> _persistAuthPayload(
+  Future<AuthResult> _persistAuthPayload(
     Map<String, Object?> data, {
-    List<String>? fallbackNameParts,
+    required String message,
+    CustomerNameParts? fallbackNameParts,
+    bool requireToken = true,
   }) async {
     final String? token =
         (data['token'] as String?) ?? (data['access_token'] as String?);
+    final String tokenType = (data['token_type'] as String?) ?? 'bearer';
+    final String? role = data['role'] as String?;
     if (token != null && token.isNotEmpty) {
-      await _tokens.saveToken(token);
+      await _tokens.saveToken(token, tokenType: tokenType, userRole: role);
+      try {
+        return AuthResult.authenticated(
+          await _fetchAuthenticatedUser(token, fallbackNameParts),
+          message: message,
+        );
+      } on Object {
+        await _tokens.clearToken();
+        rethrow;
+      }
     }
 
-    return _userFromPayload(data['user'], fallbackNameParts: fallbackNameParts);
-  }
-
-  JosiUser _userFromPayload(
-    Object? value, {
-    List<String>? fallbackNameParts,
-  }) {
-    if (value is! Map<String, Object?>) {
-      throw const ApiException('User profile was not returned by the API.');
+    if (requireToken) {
+      throw const ApiException('Authentication token was not returned.');
     }
 
-    final String role = (value['role'] as String?) ?? 'customer';
-    return JosiUser(
-      id: '${value['id']}',
-      name: (value['name'] as String?) ??
-          fallbackNameParts?.join(' ') ??
-          'Josi user',
-      email: (value['email'] as String?) ?? '',
-      phone: (value['phone'] as String?) ?? '',
-      role: _appRoleFromApi(role),
-      applicationStatus: _applicationStatusFromApi(value['status']),
+    return AuthResult.unauthenticated(
+      message: message.isEmpty
+          ? 'Account created successfully. Please sign in.'
+          : message,
+      user: _tryUserFromPayload(
+        data['user'],
+        fallbackNameParts: fallbackNameParts,
+      ),
     );
   }
 
-  AppRole _appRoleFromApi(String role) {
+  Future<JosiUser> _fetchAuthenticatedUser(
+    String token, [
+    CustomerNameParts? fallbackNameParts,
+  ]) async {
+    final Map<String, Object?> envelope =
+        await _api.get('/auth/me', token: token);
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    return userFromPayload(data['user'], fallbackNameParts: fallbackNameParts);
+  }
+
+  JosiUser? _tryUserFromPayload(
+    Object? value, {
+    CustomerNameParts? fallbackNameParts,
+  }) {
+    try {
+      return userFromPayload(value, fallbackNameParts: fallbackNameParts);
+    } on ApiException {
+      return null;
+    }
+  }
+
+  static JosiUser userFromPayload(
+    Object? value, {
+    CustomerNameParts? fallbackNameParts,
+  }) {
+    final Map<String, Object?>? user = _mapFrom(value);
+    if (user == null) {
+      throw const ApiException('User profile was not returned by the API.');
+    }
+
+    final Map<String, Object?>? profile = _mapFrom(user['profile']);
+    final String role = _string(user['role']) ?? 'customer';
+    final String? firstName = _string(user['first_name']) ??
+        _string(profile?['first_name']) ??
+        fallbackNameParts?.firstName;
+    final String? lastName = _string(user['last_name']) ??
+        _string(profile?['last_name']) ??
+        fallbackNameParts?.lastName;
+    final String name = _string(user['name']) ??
+        <String?>[firstName, lastName]
+            .whereType<String>()
+            .where((String value) => value.trim().isNotEmpty)
+            .join(' ');
+    return JosiUser(
+      id: '${user['id'] ?? ''}',
+      name: name,
+      firstName: firstName,
+      lastName: lastName,
+      email: _string(user['email']) ?? '',
+      phone: _string(user['phone']) ?? '',
+      role: _appRoleFromApi(role),
+      applicationStatus: _applicationStatusFromApi(
+        user['application_status'] ?? user['status'],
+      ),
+      city: _string(user['city']) ?? _string(profile?['city']) ?? 'Abuja',
+    );
+  }
+
+  static AppRole _appRoleFromApi(String role) {
     return switch (role) {
       'rider' || 'courier' || 'driver' => AppRole.rider,
       'pack_owner' || 'fleet_owner' => AppRole.fleetOwner,
@@ -224,7 +341,7 @@ class AuthRepository {
     };
   }
 
-  RiderApplicationStatus? _applicationStatusFromApi(Object? value) {
+  static RiderApplicationStatus? _applicationStatusFromApi(Object? value) {
     return switch (value) {
       'pending' => RiderApplicationStatus.pending,
       'under_review' => RiderApplicationStatus.underReview,
@@ -235,36 +352,99 @@ class AuthRepository {
     };
   }
 
-  JosiUser _mockUserForRole(String role) {
-    return switch (role) {
-      'rider' || 'courier' => JosiMockData.rider,
-      _ => JosiMockData.customer,
-    };
-  }
-
-  List<String> _splitName(String fullName) {
+  static CustomerNameParts splitFullName(String fullName) {
     final List<String> parts = fullName
         .trim()
         .split(RegExp(r'\s+'))
         .where((String part) => part.isNotEmpty)
         .toList();
     if (parts.isEmpty) {
-      return <String>['Josi', 'User'];
+      return const CustomerNameParts(firstName: '', lastName: '');
     }
-    if (parts.length == 1) {
-      return <String>[parts.first, 'User'];
+
+    return CustomerNameParts(
+      firstName: parts.first,
+      lastName: parts.length == 1 ? '' : parts.skip(1).join(' '),
+    );
+  }
+
+  static Map<String, Object?>? _mapFrom(Object? value) {
+    if (value is Map) {
+      return value.map(
+        (Object? key, Object? fieldValue) =>
+            MapEntry<String, Object?>('$key', fieldValue),
+      );
     }
-    return <String>[parts.first, parts.skip(1).join(' ')];
+
+    return null;
+  }
+
+  static String? _string(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final String stringValue = '$value'.trim();
+    return stringValue.isEmpty ? null : stringValue;
   }
 }
 
 class CustomerRepository {
-  const CustomerRepository();
+  const CustomerRepository({
+    ApiClient? apiClient,
+    TokenStorage? tokenStorage,
+  })  : _apiClient = apiClient,
+        _tokenStorage = tokenStorage;
 
-  Future<JosiUser> profile() async => JosiMockData.customer;
+  final ApiClient? _apiClient;
+  final TokenStorage? _tokenStorage;
+
+  ApiClient get _api => _apiClient ?? ApiClient();
+
+  TokenStorage get _tokens => _tokenStorage ?? const SecureTokenStorage();
+
+  Future<JosiUser> profile() async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/customer/profile', token: token);
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    return AuthRepository.userFromPayload(data['user']);
+  }
 
   Future<List<QuickAction>> quickActions() async =>
       JosiMockData.customerActions;
+
+  Future<List<String>> recentLocations() async {
+    await _requireToken();
+    // No backend endpoint exists yet for customer recent locations.
+    return const <String>[];
+  }
+
+  Future<List<CustomerSavedAddress>> savedAddresses() async {
+    await _requireToken();
+    // No backend endpoint exists yet for customer saved addresses.
+    return const <CustomerSavedAddress>[];
+  }
+
+  Future<List<Trip>> trips() async {
+    await _requireToken();
+    // No customer trip listing endpoint is exposed in routes/api.php yet.
+    return const <Trip>[];
+  }
+
+  Future<String> _requireToken() async {
+    if (!_api.isConfigured) {
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
+    }
+
+    final String? token = await _tokens.readToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Please sign in again to continue.');
+    }
+
+    return token;
+  }
 }
 
 class RiderRepository {

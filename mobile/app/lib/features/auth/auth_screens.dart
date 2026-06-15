@@ -116,6 +116,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _identityController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  Map<String, String> _fieldErrors = const <String, String>{};
 
   bool get _isRider => widget.role.toLowerCase() == 'rider';
   bool get _isCourier => widget.role.toLowerCase() == 'courier';
@@ -129,6 +130,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    if (ref.read(authControllerProvider).isLoading) {
+      return;
+    }
+
+    final Map<String, String> errors = <String, String>{};
+    if (_identityController.text.trim().isEmpty) {
+      errors['identifier'] = 'Enter your email or phone number.';
+    }
+    if (_passwordController.text.isEmpty) {
+      errors['password'] = 'Enter your password.';
+    }
+    setState(() => _fieldErrors = errors);
+    if (errors.isNotEmpty) {
+      return;
+    }
+
     await ref.read(authControllerProvider.notifier).signIn(
           identity: _identityController.text.trim(),
           password: _passwordController.text,
@@ -225,6 +242,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     svgAsset: AppAssets.email,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
+                    errorText:
+                        _fieldError(session, 'identifier', 'email_or_phone'),
                   ),
                   const SizedBox(height: 16),
                   _RedlineTextField(
@@ -238,6 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onTrailingTap: () =>
                         context.go(AppRoutes.forgotPasswordFor(widget.role)),
                     textInputAction: TextInputAction.done,
+                    errorText: _fieldError(session, 'password'),
                   ),
                   if (session.errorMessage != null) ...<Widget>[
                     const SizedBox(height: 10),
@@ -292,7 +312,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   SizedBox(
                     height: 56,
                     child: OutlinedButton(
-                      onPressed: _submit,
+                      onPressed: session.isLoading ? null : _submit,
                       style: OutlinedButton.styleFrom(
                         backgroundColor: JosiColors.white,
                         side: BorderSide(
@@ -379,6 +399,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+
+  String? _fieldError(AuthSession session, String key, [String? alternateKey]) {
+    return _fieldErrors[key] ??
+        session.fieldErrors[key] ??
+        (alternateKey == null ? null : session.fieldErrors[alternateKey]);
+  }
 }
 
 class CustomerRegistrationScreen extends ConsumerStatefulWidget {
@@ -395,6 +421,9 @@ class _CustomerRegistrationScreenState
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  Map<String, String> _fieldErrors = const <String, String>{};
 
   @override
   void dispose() {
@@ -402,18 +431,73 @@ class _CustomerRegistrationScreenState
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
+    if (ref.read(authControllerProvider).isLoading) {
+      return;
+    }
+
+    final String fullName = _fullNameController.text.trim();
+    final String email = _emailController.text.trim();
+    final String phone = _phoneController.text.trim();
+    final String password = _passwordController.text;
+    final String confirmation = _confirmPasswordController.text;
+    final Map<String, String> errors = <String, String>{};
+
+    if (fullName.isEmpty) {
+      errors['fullName'] = 'Full name is required.';
+    }
+    if (email.isEmpty) {
+      errors['email'] = 'Email is required.';
+    } else if (!_isValidEmail(email)) {
+      errors['email'] = 'Enter a valid email address.';
+    }
+    if (phone.isEmpty) {
+      errors['phone'] = 'Phone number is required.';
+    }
+    if (password.isEmpty) {
+      errors['password'] = 'Password is required.';
+    }
+    if (confirmation.isEmpty) {
+      errors['passwordConfirmation'] = 'Confirm your password.';
+    } else if (password != confirmation) {
+      errors['passwordConfirmation'] = 'Passwords do not match.';
+    }
+
+    setState(() => _fieldErrors = errors);
+    if (errors.isNotEmpty) {
+      return;
+    }
+
     await ref.read(authControllerProvider.notifier).registerCustomer(
-          fullName: _fullNameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          password: _passwordController.text,
+          fullName: fullName,
+          email: email,
+          phone: phone,
+          password: password,
+          passwordConfirmation: confirmation,
         );
-    if (mounted && ref.read(authControllerProvider).isAuthenticated) {
+    if (!mounted) {
+      return;
+    }
+
+    final AuthSession session = ref.read(authControllerProvider);
+    if (session.isAuthenticated) {
+      _showAuthMessage(
+        context,
+        session.successMessage?.isEmpty ?? true
+            ? 'Account created successfully.'
+            : session.successMessage!,
+      );
       context.go(AppRoutes.customerHome);
+      return;
+    }
+
+    if (session.successMessage != null) {
+      _showAuthMessage(context, session.successMessage!);
+      context.go(AppRoutes.loginFor('customer'));
     }
   }
 
@@ -432,6 +516,7 @@ class _CustomerRegistrationScreenState
           label: 'Full Name',
           hintText: 'e.g. Alex Josi',
           controller: _fullNameController,
+          errorText: _fieldError(session, 'fullName', 'name'),
         ),
         const SizedBox(height: 12),
         _SignupTextField(
@@ -440,6 +525,7 @@ class _CustomerRegistrationScreenState
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
+          errorText: _fieldError(session, 'email'),
         ),
         const SizedBox(height: 12),
         _SignupTextField(
@@ -448,6 +534,7 @@ class _CustomerRegistrationScreenState
           controller: _phoneController,
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
+          errorText: _fieldError(session, 'phone'),
         ),
         const SizedBox(height: 12),
         _SignupTextField(
@@ -455,7 +542,22 @@ class _CustomerRegistrationScreenState
           hintText: '••••••••',
           controller: _passwordController,
           obscureText: true,
+          textInputAction: TextInputAction.next,
+          errorText: _fieldError(session, 'password'),
+        ),
+        const SizedBox(height: 12),
+        _SignupTextField(
+          key: const ValueKey<String>('customer-confirm-password-field'),
+          label: 'Confirm Password',
+          hintText: '••••••••',
+          controller: _confirmPasswordController,
+          obscureText: true,
           textInputAction: TextInputAction.done,
+          errorText: _fieldError(
+            session,
+            'passwordConfirmation',
+            'password_confirmation',
+          ),
         ),
         const SizedBox(height: 28),
         _SignupPrimaryButton(
@@ -471,13 +573,23 @@ class _CustomerRegistrationScreenState
         const SizedBox(height: 26),
         const _SignupOrDivider(),
         const SizedBox(height: 18),
-        _SignupGoogleButton(onPressed: _submit),
+        _SignupGoogleButton(onPressed: session.isLoading ? null : _submit),
         const SizedBox(height: 32),
         _SignupLoginLink(
           onTap: () => context.go(AppRoutes.loginFor('customer')),
         ),
       ],
     );
+  }
+
+  String? _fieldError(AuthSession session, String key, [String? apiKey]) {
+    return _fieldErrors[key] ??
+        session.fieldErrors[apiKey ?? key] ??
+        (apiKey == null ? null : session.fieldErrors[key]);
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
   }
 }
 
@@ -724,6 +836,7 @@ class _SignupTextField extends StatefulWidget {
     this.textInputAction,
     this.filled = true,
     this.borderColor = JosiColors.line,
+    this.errorText,
   });
 
   final String label;
@@ -734,6 +847,7 @@ class _SignupTextField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final bool filled;
   final Color borderColor;
+  final String? errorText;
 
   @override
   State<_SignupTextField> createState() => _SignupTextFieldState();
@@ -746,6 +860,7 @@ class _SignupTextFieldState extends State<_SignupTextField> {
   Widget build(BuildContext context) {
     return _SignupFieldShell(
       label: widget.label,
+      errorText: widget.errorText,
       child: SizedBox(
         height: 52,
         child: TextField(
@@ -866,10 +981,12 @@ class _SignupFieldShell extends StatelessWidget {
   const _SignupFieldShell({
     required this.label,
     required this.child,
+    this.errorText,
   });
 
   final String label;
   final Widget child;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -887,6 +1004,17 @@ class _SignupFieldShell extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         child,
+        if (errorText != null) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            errorText!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: JosiColors.redDark,
+                  fontSize: 12,
+                  height: 1.2,
+                ),
+          ),
+        ],
       ],
     );
   }
@@ -990,7 +1118,7 @@ class _SignupGoogleButton extends StatelessWidget {
     required this.onPressed,
   });
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -1088,6 +1216,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   bool _loading = false;
   String? _message;
   String? _errorMessage;
+  String? _identityError;
 
   @override
   void dispose() {
@@ -1096,15 +1225,21 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _submit() async {
+    final String identity = _identityController.text.trim();
+    if (identity.isEmpty) {
+      setState(() => _identityError = 'Enter your email or phone number.');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _errorMessage = null;
+      _identityError = null;
       _message = null;
     });
     try {
-      final String message = await ref
-          .read(authRepositoryProvider)
-          .requestPasswordReset(_identityController.text.trim());
+      final String message =
+          await ref.read(authRepositoryProvider).requestPasswordReset(identity);
       if (!mounted) {
         return;
       }
@@ -1151,6 +1286,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           svgAsset: AppAssets.email,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.done,
+          errorText: _identityError,
         ),
         const SizedBox(height: 24),
         _RecoveryButton(
@@ -1224,6 +1360,16 @@ class _VerifyResetCodeScreenState extends ConsumerState<VerifyResetCodeScreen> {
   Future<void> _submit() async {
     final String code =
         _codeControllers.map((TextEditingController item) => item.text).join();
+    if (widget.emailOrPhone.trim().isEmpty) {
+      setState(() => _errorMessage =
+          'Start from forgot password so we know which account to verify.');
+      return;
+    }
+    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+      setState(() => _errorMessage = 'Enter the 6-digit reset code.');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _errorMessage = null;
@@ -1346,6 +1492,26 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 
   Future<void> _submit() async {
+    final String password = _passwordController.text;
+    final String confirmation = _confirmPasswordController.text;
+    if (widget.emailOrPhone.trim().isEmpty || widget.code.trim().isEmpty) {
+      setState(() => _errorMessage =
+          'Verify your reset code before choosing a new password.');
+      return;
+    }
+    if (password.isEmpty) {
+      setState(() => _errorMessage = 'Enter a new password.');
+      return;
+    }
+    if (confirmation.isEmpty) {
+      setState(() => _errorMessage = 'Confirm your new password.');
+      return;
+    }
+    if (password != confirmation) {
+      setState(() => _errorMessage = 'Passwords do not match.');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _errorMessage = null;
@@ -1356,16 +1522,23 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           await ref.read(authRepositoryProvider).resetPassword(
                 emailOrPhone: widget.emailOrPhone,
                 code: widget.code,
-                password: _passwordController.text,
-                passwordConfirmation: _confirmPasswordController.text,
+                password: password,
+                passwordConfirmation: confirmation,
               );
       if (!mounted) {
         return;
       }
+      _showAuthMessage(
+        context,
+        message.isEmpty
+            ? 'Password reset. You can now log in securely.'
+            : 'Password reset. You can now log in securely.',
+      );
       setState(() {
         _reset = true;
         _message = message;
       });
+      context.go(AppRoutes.loginFor(widget.role));
     } on Object catch (error) {
       if (mounted) {
         setState(() => _errorMessage =
@@ -1652,6 +1825,12 @@ String _recoveryErrorMessage(Object error, String fallback) {
   return fallback;
 }
 
+void _showAuthMessage(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+}
+
 class _OtpCodeField extends StatelessWidget {
   const _OtpCodeField({
     required this.index,
@@ -1935,7 +2114,7 @@ class _RoleCard extends StatelessWidget {
   }
 }
 
-class _RedlineTextField extends StatelessWidget {
+class _RedlineTextField extends StatefulWidget {
   const _RedlineTextField({
     required this.label,
     required this.hintText,
@@ -1947,6 +2126,7 @@ class _RedlineTextField extends StatelessWidget {
     this.textInputAction,
     this.trailingLabel,
     this.onTrailingTap,
+    this.errorText,
   });
 
   final String label;
@@ -1958,6 +2138,14 @@ class _RedlineTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final String? trailingLabel;
   final VoidCallback? onTrailingTap;
+  final String? errorText;
+
+  @override
+  State<_RedlineTextField> createState() => _RedlineTextFieldState();
+}
+
+class _RedlineTextFieldState extends State<_RedlineTextField> {
+  late bool _obscure = widget.obscureText;
 
   @override
   Widget build(BuildContext context) {
@@ -1968,7 +2156,7 @@ class _RedlineTextField extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: Text(
-                label,
+                widget.label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: JosiColors.softMuted,
                       fontSize: 13,
@@ -1977,11 +2165,11 @@ class _RedlineTextField extends StatelessWidget {
                     ),
               ),
             ),
-            if (trailingLabel != null)
+            if (widget.trailingLabel != null)
               GestureDetector(
-                onTap: onTrailingTap,
+                onTap: widget.onTrailingTap,
                 child: Text(
-                  trailingLabel!,
+                  widget.trailingLabel!,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: JosiColors.redDark,
                         fontSize: 14,
@@ -1995,39 +2183,52 @@ class _RedlineTextField extends StatelessWidget {
         SizedBox(
           height: 58,
           child: TextField(
-            controller: controller,
-            obscureText: obscureText,
-            keyboardType: keyboardType,
-            textInputAction: textInputAction,
+            controller: widget.controller,
+            obscureText: _obscure,
+            keyboardType: widget.keyboardType,
+            textInputAction: widget.textInputAction,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.outline,
                   fontSize: 16,
-                  letterSpacing: obscureText ? 3.2 : 0,
+                  letterSpacing: widget.obscureText ? 3.2 : 0,
                 ),
             decoration: InputDecoration(
-              hintText: hintText,
+              hintText: widget.hintText,
               hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: obscureText
+                    color: widget.obscureText
                         ? JosiColors.outline
                         : const Color(0xFF6B7280),
                     fontSize: 16,
-                    letterSpacing: obscureText ? 3.2 : 0,
+                    letterSpacing: widget.obscureText ? 3.2 : 0,
                   ),
               filled: true,
               fillColor: JosiColors.white,
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(left: 18, right: 12),
-                child: svgAsset == null
+                child: widget.svgAsset == null
                     ? const Icon(Icons.lock_outline_rounded,
                         color: JosiColors.softMuted, size: 23)
                     : SvgPicture.asset(
-                        svgAsset!,
+                        widget.svgAsset!,
                         width: 23,
                         height: 23,
                         colorFilter: const ColorFilter.mode(
                             JosiColors.softMuted, BlendMode.srcIn),
                       ),
               ),
+              suffixIcon: widget.obscureText
+                  ? IconButton(
+                      tooltip: _obscure ? 'Show password' : 'Hide password',
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: JosiColors.softMuted,
+                        size: 20,
+                      ),
+                    )
+                  : null,
               prefixIconConstraints: const BoxConstraints(minWidth: 54),
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 17, horizontal: 0),
@@ -2047,6 +2248,17 @@ class _RedlineTextField extends StatelessWidget {
             ),
           ),
         ),
+        if (widget.errorText != null) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            widget.errorText!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: JosiColors.redDark,
+                  fontSize: 12,
+                  height: 1.2,
+                ),
+          ),
+        ],
       ],
     );
   }

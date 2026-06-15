@@ -372,21 +372,19 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class EditProfileScreen extends StatefulWidget {
+class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Rik Space');
-  final TextEditingController _phoneController =
-      TextEditingController(text: '+234 801 234 5678');
-  final TextEditingController _emailController =
-      TextEditingController(text: 'rik@josi.ng');
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   String _gender = 'Select';
+  bool _hydrated = false;
 
   @override
   void dispose() {
@@ -398,6 +396,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final AsyncValue<JosiUser> user = ref.watch(currentCustomerProvider);
+    final JosiUser? profile = user.value;
+    if (!_hydrated && profile != null) {
+      _nameController.text = profile.displayName;
+      _phoneController.text = profile.phone;
+      _emailController.text = profile.email;
+      _hydrated = true;
+    }
+
     return Scaffold(
       key: const ValueKey<String>('edit-profile-screen'),
       backgroundColor: JosiColors.white,
@@ -420,8 +427,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     },
                   ),
                   const SizedBox(height: 38),
-                  const Center(
-                    child: _EditProfilePhoto(name: 'Rik Space', size: 132),
+                  Center(
+                    child: _EditProfilePhoto(
+                      name: profile?.displayName ?? 'Josi customer',
+                      size: 132,
+                    ),
                   ),
                   const SizedBox(height: 44),
                   _EditProfileField(
