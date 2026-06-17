@@ -77,6 +77,7 @@ $routes = @{
     'POST /api/v1/auth/logout' = "Route::post('/logout'"
     'POST /api/v1/auth/refresh' = "Route::post('/refresh'"
     'GET /api/v1/auth/me' = "Route::get('/me'"
+    'POST /api/v1/auth/change-password' = "Route::post('/change-password'"
     'POST /api/v1/auth/forgot-password' = "Route::post('/forgot-password'"
     'POST /api/v1/auth/verify-reset-code' = "Route::post('/verify-reset-code'"
     'POST /api/v1/auth/reset-password' = "Route::post('/reset-password'"

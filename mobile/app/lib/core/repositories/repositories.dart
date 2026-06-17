@@ -231,6 +231,34 @@ class AuthRepository {
         : message;
   }
 
+  Future<String> changePassword({
+    required String currentPassword,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    if (!_api.isConfigured) {
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
+    }
+
+    final String? token = await _tokens.readToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Please sign in again to continue.');
+    }
+
+    final Map<String, Object?> envelope = await _api.post(
+      '/auth/change-password',
+      token: token,
+      body: <String, Object?>{
+        'current_password': currentPassword,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      },
+    );
+    final String message = ApiClient.messageFromEnvelope(envelope);
+    return message.isEmpty ? 'Password updated successfully.' : message;
+  }
+
   Future<void> signOut() async {
     final String? token = await _tokens.readToken();
     await _tokens.clearToken();
@@ -502,6 +530,35 @@ class RiderRepository {
       throw const ApiException('Riding details have not been completed yet.');
     }
     return vehicle;
+  }
+
+  Future<RiderOnboarding> updateProfile({
+    required String fullName,
+    required String phone,
+    required String gender,
+    required String city,
+    String? state,
+    String? address,
+    String? profilePhoto,
+  }) async {
+    final String token = await _requireToken();
+    final CustomerNameParts parts = AuthRepository.splitFullName(fullName);
+    await _api.put(
+      '/driver/profile',
+      token: token,
+      body: <String, Object?>{
+        'first_name': parts.firstName,
+        'last_name': parts.lastName,
+        if (phone.trim().isNotEmpty) 'phone': phone.trim(),
+        if (gender.trim().isNotEmpty && gender != 'Select') 'gender': gender,
+        if (city.trim().isNotEmpty) 'city': city.trim(),
+        if (state?.trim().isNotEmpty ?? false) 'state': state!.trim(),
+        if (address?.trim().isNotEmpty ?? false) 'address': address!.trim(),
+        if (profilePhoto?.trim().isNotEmpty ?? false)
+          'profile_photo': profilePhoto!.trim(),
+      },
+    );
+    return onboarding();
   }
 
   Future<List<DocumentRequirement>> documents() async {

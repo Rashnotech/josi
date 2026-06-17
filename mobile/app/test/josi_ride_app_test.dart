@@ -650,6 +650,36 @@ void main() {
         find.byKey(const ValueKey<String>('rider-bottom-action-save-changes')));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Settings'));
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('settings-screen')), findsOneWidget);
+    await tester.tap(
+        find.byKey(const ValueKey<String>('settings-item-password-manager')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('password-manager-sheet')),
+        findsOneWidget);
+    await tester.enterText(
+        find.byKey(const ValueKey<String>('current-password-update-field')),
+        'Password123!');
+    await tester.enterText(
+        find.byKey(const ValueKey<String>('new-password-update-field')),
+        'NewPassword123!');
+    await tester.enterText(
+        find.byKey(const ValueKey<String>('confirm-password-update-field')),
+        'NewPassword123!');
+    await tester
+        .tap(find.byKey(const ValueKey<String>('password-manager-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Password updated successfully.'), findsOneWidget);
+    await tester
+        .tap(find.byKey(const ValueKey<String>('settings-back-button')));
+    await tester.pumpAndSettle();
+
     await tester.ensureVisible(
         find.byKey(const ValueKey<String>('rider-logout-button')));
     await tester.tap(find.byKey(const ValueKey<String>('rider-logout-button')));
@@ -1382,6 +1412,16 @@ class _FakeAuthRepository extends AuthRepository {
   }
 
   @override
+  Future<String> changePassword({
+    required String currentPassword,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return 'Password updated successfully.';
+  }
+
+  @override
   Future<void> signOut() async {}
 }
 
@@ -1425,6 +1465,39 @@ class _FakeRiderRepository extends RiderRepository {
 
   @override
   Future<List<DocumentRequirement>> documents() async => JosiMockData.documents;
+
+  @override
+  Future<RiderOnboarding> updateProfile({
+    required String fullName,
+    required String phone,
+    required String gender,
+    required String city,
+    String? state,
+    String? address,
+    String? profilePhoto,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    _onboarding = RiderOnboarding(
+      profile: _profile(
+        fullName: fullName,
+        phone: phone,
+        gender: gender,
+        address: address,
+        city: city,
+        state: state,
+        profilePhoto: profilePhoto,
+        bank: _onboarding.bankAccount,
+      ),
+      bankAccount: _onboarding.bankAccount,
+      ridingDetails: _onboarding.ridingDetails,
+      profilePictureComplete: _onboarding.profilePictureComplete ||
+          (profilePhoto?.trim().isNotEmpty ?? false),
+      bankAccountComplete: _onboarding.bankAccountComplete,
+      ridingDetailsComplete: _onboarding.ridingDetailsComplete,
+      isSubmitted: _onboarding.isSubmitted,
+    );
+    return _onboarding;
+  }
 
   @override
   Future<RiderOnboarding> saveProfilePicture({
@@ -1535,18 +1608,24 @@ class _FakeRiderRepository extends RiderRepository {
   }
 
   RiderProfile _profile({
+    String? fullName,
+    String? phone,
+    String? gender,
+    String? address,
+    String? city,
+    String? state,
     String? profilePhoto,
     RiderBankAccount? bank,
   }) {
     final RiderProfile base = JosiMockData.riderProfile;
     return RiderProfile(
-      fullName: base.fullName,
-      phone: base.phone,
-      gender: base.gender,
+      fullName: fullName ?? base.fullName,
+      phone: phone ?? base.phone,
+      gender: gender ?? base.gender,
       dateOfBirth: base.dateOfBirth,
-      address: base.address,
-      city: base.city,
-      state: base.state,
+      address: address ?? base.address,
+      city: city ?? base.city,
+      state: state ?? base.state,
       rating: base.rating,
       completedTrips: base.completedTrips,
       profilePhoto: profilePhoto,

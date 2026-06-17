@@ -58,6 +58,14 @@ class ApiClient {
     return _send(path, method: 'POST', body: body, token: token);
   }
 
+  Future<Map<String, Object?>> put(
+    String path, {
+    Map<String, Object?> body = const <String, Object?>{},
+    String? token,
+  }) {
+    return _send(path, method: 'PUT', body: body, token: token);
+  }
+
   Future<Map<String, Object?>> _send(
     String path, {
     required String method,
@@ -167,9 +175,11 @@ class ApiClient {
     final HttpClient client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 12);
     try {
-      final HttpClientRequest request = method == 'GET'
-          ? await client.getUrl(uri)
-          : await client.postUrl(uri);
+      final HttpClientRequest request = switch (method) {
+        'GET' => await client.getUrl(uri),
+        'PUT' => await client.putUrl(uri),
+        _ => await client.postUrl(uri),
+      };
       headers.forEach(request.headers.set);
       if (body != null) {
         request.write(body is String ? body : jsonEncode(body));

@@ -255,8 +255,9 @@ void main() {
 
   test('login and password reset use backend identifier field', () async {
     final List<Map<String, Object?>> bodies = <Map<String, Object?>>[];
+    final _MemoryTokenStorage storage = _MemoryTokenStorage();
     final AuthRepository repository = AuthRepository(
-      tokenStorage: _MemoryTokenStorage(),
+      tokenStorage: storage,
       apiClient: ApiClient(
         baseUrl: 'https://api.josi.test/api/v1',
         httpRequest: (
@@ -337,12 +338,20 @@ void main() {
       password: 'Password123!',
       passwordConfirmation: 'Password123!',
     );
+    await repository.changePassword(
+      currentPassword: 'Password123!',
+      password: 'NewPassword123!',
+      passwordConfirmation: 'NewPassword123!',
+    );
 
     expect(bodies[0]['identifier'], '+2348012345678');
     expect(bodies[0].containsKey('email_or_phone'), isFalse);
     expect(bodies[1]['identifier'], '+2348012345678');
     expect(bodies[2]['identifier'], '+2348012345678');
     expect(bodies[3]['identifier'], '+2348012345678');
+    expect(bodies[4]['current_password'], 'Password123!');
+    expect(bodies[4]['password'], 'NewPassword123!');
+    expect(bodies[4]['password_confirmation'], 'NewPassword123!');
   });
 }
 

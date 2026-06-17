@@ -7,6 +7,7 @@ import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/services/api_client.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 
@@ -305,7 +306,7 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 }
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({
     required this.role,
     super.key,
@@ -314,7 +315,7 @@ class SettingsScreen extends StatelessWidget {
   final AppNavRole role;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       key: const ValueKey<String>('settings-screen'),
       backgroundColor: JosiColors.white,
@@ -350,7 +351,7 @@ class SettingsScreen extends StatelessWidget {
                             'settings-item-password-manager'),
                         icon: Icons.key_rounded,
                         label: 'Password Manager',
-                        onTap: () {},
+                        onTap: () => _openPasswordManager(context),
                       ),
                       const _SettingsDivider(),
                       _SettingsMenuRow(
@@ -370,6 +371,356 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _openPasswordManager(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetContext) {
+        return const _PasswordManagerSheet();
+      },
+    );
+  }
+}
+
+class _PasswordManagerSheet extends ConsumerStatefulWidget {
+  const _PasswordManagerSheet();
+
+  @override
+  ConsumerState<_PasswordManagerSheet> createState() =>
+      _PasswordManagerSheetState();
+}
+
+class _PasswordManagerSheetState extends ConsumerState<_PasswordManagerSheet> {
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  bool _loading = false;
+  String? _message;
+  Map<String, String> _errors = const <String, String>{};
+
+  @override
+  void dispose() {
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_loading) {
+      return;
+    }
+
+    final String currentPassword = _currentPasswordController.text;
+    final String newPassword = _newPasswordController.text;
+    final String confirmation = _confirmPasswordController.text;
+    final Map<String, String> errors = <String, String>{};
+    if (currentPassword.isEmpty) {
+      errors['current_password'] = 'Enter your current password.';
+    }
+    if (newPassword.isEmpty) {
+      errors['password'] = 'Enter a new password.';
+    }
+    if (confirmation.isEmpty) {
+      errors['password_confirmation'] = 'Confirm your new password.';
+    } else if (newPassword != confirmation) {
+      errors['password_confirmation'] = 'Passwords do not match.';
+    }
+
+    setState(() {
+      _errors = errors;
+      _message = null;
+    });
+    if (errors.isNotEmpty) {
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final String message =
+          await ref.read(authRepositoryProvider).changePassword(
+                currentPassword: currentPassword,
+                password: newPassword,
+                passwordConfirmation: confirmation,
+              );
+      if (!mounted) {
+        return;
+      }
+      final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+      Navigator.of(context).pop();
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = _settingsErrorMessage(error, 'Unable to update password.');
+          _errors = _settingsFieldErrors(error);
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Container(
+        key: const ValueKey<String>('password-manager-sheet'),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+        decoration: const BoxDecoration(
+          color: JosiColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Align(
+                child: Container(
+                  width: 86,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: JosiColors.line,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 22),
+              Text(
+                'Password Manager',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 18),
+              if (_message != null) ...<Widget>[
+                _SettingsInlineMessage(message: _message!),
+                const SizedBox(height: 14),
+              ],
+              _SettingsPasswordField(
+                key: const ValueKey<String>('current-password-update-field'),
+                label: 'Current Password',
+                controller: _currentPasswordController,
+                errorText: _errors['current_password'],
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 14),
+              _SettingsPasswordField(
+                key: const ValueKey<String>('new-password-update-field'),
+                label: 'New Password',
+                controller: _newPasswordController,
+                errorText: _errors['password'],
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 14),
+              _SettingsPasswordField(
+                key: const ValueKey<String>('confirm-password-update-field'),
+                label: 'Confirm Password',
+                controller: _confirmPasswordController,
+                errorText: _errors['password_confirmation'],
+                textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  key: const ValueKey<String>('password-manager-submit'),
+                  onPressed: _loading ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: JosiColors.red,
+                    foregroundColor: JosiColors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: JosiColors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  child: _loading
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: JosiColors.white,
+                          ),
+                        )
+                      : const Text('Update Password'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsPasswordField extends StatefulWidget {
+  const _SettingsPasswordField({
+    required this.label,
+    required this.controller,
+    super.key,
+    this.errorText,
+    this.textInputAction,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final String? errorText;
+  final TextInputAction? textInputAction;
+
+  @override
+  State<_SettingsPasswordField> createState() => _SettingsPasswordFieldState();
+}
+
+class _SettingsPasswordFieldState extends State<_SettingsPasswordField> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          widget.label,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: JosiColors.ink,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 56,
+          child: TextField(
+            controller: widget.controller,
+            obscureText: _obscure,
+            textInputAction: widget.textInputAction,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: JosiColors.white,
+              suffixIcon: IconButton(
+                tooltip: _obscure ? 'Show password' : 'Hide password',
+                onPressed: () => setState(() => _obscure = !_obscure),
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: JosiColors.softMuted,
+                  size: 20,
+                ),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.line),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: JosiColors.red, width: 1.3),
+              ),
+            ),
+          ),
+        ),
+        if (widget.errorText != null) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            widget.errorText!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: JosiColors.redDark,
+                  fontSize: 12,
+                  height: 1.2,
+                ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SettingsInlineMessage extends StatelessWidget {
+  const _SettingsInlineMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: JosiColors.redDark.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.error_outline_rounded,
+              color: JosiColors.redDark, size: 21),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: JosiColors.redDark,
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _settingsErrorMessage(Object error, String fallback) {
+  if (error is ApiException) {
+    final Object? first =
+        error.errors.values.isEmpty ? null : error.errors.values.first;
+    if (first is List<Object?> && first.isNotEmpty) {
+      return '${first.first}';
+    }
+    return error.message;
+  }
+
+  return fallback;
+}
+
+Map<String, String> _settingsFieldErrors(Object error) {
+  if (error is! ApiException || error.errors.isEmpty) {
+    return const <String, String>{};
+  }
+
+  return error.errors.map((String key, Object? value) {
+    if (value is List && value.isNotEmpty) {
+      return MapEntry<String, String>(key, '${value.first}');
+    }
+    return MapEntry<String, String>(key, '$value');
+  });
 }
 
 class EditProfileScreen extends ConsumerStatefulWidget {

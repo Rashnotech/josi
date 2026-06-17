@@ -15,6 +15,9 @@ Gate checks for rider auth and account setup:
 - Riding Details posts backend enum `vehicle_type`, vehicle fields, city, and state to `/driver/onboarding/riding-details`.
 - The application-status Continue action posts to `/driver/onboarding/submit` and shows success or backend validation errors.
 - Rider profile/account setup uses backend data from `/driver/onboarding`, not mock rider profile data.
+- Rider Profile shows backend rider name, phone, and location when available.
+- `Your profile` saves name, phone, gender, address, city/state, and profile photo through `/driver/profile`.
+- Settings Password Manager posts `current_password`, `password`, and `password_confirmation` to `/auth/change-password`.
 
 Run:
 

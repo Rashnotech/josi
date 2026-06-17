@@ -26,6 +26,7 @@ class DriverProfileController extends Controller
         $data = $request->validate([
             'first_name' => ['sometimes', 'string', 'max:100'],
             'last_name' => ['sometimes', 'string', 'max:100'],
+            'phone' => ['sometimes', 'string', 'max:30', Rule::unique('users', 'phone')->ignore($request->user()->getKey())],
             'gender' => ['sometimes', 'nullable', 'string', 'max:50'],
             'date_of_birth' => ['sometimes', 'nullable', 'date'],
             'address' => ['sometimes', 'string', 'max:1000'],
@@ -39,6 +40,18 @@ class DriverProfileController extends Controller
         ]);
 
         $request->user()->riderProfile?->update($data);
+
+        $userUpdates = [];
+        if (array_key_exists('first_name', $data) || array_key_exists('last_name', $data)) {
+            $profile = $request->user()->riderProfile;
+            $userUpdates['name'] = trim(($profile?->first_name ?? '').' '.($profile?->last_name ?? ''));
+        }
+        if (array_key_exists('phone', $data)) {
+            $userUpdates['phone'] = $data['phone'];
+        }
+        if ($userUpdates !== []) {
+            $request->user()->forceFill($userUpdates)->save();
+        }
 
         return ApiResponse::success('Driver profile updated successfully', [
             'profile' => $rbacService->profileSummary($request->user()->refresh()),

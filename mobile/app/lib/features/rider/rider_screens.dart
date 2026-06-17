@@ -562,7 +562,7 @@ class _RiderInlineMessage extends StatelessWidget {
   }
 }
 
-class RiderProfileSetupScreen extends StatefulWidget {
+class RiderProfileSetupScreen extends ConsumerStatefulWidget {
   const RiderProfileSetupScreen({
     super.key,
     this.isUpdate = false,
@@ -571,18 +571,123 @@ class RiderProfileSetupScreen extends StatefulWidget {
   final bool isUpdate;
 
   @override
-  State<RiderProfileSetupScreen> createState() =>
+  ConsumerState<RiderProfileSetupScreen> createState() =>
       _RiderProfileSetupScreenState();
 }
 
-class _RiderProfileSetupScreenState extends State<RiderProfileSetupScreen> {
+class _RiderProfileSetupScreenState
+    extends ConsumerState<RiderProfileSetupScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _profilePhotoController = TextEditingController();
   String _gender = 'Select';
-  String _city = 'Jersey City, New Jersey';
+  String _city = 'Abuja, FCT';
   bool _acceptedTerms = true;
+  bool _hydrated = false;
+  bool _saving = false;
+  Map<String, String> _errors = const <String, String>{};
+  String? _message;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _profilePhotoController.dispose();
+    super.dispose();
+  }
+
+  void _hydrate(RiderOnboarding onboarding, JosiUser? user) {
+    if (_hydrated) {
+      return;
+    }
+
+    final RiderProfile? profile = onboarding.profile;
+    final String? profileName = _cleanPendingValue(profile?.fullName);
+    _nameController.text = profileName == null || profileName == 'Rider'
+        ? user?.displayName ?? profileName ?? ''
+        : profileName;
+    _emailController.text = user?.email ?? '';
+    _phoneController.text =
+        _cleanPendingValue(profile?.phone) ?? user?.phone ?? '';
+    _addressController.text = _cleanPendingValue(profile?.address) ?? '';
+    _profilePhotoController.text = profile?.profilePhoto ?? '';
+    _gender = _genderLabel(profile?.gender);
+    _city = _cityLabel(profile?.city, profile?.state);
+    _hydrated = true;
+  }
+
+  Future<void> _submit() async {
+    if (_saving) {
+      return;
+    }
+
+    final String fullName = _nameController.text.trim();
+    final String phone = _phoneController.text.trim();
+    final Map<String, String> errors = <String, String>{};
+    if (fullName.isEmpty) {
+      errors['name'] = 'Name is required.';
+    }
+    if (phone.isEmpty) {
+      errors['phone'] = 'Phone number is required.';
+    }
+    if (!_acceptedTerms && !widget.isUpdate) {
+      errors['terms'] = 'Accept the terms to continue.';
+    }
+
+    setState(() {
+      _errors = errors;
+      _message = null;
+    });
+    if (errors.isNotEmpty) {
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(riderRepositoryProvider).updateProfile(
+            fullName: fullName,
+            phone: phone,
+            gender: _gender,
+            address: _addressController.text.trim(),
+            city: _cityNameFromLabel(_city),
+            state: _stateFromLabel(_city),
+            profilePhoto: _profilePhotoController.text.trim(),
+          );
+      ref
+        ..invalidate(riderOnboardingProvider)
+        ..invalidate(riderProfileProvider)
+        ..invalidate(currentRiderProvider);
+      if (mounted) {
+        context.go(
+          widget.isUpdate
+              ? AppRoutes.riderProfile
+              : AppRoutes.riderProfilePicture,
+        );
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = _riderErrorMessage(error, 'Unable to save profile.');
+          _errors = _riderFieldErrors(error);
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final bool isUpdate = widget.isUpdate;
+    final AsyncValue<RiderOnboarding> onboarding =
+        ref.watch(riderOnboardingProvider);
+    final JosiUser? user = ref.watch(authControllerProvider).user;
 
     return _RiderFlowScaffold(
       key: const ValueKey<String>('rider-profile-setup-screen'),
@@ -594,96 +699,166 @@ class _RiderProfileSetupScreenState extends State<RiderProfileSetupScreen> {
           ? null
           : "Don't worry, only you can see your personal data. No one else will be able to see it.",
       bottomLabel: isUpdate ? 'Save changes' : 'Continue',
-      onBottomPressed: () => context.go(
-        isUpdate ? AppRoutes.riderProfile : AppRoutes.riderProfilePicture,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const _RiderFormField(label: 'Name', hintText: 'Jenny Wilson'),
-          const SizedBox(height: 14),
-          const _RiderFormField(label: 'Email', hintText: 'example@gmail.com'),
-          const SizedBox(height: 14),
-          const _RiderPhoneField(),
-          const SizedBox(height: 14),
-          _RiderSelectField(
-            label: 'Gender',
-            value: _gender,
-            items: const <String>['Select', 'Female', 'Male'],
-            onChanged: (String? value) =>
-                setState(() => _gender = value ?? _gender),
-          ),
-          const SizedBox(height: 14),
-          _RiderSelectField(
-            label: 'City You Drive In',
-            value: _city,
-            items: const <String>[
-              'Jersey City, New Jersey',
-              'Abuja, FCT',
-              'Lagos, Lagos',
-            ],
-            onChanged: (String? value) =>
-                setState(() => _city = value ?? _city),
-          ),
-          if (isUpdate) ...<Widget>[
-            const SizedBox(height: 22),
-            const Divider(color: JosiColors.line),
-            const SizedBox(height: 22),
-            const _RiderProfilePictureFields(),
-          ] else ...<Widget>[
-            const SizedBox(height: 22),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: _acceptedTerms ? JosiColors.red : JosiColors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
+      bottomLoading: _saving,
+      onBottomPressed: _submit,
+      child: onboarding.when(
+        data: (RiderOnboarding value) {
+          _hydrate(value, user);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (_message != null) ...<Widget>[
+                _RiderInlineMessage(
+                  message: _message!,
+                  icon: Icons.error_outline_rounded,
+                  color: JosiColors.redDark,
+                  backgroundColor: const Color(0xFFFFF1F2),
+                ),
+                const SizedBox(height: 16),
+              ],
+              _RiderFormField(
+                label: 'Name',
+                hintText: 'Jenny Wilson',
+                controller: _nameController,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['name'] ?? _errors['first_name'],
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Email',
+                hintText: 'example@gmail.com',
+                controller: _emailController,
+                readOnly: true,
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Phone Number',
+                hintText: '+234 802 345 6789',
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['phone'],
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Address',
+                hintText: '22 Adetokunbo Ademola Crescent',
+                controller: _addressController,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['address'],
+              ),
+              const SizedBox(height: 14),
+              _RiderSelectField(
+                label: 'Gender',
+                value: _gender,
+                items: const <String>['Select', 'Female', 'Male'],
+                onChanged: (String? value) =>
+                    setState(() => _gender = value ?? _gender),
+              ),
+              const SizedBox(height: 14),
+              _RiderSelectField(
+                label: 'City You Drive In',
+                value: _city,
+                items: const <String>[
+                  'Abuja, FCT',
+                  'Lagos, Lagos',
+                  'Port Harcourt, Rivers',
+                  'Other',
+                ],
+                onChanged: (String? value) =>
+                    setState(() => _city = value ?? _city),
+              ),
+              if (isUpdate) ...<Widget>[
+                const SizedBox(height: 22),
+                const Divider(color: JosiColors.line),
+                const SizedBox(height: 22),
+                _RiderProfilePictureFields(
+                  controller: _profilePhotoController,
+                  errorText: _errors['profile_photo'],
+                ),
+              ] else ...<Widget>[
+                const SizedBox(height: 22),
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
                           color: _acceptedTerms
                               ? JosiColors.red
-                              : JosiColors.line),
-                    ),
-                    child: _acceptedTerms
-                        ? const Icon(Icons.check_rounded,
-                            color: JosiColors.white, size: 24)
-                        : null,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        text: 'By Accept, you agree to Company ',
-                        children: <InlineSpan>[
+                              : JosiColors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: _acceptedTerms
+                                  ? JosiColors.red
+                                  : JosiColors.line),
+                        ),
+                        child: _acceptedTerms
+                            ? const Icon(Icons.check_rounded,
+                                color: JosiColors.white, size: 24)
+                            : null,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text.rich(
                           TextSpan(
-                            text: 'Terms & Condition',
-                            style:
-                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            text: 'By Accept, you agree to Company ',
+                            children: <InlineSpan>[
+                              TextSpan(
+                                text: 'Terms & Condition',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
                                       color: JosiColors.red,
                                       decoration: TextDecoration.underline,
                                       decorationColor: JosiColors.red,
                                     ),
+                              ),
+                            ],
                           ),
-                        ],
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: JosiColors.ink,
+                                    fontSize: 17,
+                                    height: 1.35,
+                                  ),
+                        ),
                       ),
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: JosiColors.ink,
-                            fontSize: 17,
-                            height: 1.35,
-                          ),
-                    ),
+                    ],
+                  ),
+                ),
+                if (_errors['terms'] != null) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(
+                    _errors['terms']!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: JosiColors.redDark,
+                          fontSize: 12,
+                          height: 1.2,
+                        ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        ],
+              ],
+            ],
+          );
+        },
+        error: (Object error, StackTrace stackTrace) => ErrorState(
+          title: 'Profile unavailable',
+          message: _riderErrorMessage(
+            error,
+            'Rider profile could not load.',
+          ),
+        ),
+        loading: () => const SizedBox(
+          height: 220,
+          child: LoadingState(label: 'Loading profile'),
+        ),
       ),
     );
   }
@@ -2165,35 +2340,44 @@ class RiderProfileScreen extends ConsumerWidget {
       child: AppScreenBody(
         children: <Widget>[
           profile.when(
-            data: (RiderProfile value) => AppCard(
-              child: Row(
-                children: <Widget>[
-                  ProfileAvatar(name: value.fullName, showEdit: true),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(value.fullName,
-                            style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 4),
-                        Text(
-                            '${value.completedTrips} trips - ${value.rating} rating',
+            data: (RiderProfile value) {
+              final String location = _riderLocationLabel(value);
+              return AppCard(
+                child: Row(
+                  children: <Widget>[
+                    ProfileAvatar(name: value.fullName, showEdit: true),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(value.fullName,
+                              style: Theme.of(context).textTheme.titleLarge),
+                          if (value.phone.trim().isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 4),
+                            Text(
+                              value.phone,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: JosiColors.muted),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Text(
+                            location,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
-                                ?.copyWith(color: JosiColors.muted)),
-                        Text('${value.city}, ${value.state}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: JosiColors.muted)),
-                      ],
+                                ?.copyWith(color: JosiColors.muted),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  ],
+                ),
+              );
+            },
             error: (Object error, StackTrace stackTrace) => const ErrorState(
                 title: 'Profile unavailable',
                 message: 'Rider profile could not load.'),
@@ -4076,6 +4260,7 @@ class _RiderFormField extends StatelessWidget {
     this.keyboardType,
     this.textInputAction,
     this.errorText,
+    this.readOnly = false,
   });
 
   final String label;
@@ -4084,6 +4269,7 @@ class _RiderFormField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final String? errorText;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -4102,10 +4288,11 @@ class _RiderFormField extends StatelessWidget {
         TextFormField(
           controller: controller,
           initialValue: controller == null ? hintText : null,
+          readOnly: readOnly,
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: JosiColors.softMuted,
+                color: readOnly ? JosiColors.outline : JosiColors.softMuted,
                 fontSize: 17,
               ),
           decoration: InputDecoration(
@@ -4139,65 +4326,6 @@ class _RiderFormField extends StatelessWidget {
                 ),
           ),
         ],
-      ],
-    );
-  }
-}
-
-class _RiderPhoneField extends StatelessWidget {
-  const _RiderPhoneField();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          'Phone Number',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: JosiColors.ink,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 58,
-          decoration: BoxDecoration(
-            color: JosiColors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: JosiColors.line),
-          ),
-          child: Row(
-            children: <Widget>[
-              const SizedBox(width: 16),
-              Text('+1',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: JosiColors.ink, fontWeight: FontWeight.w700)),
-              const SizedBox(width: 4),
-              const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: JosiColors.red, size: 22),
-              Container(
-                  width: 1,
-                  height: 28,
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  color: JosiColors.line),
-              Expanded(
-                child: TextFormField(
-                  decoration: const InputDecoration(
-                    hintText: 'Enter Phone Number',
-                    border: InputBorder.none,
-                    isCollapsed: true,
-                  ),
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: JosiColors.ink,
-                        fontSize: 17,
-                      ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -5300,7 +5428,62 @@ String _vehicleTypeLabel(String value) {
   };
 }
 
+String? _cleanPendingValue(String? value) {
+  final String trimmed = value?.trim() ?? '';
+  if (trimmed.isEmpty || trimmed.toLowerCase() == 'pending onboarding') {
+    return null;
+  }
+
+  return trimmed;
+}
+
+String _cityLabel(String? city, String? state) {
+  final String? cleanCity = _cleanPendingValue(city);
+  final String? cleanState = _cleanPendingValue(state);
+  if (cleanCity == null) {
+    return 'Abuja, FCT';
+  }
+
+  final String label =
+      cleanState == null ? cleanCity : '$cleanCity, $cleanState';
+  const List<String> supported = <String>[
+    'Abuja, FCT',
+    'Lagos, Lagos',
+    'Port Harcourt, Rivers',
+  ];
+  return supported.contains(label) ? label : 'Other';
+}
+
+String _genderLabel(String? gender) {
+  return switch (_cleanPendingValue(gender)?.toLowerCase()) {
+    'female' => 'Female',
+    'male' => 'Male',
+    _ => 'Select',
+  };
+}
+
+String _riderLocationLabel(RiderProfile profile) {
+  final List<String> parts = <String>[
+    if (_cleanPendingValue(profile.address) != null)
+      _cleanPendingValue(profile.address)!,
+    if (_cleanPendingValue(profile.city) != null)
+      _cleanPendingValue(profile.city)!,
+    if (_cleanPendingValue(profile.state) != null)
+      _cleanPendingValue(profile.state)!,
+  ];
+
+  if (parts.isEmpty) {
+    return 'Location not added yet';
+  }
+
+  return parts.join(', ');
+}
+
 String _cityNameFromLabel(String label) {
+  if (label == 'Other') {
+    return '';
+  }
+
   return label.split(',').first.trim();
 }
 

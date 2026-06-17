@@ -159,8 +159,11 @@ All require `Authorization: Bearer <access_token>`.
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/refresh`
 - `GET /api/v1/auth/me`
+- `POST /api/v1/auth/change-password`
 
 Refresh deletes the current Sanctum token and issues a new one.
+
+Change password required JSON fields: `current_password`, `password`, `password_confirmation`.
 
 ## Laravel Dashboard Scaffold
 
@@ -189,6 +192,8 @@ All require role `rider`, `courier`, or `driver`.
 - `POST /api/v1/driver/onboarding/submit`
 - `POST /api/v1/driver/documents`
 - `GET /api/v1/driver/documents`
+
+Rider profile update accepts partial JSON fields: `first_name`, `last_name`, `phone`, `gender`, `date_of_birth`, `address`, `city`, `state`, `profile_photo`, and `license_number`. When `first_name`, `last_name`, or `phone` changes, the API also syncs the authenticated user summary returned by `/auth/me`.
 
 Rider onboarding payloads:
 

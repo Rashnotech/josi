@@ -11,7 +11,9 @@ use App\Services\AuthService;
 use App\Services\RegistrationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -65,5 +67,25 @@ class AuthController extends Controller
             'Authenticated user fetched successfully',
             $authService->me($request->user())
         );
+    }
+
+    public function changePassword(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        if (! Hash::check($data['current_password'], $request->user()->password)) {
+            return ApiResponse::error('Current password is incorrect.', [
+                'current_password' => ['Current password is incorrect.'],
+            ], 422);
+        }
+
+        $request->user()->forceFill([
+            'password' => Hash::make($data['password']),
+        ])->save();
+
+        return ApiResponse::success('Password updated successfully');
     }
 }

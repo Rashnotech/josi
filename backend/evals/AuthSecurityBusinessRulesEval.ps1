@@ -26,6 +26,10 @@ Assert-Contains 'app/Services/RegistrationService.php' 'UserRole::Customer' 'Cus
 Assert-Contains 'app/Services/RegistrationService.php' 'UserRole::Admin' 'Admin creation sets admin role internally'
 Assert-Contains 'app/Services/RegistrationService.php' 'manage_admins' 'Admin creation requires manage_admins'
 Assert-Contains 'app/Services/RegistrationService.php' 'Hash::make' 'Registration hashes passwords'
+Assert-Contains 'app/Http/Controllers/Api/V1/AuthController.php' 'changePassword' 'Authenticated password change endpoint'
+Assert-Contains 'app/Http/Controllers/Api/V1/AuthController.php' 'current_password' 'Password change requires current password'
+Assert-Contains 'app/Http/Controllers/Api/V1/AuthController.php' 'Hash::check' 'Password change verifies current password'
+Assert-Contains 'app/Http/Controllers/Api/V1/AuthController.php' 'Hash::make($data[''password''])' 'Password change hashes new password'
 
 Assert-Contains 'app/Services/AuthService.php' 'findUserByIdentifier' 'Login identifier detection'
 Assert-Contains 'app/Services/AuthService.php' "where('email', `$identifier)" 'Login checks email'

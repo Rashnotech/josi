@@ -46,6 +46,15 @@ void main() {
     );
 
     final RiderOnboarding initial = await repository.onboarding();
+    await repository.updateProfile(
+      fullName: 'Amina Yusuf',
+      phone: '+2348023000000',
+      gender: 'Female',
+      city: 'Abuja',
+      state: 'FCT',
+      address: '22 Adetokunbo Ademola Crescent',
+      profilePhoto: 'profile.jpg',
+    );
     final RiderOnboarding profile = await repository.saveProfilePicture(
       profilePhoto: 'selfie.jpg',
     );
@@ -76,6 +85,8 @@ void main() {
       requests.map((Map<String, Object?> request) => request['path']),
       <String>[
         '/api/v1/driver/onboarding',
+        '/api/v1/driver/profile',
+        '/api/v1/driver/onboarding',
         '/api/v1/driver/onboarding/profile-picture',
         '/api/v1/driver/onboarding/bank-account',
         '/api/v1/driver/onboarding/riding-details',
@@ -86,15 +97,23 @@ void main() {
       return request['authorization'] == 'Bearer rider-token';
     }), isTrue);
     expect(
-      (requests[1]['body']! as Map<String, Object?>)['profile_photo'],
+      (requests[3]['body']! as Map<String, Object?>)['profile_photo'],
       'selfie.jpg',
     );
     expect(
-      (requests[2]['body']! as Map<String, Object?>)['account_number'],
+      (requests[1]['body']! as Map<String, Object?>)['first_name'],
+      'Amina',
+    );
+    expect(
+      (requests[1]['body']! as Map<String, Object?>)['phone'],
+      '+2348023000000',
+    );
+    expect(
+      (requests[4]['body']! as Map<String, Object?>)['account_number'],
       '0123456789',
     );
     expect(
-      (requests[3]['body']! as Map<String, Object?>)['vehicle_type'],
+      (requests[5]['body']! as Map<String, Object?>)['vehicle_type'],
       'car',
     );
   });
