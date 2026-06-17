@@ -11,6 +11,7 @@ import 'package:josi_ride/core/mock/josi_mock_data.dart';
 import 'package:josi_ride/core/mock/josi_models.dart';
 import 'package:josi_ride/core/providers/app_providers.dart';
 import 'package:josi_ride/core/repositories/repositories.dart';
+import 'package:josi_ride/core/services/api_client.dart';
 import 'package:josi_ride/core/theme/josi_colors.dart';
 import 'package:josi_ride/core/theme/josi_theme.dart';
 import 'package:josi_ride/core/widgets/josi_google_map.dart';
@@ -180,6 +181,11 @@ void main() {
     _expectVisibleInViewport(tester, find.text('Continue with Google'));
     _expectVisibleInViewport(tester, find.text('Log in'));
 
+    await tester.enterText(find.byType(TextField).at(0), 'Amina Yusuf');
+    await tester.enterText(find.byType(TextField).at(1), 'amina@josi.test');
+    await tester.enterText(find.byType(TextField).at(2), '+2348023456789');
+    await tester.enterText(find.byType(TextField).at(3), 'Password123!');
+    await tester.enterText(find.byType(TextField).at(4), 'Password123!');
     await tester
         .tap(find.byKey(const ValueKey<String>('rider-sign-up-button')));
     await tester.pump();
@@ -189,7 +195,7 @@ void main() {
     expect(
         find.byKey(const ValueKey<String>('rider-application-status-screen')),
         findsOneWidget);
-    expect(find.text('Welcome!, Esther'), findsOneWidget);
+    expect(find.text('Welcome, Amina'), findsOneWidget);
     expect(find.text('Required Steps'), findsOneWidget);
     expect(find.text('Profile Picture'), findsOneWidget);
     expect(find.text('Bank Account Details'), findsOneWidget);
@@ -198,7 +204,7 @@ void main() {
     expect(find.text('Submitted Steps'), findsNothing);
     expect(find.text('Government ID'), findsNothing);
     expect(
-        tester.widget<Text>(find.text('Welcome!, Esther')).style?.fontSize, 20);
+        tester.widget<Text>(find.text('Welcome, Amina')).style?.fontSize, 20);
     expect(
         tester.widget<Text>(find.text('Required Steps')).style?.fontSize, 18);
     expect(
@@ -229,7 +235,9 @@ void main() {
     expect(find.text('Please Upload a Clear Selfie'), findsOneWidget);
     expect(find.text('Upload Documents'), findsOneWidget);
 
-    await tester.tap(find.text('Done'));
+    await tester.enterText(find.byType(TextField).last, 'selfie.jpg');
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bottom-action-continue')));
     await tester.pumpAndSettle();
 
     expect(
@@ -243,12 +251,17 @@ void main() {
     expect(find.text('Attach Bank Account Details'), findsNothing);
     expect(find.text('Upload Documents'), findsNothing);
 
-    await tester.tap(find.text('Done'));
+    await tester.enterText(find.byType(TextField).at(0), '0123456789');
+    await tester.enterText(
+        find.byType(TextField).at(1), 'Josi Microfinance Bank');
+    await tester.enterText(find.byType(TextField).at(2), 'Amina Yusuf');
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bottom-action-continue')));
     await tester.pumpAndSettle();
 
-    expect(
-        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    expect(find.byKey(const ValueKey<String>('rider-vehicle-setup-screen')),
         findsOneWidget);
+    expect(find.text('Complete Your Riding Details'), findsOneWidget);
     expect(find.text('Government ID'), findsNothing);
     expect(find.text('Documents'), findsNothing);
   });
@@ -289,9 +302,14 @@ void main() {
     expect(continueButton, findsOneWidget);
     expect(tester.getSize(continueButton).height, 52);
 
+    await tester.enterText(find.byType(TextField).at(0), 'Toyota');
+    await tester.enterText(find.byType(TextField).at(1), 'Corolla');
+    await tester.enterText(find.byType(TextField).at(2), 'White');
+    await tester.enterText(find.byType(TextField).at(3), 'ABC 482 JK');
+    await tester.enterText(find.byType(TextField).at(4), 'REG-2408-JR');
     await tester.tap(continueButton);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     expect(
         find.byKey(const ValueKey<String>('rider-application-status-screen')),
@@ -308,6 +326,7 @@ void main() {
       },
     );
     await _loginAsRider(tester);
+    await _completeRiderOnboarding(tester);
 
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -603,6 +622,10 @@ void main() {
         findsOneWidget);
     expect(find.text('Save changes'), findsOneWidget);
 
+    await tester.enterText(find.byType(TextField).at(0), '0123456789');
+    await tester.enterText(
+        find.byType(TextField).at(1), 'Josi Microfinance Bank');
+    await tester.enterText(find.byType(TextField).at(2), 'Amina Yusuf');
     await tester.tap(
         find.byKey(const ValueKey<String>('rider-bottom-action-save-changes')));
     await tester.pumpAndSettle();
@@ -618,6 +641,11 @@ void main() {
     expect(find.text('Complete Your Riding Details'), findsNothing);
     expect(find.text('Save changes'), findsOneWidget);
 
+    await tester.enterText(find.byType(TextField).at(0), 'Toyota');
+    await tester.enterText(find.byType(TextField).at(1), 'Corolla');
+    await tester.enterText(find.byType(TextField).at(2), 'White');
+    await tester.enterText(find.byType(TextField).at(3), 'ABC 482 JK');
+    await tester.enterText(find.byType(TextField).at(4), 'REG-2408-JR');
     await tester.tap(
         find.byKey(const ValueKey<String>('rider-bottom-action-save-changes')));
     await tester.pumpAndSettle();
@@ -1263,6 +1291,7 @@ Future<void> _pumpApp(WidgetTester tester) async {
         authRepositoryProvider.overrideWithValue(const _FakeAuthRepository()),
         customerRepositoryProvider
             .overrideWithValue(const _FakeCustomerRepository()),
+        riderRepositoryProvider.overrideWithValue(_FakeRiderRepository()),
         locationServiceProvider.overrideWithValue(
           _FakeLocationService(onCall: () => _mockLocationCall?.call()),
         ),
@@ -1312,15 +1341,19 @@ class _FakeAuthRepository extends AuthRepository {
   }
 
   @override
-  Future<JosiUser> registerRider({
+  Future<AuthResult> registerRider({
     required String fullName,
     required String email,
     required String phone,
     required String password,
+    required String passwordConfirmation,
     String role = 'rider',
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    return JosiMockData.rider;
+    return const AuthResult.authenticated(
+      JosiMockData.rider,
+      message: 'Rider registration successful',
+    );
   }
 
   @override
@@ -1369,6 +1402,162 @@ class _FakeCustomerRepository extends CustomerRepository {
   Future<List<Trip>> trips() async => const <Trip>[];
 }
 
+class _FakeRiderRepository extends RiderRepository {
+  _FakeRiderRepository();
+
+  RiderOnboarding _onboarding = const RiderOnboarding(
+    profile: JosiMockData.riderProfile,
+  );
+
+  @override
+  Future<JosiUser> profile() async => JosiMockData.rider;
+
+  @override
+  Future<RiderOnboarding> onboarding() async => _onboarding;
+
+  @override
+  Future<RiderProfile> riderProfile() async =>
+      _onboarding.profile ?? JosiMockData.riderProfile;
+
+  @override
+  Future<Vehicle> vehicle() async =>
+      _onboarding.ridingDetails ?? JosiMockData.vehicle;
+
+  @override
+  Future<List<DocumentRequirement>> documents() async => JosiMockData.documents;
+
+  @override
+  Future<RiderOnboarding> saveProfilePicture({
+    required String profilePhoto,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    _onboarding = RiderOnboarding(
+      profile: _profile(profilePhoto: profilePhoto),
+      bankAccount: _onboarding.bankAccount,
+      ridingDetails: _onboarding.ridingDetails,
+      profilePictureComplete: true,
+      bankAccountComplete: _onboarding.bankAccountComplete,
+      ridingDetailsComplete: _onboarding.ridingDetailsComplete,
+      isSubmitted: _onboarding.isSubmitted,
+    );
+    return _onboarding;
+  }
+
+  @override
+  Future<RiderOnboarding> saveBankAccount({
+    required String accountNumber,
+    required String bankName,
+    required String accountName,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final RiderBankAccount bank = RiderBankAccount(
+      bankName: bankName,
+      accountName: accountName,
+      accountNumber: accountNumber,
+    );
+    _onboarding = RiderOnboarding(
+      profile: _profile(
+        profilePhoto: _onboarding.profile?.profilePhoto,
+        bank: bank,
+      ),
+      bankAccount: bank,
+      ridingDetails: _onboarding.ridingDetails,
+      profilePictureComplete: _onboarding.profilePictureComplete,
+      bankAccountComplete: true,
+      ridingDetailsComplete: _onboarding.ridingDetailsComplete,
+      isSubmitted: _onboarding.isSubmitted,
+    );
+    return _onboarding;
+  }
+
+  @override
+  Future<RiderOnboarding> saveRidingDetails({
+    required String vehicleType,
+    required String brand,
+    required String model,
+    required String color,
+    required String plateNumber,
+    required String registrationNumber,
+    required String city,
+    String? state,
+    String? licenseNumber,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    _onboarding = RiderOnboarding(
+      profile: _profile(
+        profilePhoto: _onboarding.profile?.profilePhoto,
+        bank: _onboarding.bankAccount,
+      ),
+      bankAccount: _onboarding.bankAccount,
+      ridingDetails: Vehicle(
+        type: vehicleType,
+        brand: brand,
+        model: model,
+        color: color,
+        plateNumber: plateNumber,
+        registrationNumber: registrationNumber,
+        chassisNumber: '',
+        engineNumber: '',
+      ),
+      profilePictureComplete: _onboarding.profilePictureComplete,
+      bankAccountComplete: _onboarding.bankAccountComplete,
+      ridingDetailsComplete: true,
+      isSubmitted: _onboarding.isSubmitted,
+    );
+    return _onboarding;
+  }
+
+  @override
+  Future<RiderOnboarding> submitOnboarding() async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    if (!_onboarding.isComplete) {
+      throw const ApiException(
+        'Complete all required rider account sections before submitting.',
+        errors: <String, Object?>{
+          'onboarding': <String>[
+            'Complete all required rider account sections before submitting.'
+          ],
+        },
+      );
+    }
+
+    _onboarding = RiderOnboarding(
+      profile: _onboarding.profile,
+      bankAccount: _onboarding.bankAccount,
+      ridingDetails: _onboarding.ridingDetails,
+      profilePictureComplete: true,
+      bankAccountComplete: true,
+      ridingDetailsComplete: true,
+      isSubmitted: true,
+      submittedAt: '2026-06-17T00:00:00Z',
+    );
+    return _onboarding;
+  }
+
+  RiderProfile _profile({
+    String? profilePhoto,
+    RiderBankAccount? bank,
+  }) {
+    final RiderProfile base = JosiMockData.riderProfile;
+    return RiderProfile(
+      fullName: base.fullName,
+      phone: base.phone,
+      gender: base.gender,
+      dateOfBirth: base.dateOfBirth,
+      address: base.address,
+      city: base.city,
+      state: base.state,
+      rating: base.rating,
+      completedTrips: base.completedTrips,
+      profilePhoto: profilePhoto,
+      bankName: bank?.bankName,
+      bankAccountName: bank?.accountName,
+      bankAccountNumber: bank?.accountNumber,
+      applicationStatus: RiderApplicationStatus.underReview,
+    );
+  }
+}
+
 Future<void> _finishSplash(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 2200));
   await tester.pumpAndSettle();
@@ -1407,6 +1596,37 @@ Future<void> _loginAsRider(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 650));
   await tester.pumpAndSettle();
+}
+
+Future<void> _completeRiderOnboarding(WidgetTester tester) async {
+  expect(find.byKey(const ValueKey<String>('rider-application-status-screen')),
+      findsOneWidget);
+
+  await tester.tap(find.text('Profile Picture'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextField).last, 'selfie.jpg');
+  await tester
+      .tap(find.byKey(const ValueKey<String>('rider-bottom-action-continue')));
+  await tester.pumpAndSettle();
+
+  await tester.enterText(find.byType(TextField).at(0), '0123456789');
+  await tester.enterText(find.byType(TextField).at(1), 'Josi Microfinance');
+  await tester.enterText(find.byType(TextField).at(2), 'Amina Yusuf');
+  await tester
+      .tap(find.byKey(const ValueKey<String>('rider-bottom-action-continue')));
+  await tester.pumpAndSettle();
+
+  await tester.enterText(find.byType(TextField).at(0), 'Toyota');
+  await tester.enterText(find.byType(TextField).at(1), 'Corolla');
+  await tester.enterText(find.byType(TextField).at(2), 'White');
+  await tester.enterText(find.byType(TextField).at(3), 'ABC 482 JK');
+  await tester.enterText(find.byType(TextField).at(4), 'REG-2408-JR');
+  await tester
+      .tap(find.byKey(const ValueKey<String>('rider-bottom-action-continue')));
+  await tester.pumpAndSettle();
+
+  expect(find.byKey(const ValueKey<String>('rider-application-status-screen')),
+      findsOneWidget);
 }
 
 void _mockDeviceLocation(

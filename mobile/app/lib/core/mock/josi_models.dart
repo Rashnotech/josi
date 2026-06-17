@@ -78,6 +78,12 @@ class RiderProfile {
     required this.state,
     required this.rating,
     required this.completedTrips,
+    this.profilePhoto,
+    this.licenseNumber,
+    this.applicationStatus,
+    this.bankName,
+    this.bankAccountName,
+    this.bankAccountNumber,
   });
 
   final String fullName;
@@ -89,6 +95,12 @@ class RiderProfile {
   final String state;
   final double rating;
   final int completedTrips;
+  final String? profilePhoto;
+  final String? licenseNumber;
+  final RiderApplicationStatus? applicationStatus;
+  final String? bankName;
+  final String? bankAccountName;
+  final String? bankAccountNumber;
 }
 
 class Vehicle {
@@ -100,6 +112,7 @@ class Vehicle {
     required this.plateNumber,
     required this.chassisNumber,
     required this.engineNumber,
+    this.registrationNumber = '',
   });
 
   final String type;
@@ -109,6 +122,46 @@ class Vehicle {
   final String plateNumber;
   final String chassisNumber;
   final String engineNumber;
+  final String registrationNumber;
+}
+
+class RiderBankAccount {
+  const RiderBankAccount({
+    required this.bankName,
+    required this.accountName,
+    required this.accountNumber,
+  });
+
+  final String bankName;
+  final String accountName;
+  final String accountNumber;
+}
+
+class RiderOnboarding {
+  const RiderOnboarding({
+    this.profile,
+    this.bankAccount,
+    this.ridingDetails,
+    this.profilePictureComplete = false,
+    this.bankAccountComplete = false,
+    this.ridingDetailsComplete = false,
+    this.isSubmitted = false,
+    this.submittedAt,
+    this.missingSteps = const <String>[],
+  });
+
+  final RiderProfile? profile;
+  final RiderBankAccount? bankAccount;
+  final Vehicle? ridingDetails;
+  final bool profilePictureComplete;
+  final bool bankAccountComplete;
+  final bool ridingDetailsComplete;
+  final bool isSubmitted;
+  final String? submittedAt;
+  final List<String> missingSteps;
+
+  bool get isComplete =>
+      profilePictureComplete && bankAccountComplete && ridingDetailsComplete;
 }
 
 class Trip {

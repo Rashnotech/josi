@@ -55,18 +55,26 @@ class RegistrationService
             ]);
 
             $user = $user->refresh()->load(['riderProfile', 'fleet']);
-            $payload = [
-                'user' => $this->rbacService->userSummary($user),
-                'role' => $role->value,
-                'redirect_to' => $role->requiresDashboard() ? '/login' : $this->rbacService->redirectPathForUser($user),
-                'requires_dashboard' => $role->requiresDashboard(),
-                'login_required' => $role->requiresDashboard(),
-                'approval_status' => $role->requiresDashboard() ? null : ApplicationStatus::Pending->value,
-            ];
+            $payload = $role->requiresDashboard()
+                ? [
+                    'user' => $this->rbacService->userSummary($user),
+                    'role' => $role->value,
+                    'redirect_to' => '/login',
+                    'requires_dashboard' => true,
+                    'login_required' => true,
+                    'approval_status' => null,
+                ]
+                : array_merge(
+                    $this->authResponse($user),
+                    [
+                        'approval_status' => ApplicationStatus::Pending->value,
+                        'login_required' => false,
+                    ]
+                );
 
             $payload['message'] = $role->requiresDashboard()
                 ? 'Account created successfully. Please sign in to access your dashboard.'
-                : 'Account created successfully. Please check your email.';
+                : 'Account created successfully. Continue your rider account setup.';
 
             return $payload;
         });
@@ -203,7 +211,7 @@ class RegistrationService
         return RiderProfile::create([
             'user_id' => $user->getKey(),
             'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
+            'last_name' => $data['last_name'] ?? '',
             'phone' => $data['phone'],
             'address' => $data['address'] ?? 'Pending onboarding',
             'city' => $data['city'] ?? 'Pending onboarding',

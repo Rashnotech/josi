@@ -41,15 +41,15 @@ Register these aliases in Laravel 10 `app/Http/Kernel.php` or Laravel 11 `bootst
 
 `POST /api/v1/auth/register`
 
-Required JSON fields: `first_name`, `last_name`, `email`, `phone`, `password`, `password_confirmation`, `role`.
+Required JSON fields: `first_name`, `email`, `phone`, `password`, `password_confirmation`, `role`.
 
 Accepted public roles: `rider`, `courier`, `pack_owner`.
 
-Optional JSON fields: `address`, `city`, `state`, `business_name`, `business_email`, `business_phone`, `business_address`, `registration_number`.
+Optional JSON fields: `last_name`, `address`, `city`, `state`, `business_name`, `business_email`, `business_phone`, `business_address`, `registration_number`.
 
 Creates a public Josi account, sends an account creation email, and returns role-aware metadata:
 
-- `rider` and `courier`: creates a pending application profile, does not return a token, and returns `requires_dashboard: false`.
+- `rider` and `courier`: creates a pending application profile, returns a bearer token, and returns `login_required: false` so mobile clients can continue into rider account setup.
 - `pack_owner`: creates the account and pack/fleet record, stores `vehicle_count` when supplied, sends the account email, and returns `redirect_to: "/login"` plus `login_required: true`. The user signs in from the web app before opening the Laravel dashboard.
 
 Example rider/courier payload:
@@ -63,6 +63,24 @@ Example rider/courier payload:
   "password": "password123",
   "password_confirmation": "password123",
   "role": "rider"
+}
+```
+
+Example rider/courier response:
+
+```json
+{
+  "status": true,
+  "message": "Account created successfully. Continue your rider account setup.",
+  "data": {
+    "access_token": "sanctum_token_here",
+    "token": "sanctum_token_here",
+    "token_type": "bearer",
+    "role": "rider",
+    "login_required": false,
+    "approval_status": "pending",
+    "redirect_to": "/rider/application-status"
+  }
 }
 ```
 
@@ -159,13 +177,47 @@ The web login stores the Sanctum token and writes a `josi_auth_token` browser co
 
 ## Driver Endpoints
 
-All require role `driver`.
+All require role `rider`, `courier`, or `driver`.
 
 - `GET /api/v1/driver/profile`
 - `PUT /api/v1/driver/profile`
 - `GET /api/v1/driver/application-status`
+- `GET /api/v1/driver/onboarding`
+- `POST /api/v1/driver/onboarding/profile-picture`
+- `POST /api/v1/driver/onboarding/bank-account`
+- `POST /api/v1/driver/onboarding/riding-details`
+- `POST /api/v1/driver/onboarding/submit`
 - `POST /api/v1/driver/documents`
 - `GET /api/v1/driver/documents`
+
+Rider onboarding payloads:
+
+```json
+{
+  "profile_photo": "uploads/riders/selfie.jpg"
+}
+```
+
+```json
+{
+  "bank_name": "Josi Microfinance Bank",
+  "account_name": "Amina Yusuf",
+  "account_number": "0123456789"
+}
+```
+
+```json
+{
+  "vehicle_type": "car",
+  "brand": "Toyota",
+  "model": "Corolla",
+  "color": "White",
+  "plate_number": "ABC 482 JK",
+  "registration_number": "REG-2408-JR",
+  "city": "Abuja",
+  "state": "FCT"
+}
+```
 
 ## Fleet Endpoints
 

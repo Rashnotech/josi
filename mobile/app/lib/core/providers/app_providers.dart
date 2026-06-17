@@ -129,19 +129,25 @@ class AuthController extends StateNotifier<AuthSession> {
     required String email,
     required String phone,
     required String password,
+    required String passwordConfirmation,
     String role = 'rider',
   }) async {
     state =
         state.copyWith(isLoading: true, errorMessage: null, clearUser: true);
     try {
-      final JosiUser user = await _repository.registerRider(
+      final AuthResult result = await _repository.registerRider(
         fullName: fullName,
         email: email,
         phone: phone,
         password: password,
+        passwordConfirmation: passwordConfirmation,
         role: role,
       );
-      state = AuthSession(isLoading: false, user: user);
+      state = AuthSession(
+        isLoading: false,
+        user: result.isAuthenticated ? result.user : null,
+        successMessage: result.message,
+      );
     } on Object catch (error) {
       state = AuthSession(
         isLoading: false,
@@ -211,7 +217,10 @@ final Provider<CustomerRepository> customerRepositoryProvider =
 
 final Provider<RiderRepository> riderRepositoryProvider =
     Provider<RiderRepository>((Ref ref) {
-  return const RiderRepository();
+  return RiderRepository(
+    apiClient: ref.watch(apiClientProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
+  );
 });
 
 final Provider<TripRepository> tripRepositoryProvider =
@@ -264,6 +273,11 @@ final FutureProvider<JosiUser> currentRiderProvider =
 final FutureProvider<RiderProfile> riderProfileProvider =
     FutureProvider<RiderProfile>((Ref ref) {
   return ref.watch(riderRepositoryProvider).riderProfile();
+});
+
+final FutureProvider<RiderOnboarding> riderOnboardingProvider =
+    FutureProvider<RiderOnboarding>((Ref ref) {
+  return ref.watch(riderRepositoryProvider).onboarding();
 });
 
 final FutureProvider<List<DocumentRequirement>> riderDocumentsProvider =

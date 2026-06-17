@@ -146,6 +146,113 @@ void main() {
     expect(capturedBody.containsKey('full_name'), isFalse);
   });
 
+  test('rider registration stores token and reads application profile status',
+      () async {
+    final List<Map<String, Object?>> requests = <Map<String, Object?>>[];
+    final _MemoryTokenStorage storage = _MemoryTokenStorage();
+    final AuthRepository repository = AuthRepository(
+      tokenStorage: storage,
+      apiClient: ApiClient(
+        baseUrl: 'https://api.josi.test/api/v1',
+        httpRequest: (
+          Uri uri, {
+          required String method,
+          required Map<String, String> headers,
+          Object? body,
+        }) async {
+          requests.add(<String, Object?>{
+            'method': method,
+            'path': uri.path,
+            'headers': headers,
+            'body': body == null ? null : jsonDecode(body as String),
+          });
+
+          if (uri.path.endsWith('/auth/register')) {
+            return const ApiHttpResponse(
+              statusCode: 201,
+              body: '''
+{
+  "status": true,
+  "message": "Account created successfully. Continue your rider account setup.",
+  "data": {
+    "token": "rider-token-123",
+    "token_type": "bearer",
+    "role": "rider",
+    "login_required": false,
+    "user": {
+      "id": 44,
+      "name": "Amina",
+      "email": "amina@example.com",
+      "phone": "+2348023456789",
+      "role": "rider",
+      "status": "active"
+    },
+    "profile": {
+      "first_name": "Amina",
+      "last_name": "",
+      "application_status": "pending",
+      "city": "Abuja"
+    }
+  }
+}
+''',
+            );
+          }
+
+          return const ApiHttpResponse(
+            statusCode: 200,
+            body: '''
+{
+  "status": true,
+  "message": "Authenticated user fetched successfully",
+  "data": {
+    "user": {
+      "id": 44,
+      "name": "Amina",
+      "email": "amina@example.com",
+      "phone": "+2348023456789",
+      "role": "rider",
+      "status": "active"
+    },
+    "role": "rider",
+    "profile": {
+      "first_name": "Amina",
+      "last_name": "",
+      "application_status": "pending",
+      "city": "Abuja"
+    }
+  }
+}
+''',
+          );
+        },
+      ),
+    );
+
+    final AuthResult result = await repository.registerRider(
+      fullName: 'Amina',
+      email: 'amina@example.com',
+      phone: '+2348023456789',
+      password: 'Password123!',
+      passwordConfirmation: 'Password123!',
+    );
+
+    final Map<String, Object?> body =
+        requests.first['body']! as Map<String, Object?>;
+    expect(requests.first['path'], '/api/v1/auth/register');
+    expect(body['name'], 'Amina');
+    expect(body['first_name'], 'Amina');
+    expect(body.containsKey('last_name'), isFalse);
+    expect(body.containsKey('full_name'), isFalse);
+    expect(body['role'], 'rider');
+    expect(body['password_confirmation'], 'Password123!');
+    expect(await storage.readToken(), 'rider-token-123');
+    expect(await storage.readUserRole(), 'rider');
+    expect(result.isAuthenticated, isTrue);
+    expect(result.user?.role, AppRole.rider);
+    expect(result.user?.applicationStatus, RiderApplicationStatus.pending);
+  });
+
   test('login and password reset use backend identifier field', () async {
     final List<Map<String, Object?>> bodies = <Map<String, Object?>>[];
     final AuthRepository repository = AuthRepository(

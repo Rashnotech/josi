@@ -26,7 +26,7 @@ Assert-Contains 'app/Http/Requests/Api/V1/Auth/RegisterRequest.php' "Rule::in(Us
 Assert-Contains 'app/Http/Requests/Api/V1/Auth/RegisterRequest.php' "'vehicle_count' => ['required_if:role,'.UserRole::PackOwner->value, 'integer', 'min:1', 'max:10000']" 'Pack owner vehicle count validation'
 Assert-Contains 'app/Services/RegistrationService.php' "'password' => Hash::make" 'Registration hashes passwords'
 Assert-Contains 'app/Services/RegistrationService.php' 'sendAccountCreated' 'Registration sends account created notification'
-Assert-Contains 'app/Services/RegistrationService.php' "'Account created successfully. Please check your email.'" 'Rider/courier response keeps user off dashboard'
+Assert-Contains 'app/Services/RegistrationService.php' "'Account created successfully. Continue your rider account setup.'" 'Rider/courier response opens mobile account setup'
 Assert-Contains 'app/Services/RegistrationService.php' "'Account created successfully. Please sign in to access your dashboard.'" 'Pack owner response sends user to login'
 Assert-Contains 'app/Services/RegistrationService.php' '$role->requiresDashboard()' 'Pack owner dashboard branch'
 Assert-Contains 'app/Services/RegistrationService.php' "'login_required'" 'Pack owner registration requires login before dashboard'

@@ -135,11 +135,12 @@ class AuthRepository {
     );
   }
 
-  Future<JosiUser> registerRider({
+  Future<AuthResult> registerRider({
     required String fullName,
     required String email,
     required String phone,
     required String password,
+    required String passwordConfirmation,
     String role = 'rider',
   }) async {
     if (!_api.isConfigured) {
@@ -151,17 +152,24 @@ class AuthRepository {
     final Map<String, Object?> envelope = await _api.post(
       '/auth/register',
       body: <String, Object?>{
+        // Laravel public rider registration expects split names, not full_name.
+        'name': parts.fullName,
         'first_name': parts.firstName,
-        'last_name': parts.lastName,
+        if (parts.lastName.isNotEmpty) 'last_name': parts.lastName,
         'email': email,
         'phone': phone,
         'password': password,
-        'password_confirmation': password,
+        'password_confirmation': passwordConfirmation,
         'role': role,
       },
     );
     final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
-    return userFromPayload(data['user']);
+    return _persistAuthPayload(
+      data,
+      message: ApiClient.messageFromEnvelope(envelope),
+      fallbackNameParts: parts,
+      requireToken: true,
+    );
   }
 
   Future<String> requestPasswordReset(String emailOrPhone) async {
@@ -269,7 +277,7 @@ class AuthRepository {
           ? 'Account created successfully. Please sign in.'
           : message,
       user: _tryUserFromPayload(
-        data['user'],
+        data,
         fallbackNameParts: fallbackNameParts,
       ),
     );
@@ -282,7 +290,7 @@ class AuthRepository {
     final Map<String, Object?> envelope =
         await _api.get('/auth/me', token: token);
     final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
-    return userFromPayload(data['user'], fallbackNameParts: fallbackNameParts);
+    return userFromPayload(data, fallbackNameParts: fallbackNameParts);
   }
 
   JosiUser? _tryUserFromPayload(
@@ -300,13 +308,16 @@ class AuthRepository {
     Object? value, {
     CustomerNameParts? fallbackNameParts,
   }) {
-    final Map<String, Object?>? user = _mapFrom(value);
+    final Map<String, Object?>? payload = _mapFrom(value);
+    final Map<String, Object?>? user = _mapFrom(payload?['user']) ?? payload;
     if (user == null) {
       throw const ApiException('User profile was not returned by the API.');
     }
 
-    final Map<String, Object?>? profile = _mapFrom(user['profile']);
-    final String role = _string(user['role']) ?? 'customer';
+    final Map<String, Object?>? profile =
+        _mapFrom(payload?['profile']) ?? _mapFrom(user['profile']);
+    final String role =
+        _string(payload?['role']) ?? _string(user['role']) ?? 'customer';
     final String? firstName = _string(user['first_name']) ??
         _string(profile?['first_name']) ??
         fallbackNameParts?.firstName;
@@ -327,7 +338,7 @@ class AuthRepository {
       phone: _string(user['phone']) ?? '',
       role: _appRoleFromApi(role),
       applicationStatus: _applicationStatusFromApi(
-        user['application_status'] ?? user['status'],
+        profile?['application_status'] ?? user['application_status'],
       ),
       city: _string(user['city']) ?? _string(profile?['city']) ?? 'Abuja',
     );
@@ -448,15 +459,352 @@ class CustomerRepository {
 }
 
 class RiderRepository {
-  const RiderRepository();
+  const RiderRepository({
+    ApiClient? apiClient,
+    TokenStorage? tokenStorage,
+  })  : _apiClient = apiClient,
+        _tokenStorage = tokenStorage;
 
-  Future<JosiUser> profile() async => JosiMockData.rider;
+  final ApiClient? _apiClient;
+  final TokenStorage? _tokenStorage;
 
-  Future<RiderProfile> riderProfile() async => JosiMockData.riderProfile;
+  ApiClient get _api => _apiClient ?? ApiClient();
 
-  Future<Vehicle> vehicle() async => JosiMockData.vehicle;
+  TokenStorage get _tokens => _tokenStorage ?? const SecureTokenStorage();
 
-  Future<List<DocumentRequirement>> documents() async => JosiMockData.documents;
+  Future<JosiUser> profile() async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/auth/me', token: token);
+    return AuthRepository.userFromPayload(
+      ApiClient.dataFromEnvelope(envelope),
+    );
+  }
+
+  Future<RiderOnboarding> onboarding() async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/driver/onboarding', token: token);
+    return _onboardingFromPayload(ApiClient.dataFromEnvelope(envelope));
+  }
+
+  Future<RiderProfile> riderProfile() async {
+    final RiderProfile? profile = (await onboarding()).profile;
+    if (profile == null) {
+      throw const ApiException('Rider profile was not returned by the API.');
+    }
+    return profile;
+  }
+
+  Future<Vehicle> vehicle() async {
+    final Vehicle? vehicle = (await onboarding()).ridingDetails;
+    if (vehicle == null) {
+      throw const ApiException('Riding details have not been completed yet.');
+    }
+    return vehicle;
+  }
+
+  Future<List<DocumentRequirement>> documents() async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/driver/documents', token: token);
+    final Object? documents = ApiClient.dataFromEnvelope(envelope)['documents'];
+    if (documents is! List) {
+      return const <DocumentRequirement>[];
+    }
+
+    return documents
+        .whereType<Map>()
+        .map((Map<Object?, Object?> value) => _documentFromPayload(value))
+        .toList();
+  }
+
+  Future<RiderOnboarding> saveProfilePicture({
+    required String profilePhoto,
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/driver/onboarding/profile-picture',
+      token: token,
+      body: <String, Object?>{
+        // Backend stores a profile photo path or URL for now.
+        'profile_photo': profilePhoto,
+      },
+    );
+    return _onboardingFromPayload(ApiClient.dataFromEnvelope(envelope));
+  }
+
+  Future<RiderOnboarding> saveBankAccount({
+    required String accountNumber,
+    required String bankName,
+    required String accountName,
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/driver/onboarding/bank-account',
+      token: token,
+      body: <String, Object?>{
+        'account_number': accountNumber,
+        'bank_name': bankName,
+        'account_name': accountName,
+      },
+    );
+    return _onboardingFromPayload(ApiClient.dataFromEnvelope(envelope));
+  }
+
+  Future<RiderOnboarding> saveRidingDetails({
+    required String vehicleType,
+    required String brand,
+    required String model,
+    required String color,
+    required String plateNumber,
+    required String registrationNumber,
+    required String city,
+    String? state,
+    String? licenseNumber,
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/driver/onboarding/riding-details',
+      token: token,
+      body: <String, Object?>{
+        'vehicle_type': vehicleType,
+        'brand': brand,
+        'model': model,
+        'color': color,
+        'plate_number': plateNumber,
+        if (registrationNumber.trim().isNotEmpty)
+          'registration_number': registrationNumber,
+        if (city.trim().isNotEmpty) 'city': city,
+        if (state?.trim().isNotEmpty ?? false) 'state': state,
+        if (licenseNumber?.trim().isNotEmpty ?? false)
+          'license_number': licenseNumber,
+      },
+    );
+    return _onboardingFromPayload(ApiClient.dataFromEnvelope(envelope));
+  }
+
+  Future<RiderOnboarding> submitOnboarding() async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/driver/onboarding/submit',
+      token: token,
+    );
+    return _onboardingFromPayload(ApiClient.dataFromEnvelope(envelope));
+  }
+
+  Future<String> _requireToken() async {
+    if (!_api.isConfigured) {
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
+    }
+
+    final String? token = await _tokens.readToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Please sign in again to continue.');
+    }
+
+    return token;
+  }
+
+  static RiderOnboarding _onboardingFromPayload(Map<String, Object?> data) {
+    final Map<String, Object?>? profile = _mapFrom(data['profile']);
+    final Map<String, Object?>? bank = _mapFrom(data['bank_account']);
+    final Map<String, Object?>? ridingDetails =
+        _mapFrom(data['riding_details']);
+    final Map<String, Object?> onboarding =
+        _mapFrom(data['onboarding']) ?? const <String, Object?>{};
+
+    return RiderOnboarding(
+      profile: profile == null ? null : _riderProfileFromPayload(profile, bank),
+      bankAccount: _bankFromPayload(bank),
+      ridingDetails:
+          ridingDetails == null ? null : _vehicleFromPayload(ridingDetails),
+      profilePictureComplete:
+          _bool(onboarding['profile_picture_complete']) ?? false,
+      bankAccountComplete: _bool(onboarding['bank_account_complete']) ?? false,
+      ridingDetailsComplete:
+          _bool(onboarding['riding_details_complete']) ?? false,
+      isSubmitted: _bool(onboarding['is_submitted']) ?? false,
+      submittedAt: _string(onboarding['submitted_at']),
+      missingSteps: _stringList(onboarding['missing_steps']),
+    );
+  }
+
+  static RiderProfile _riderProfileFromPayload(
+    Map<String, Object?> profile,
+    Map<String, Object?>? bank,
+  ) {
+    final String firstName = _string(profile['first_name']) ?? '';
+    final String lastName = _string(profile['last_name']) ?? '';
+    final String fullName = <String>[firstName, lastName]
+        .where((String value) => value.trim().isNotEmpty)
+        .join(' ');
+
+    return RiderProfile(
+      fullName: fullName.isEmpty ? 'Rider' : fullName,
+      phone: _string(profile['phone']) ?? '',
+      gender: _string(profile['gender']) ?? '',
+      dateOfBirth: _string(profile['date_of_birth']) ?? '',
+      address: _string(profile['address']) ?? '',
+      city: _string(profile['city']) ?? '',
+      state: _string(profile['state']) ?? '',
+      rating: _double(profile['rating']) ?? 0,
+      completedTrips: _int(profile['completed_trips']) ?? 0,
+      profilePhoto: _string(profile['profile_photo']),
+      licenseNumber: _string(profile['license_number']),
+      applicationStatus: AuthRepository._applicationStatusFromApi(
+          profile['application_status']),
+      bankName: _string(bank?['bank_name']) ?? _string(profile['bank_name']),
+      bankAccountName: _string(bank?['account_name']) ??
+          _string(profile['bank_account_name']),
+      bankAccountNumber: _string(bank?['account_number']) ??
+          _string(profile['bank_account_number']),
+    );
+  }
+
+  static RiderBankAccount? _bankFromPayload(Map<String, Object?>? bank) {
+    if (bank == null) {
+      return null;
+    }
+
+    final String bankName = _string(bank['bank_name']) ?? '';
+    final String accountName = _string(bank['account_name']) ?? '';
+    final String accountNumber = _string(bank['account_number']) ?? '';
+    if (bankName.isEmpty && accountName.isEmpty && accountNumber.isEmpty) {
+      return null;
+    }
+
+    return RiderBankAccount(
+      bankName: bankName,
+      accountName: accountName,
+      accountNumber: accountNumber,
+    );
+  }
+
+  static Vehicle _vehicleFromPayload(Map<String, Object?> vehicle) {
+    return Vehicle(
+      type: _titleCase(_string(vehicle['vehicle_type']) ?? ''),
+      brand: _string(vehicle['brand']) ?? '',
+      model: _string(vehicle['model']) ?? '',
+      color: _string(vehicle['color']) ?? '',
+      plateNumber: _string(vehicle['plate_number']) ?? '',
+      registrationNumber: _string(vehicle['registration_number']) ?? '',
+      chassisNumber: _string(vehicle['chassis_number']) ?? '',
+      engineNumber: _string(vehicle['engine_number']) ?? '',
+    );
+  }
+
+  static DocumentRequirement _documentFromPayload(
+    Map<Object?, Object?> document,
+  ) {
+    final Map<String, Object?> payload = document.map(
+      (Object? key, Object? value) => MapEntry<String, Object?>('$key', value),
+    );
+    final String type = _string(payload['document_type']) ??
+        _string(payload['title']) ??
+        'Document';
+    return DocumentRequirement(
+      title: _titleCase(type),
+      description: _string(payload['original_file_name']) ??
+          _string(payload['description']) ??
+          '',
+      status: _documentStatus(
+        payload['status'] ?? payload['verification_status'],
+      ),
+      rejectionReason: _string(payload['rejection_reason']),
+    );
+  }
+
+  static Map<String, Object?>? _mapFrom(Object? value) {
+    if (value is Map) {
+      return value.map(
+        (Object? key, Object? fieldValue) =>
+            MapEntry<String, Object?>('$key', fieldValue),
+      );
+    }
+
+    return null;
+  }
+
+  static bool? _bool(Object? value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    final String? stringValue = _string(value)?.toLowerCase();
+    return switch (stringValue) {
+      'true' || '1' || 'yes' => true,
+      'false' || '0' || 'no' => false,
+      _ => null,
+    };
+  }
+
+  static double? _double(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(_string(value) ?? '');
+  }
+
+  static int? _int(Object? value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return int.tryParse(_string(value) ?? '');
+  }
+
+  static String? _string(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final String stringValue = '$value'.trim();
+    return stringValue.isEmpty ? null : stringValue;
+  }
+
+  static List<String> _stringList(Object? value) {
+    if (value is! List) {
+      return const <String>[];
+    }
+
+    return value
+        .map(_string)
+        .whereType<String>()
+        .where((String step) => step.isNotEmpty)
+        .toList();
+  }
+
+  static DocumentStatus _documentStatus(Object? value) {
+    return switch (_string(value)) {
+      'pending' || 'under_review' => DocumentStatus.pending,
+      'verified' || 'approved' => DocumentStatus.verified,
+      'rejected' => DocumentStatus.rejected,
+      _ => DocumentStatus.notUploaded,
+    };
+  }
+
+  static String _titleCase(String value) {
+    final List<String> parts = value
+        .replaceAll('_', ' ')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((String part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) {
+      return value;
+    }
+
+    return parts
+        .map((String part) =>
+            part[0].toUpperCase() + part.substring(1).toLowerCase())
+        .join(' ');
+  }
 }
 
 class TripRepository {

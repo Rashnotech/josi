@@ -612,7 +612,10 @@ class _RiderRegistrationScreenState
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   String _vehicleType = 'Select vehicle type';
+  Map<String, String> _fieldErrors = const <String, String>{};
 
   @override
   void dispose() {
@@ -620,18 +623,65 @@ class _RiderRegistrationScreenState
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
+    if (ref.read(authControllerProvider).isLoading) {
+      return;
+    }
+
+    final String fullName = _fullNameController.text.trim();
+    final String email = _emailController.text.trim();
+    final String phone = _phoneController.text.trim();
+    final String password = _passwordController.text;
+    final String confirmation = _confirmPasswordController.text;
+    final Map<String, String> errors = <String, String>{};
+
+    if (fullName.isEmpty) {
+      errors['fullName'] = 'Full name is required.';
+    }
+    if (email.isEmpty) {
+      errors['email'] = 'Email is required.';
+    } else if (!_isValidEmail(email)) {
+      errors['email'] = 'Enter a valid email address.';
+    }
+    if (phone.isEmpty) {
+      errors['phone'] = 'Phone number is required.';
+    }
+    if (password.isEmpty) {
+      errors['password'] = 'Password is required.';
+    }
+    if (confirmation.isEmpty) {
+      errors['passwordConfirmation'] = 'Confirm your password.';
+    } else if (password != confirmation) {
+      errors['passwordConfirmation'] = 'Passwords do not match.';
+    }
+
+    setState(() => _fieldErrors = errors);
+    if (errors.isNotEmpty) {
+      return;
+    }
+
     await ref.read(authControllerProvider.notifier).registerRider(
-          fullName: _fullNameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          password: _passwordController.text,
+          fullName: fullName,
+          email: email,
+          phone: phone,
+          password: password,
+          passwordConfirmation: confirmation,
           role: widget.role,
         );
-    if (mounted && ref.read(authControllerProvider).isAuthenticated) {
+    if (!mounted) {
+      return;
+    }
+
+    final AuthSession session = ref.read(authControllerProvider);
+    if (session.isAuthenticated) {
+      if (session.successMessage != null &&
+          session.successMessage!.isNotEmpty) {
+        _showAuthMessage(context, session.successMessage!);
+      }
       context.go(AppRoutes.riderApplicationStatus);
     }
   }
@@ -653,7 +703,7 @@ class _RiderRegistrationScreenState
       titleFontSize: 26,
       topSpacing: 0,
       titleSpacing: 12,
-      fieldSpacing: 14,
+      fieldSpacing: 8,
       onBack: () => context.go(AppRoutes.loginFor('rider')),
       children: <Widget>[
         _SignupTextField(
@@ -663,6 +713,7 @@ class _RiderRegistrationScreenState
           controller: _fullNameController,
           filled: false,
           borderColor: const Color(0xFF536178),
+          errorText: _fieldError(session, 'fullName', 'first_name', 'name'),
         ),
         const SizedBox(height: 6),
         _SignupTextField(
@@ -673,6 +724,7 @@ class _RiderRegistrationScreenState
           borderColor: const Color(0xFF536178),
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
+          errorText: _fieldError(session, 'email'),
         ),
         const SizedBox(height: 6),
         _SignupTextField(
@@ -683,6 +735,7 @@ class _RiderRegistrationScreenState
           borderColor: const Color(0xFF536178),
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
+          errorText: _fieldError(session, 'phone'),
         ),
         const SizedBox(height: 6),
         _SignupDropdownField(
@@ -706,7 +759,24 @@ class _RiderRegistrationScreenState
           obscureText: true,
           filled: false,
           borderColor: const Color(0xFF536178),
+          textInputAction: TextInputAction.next,
+          errorText: _fieldError(session, 'password'),
+        ),
+        const SizedBox(height: 6),
+        _SignupTextField(
+          key: const ValueKey<String>('rider-confirm-password-field'),
+          label: 'Confirm Password',
+          hintText: '********',
+          controller: _confirmPasswordController,
+          obscureText: true,
+          filled: false,
+          borderColor: const Color(0xFF536178),
           textInputAction: TextInputAction.done,
+          errorText: _fieldError(
+            session,
+            'passwordConfirmation',
+            'password_confirmation',
+          ),
         ),
         const SizedBox(height: 16),
         _SignupPrimaryButton(
@@ -729,6 +799,22 @@ class _RiderRegistrationScreenState
         ),
       ],
     );
+  }
+
+  String? _fieldError(
+    AuthSession session,
+    String key, [
+    String? apiKey,
+    String? alternateApiKey,
+  ]) {
+    return _fieldErrors[key] ??
+        session.fieldErrors[apiKey ?? key] ??
+        (apiKey == null ? null : session.fieldErrors[key]) ??
+        (alternateApiKey == null ? null : session.fieldErrors[alternateApiKey]);
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
   }
 }
 

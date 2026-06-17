@@ -249,13 +249,22 @@ class RbacService
             'first_name' => $profile->first_name,
             'last_name' => $profile->last_name,
             'phone' => $profile->phone,
+            'gender' => $profile->gender,
+            'date_of_birth' => $profile->date_of_birth?->toDateString(),
+            'address' => $profile->address,
             'city' => $profile->city,
             'state' => $profile->state,
+            'profile_photo' => $profile->profile_photo,
+            'bank_name' => $profile->bank_name,
+            'bank_account_name' => $profile->bank_account_name,
+            'bank_account_number' => $profile->bank_account_number,
+            'license_number' => $profile->license_number,
             'application_status' => $this->enumValue($profile->application_status),
             'availability_status' => $this->enumValue($profile->availability_status),
             'approved_at' => $profile->approved_at?->toISOString(),
             'rejected_at' => $profile->rejected_at?->toISOString(),
             'rejection_reason' => $profile->rejection_reason,
+            'onboarding_submitted_at' => $profile->onboarding_submitted_at?->toISOString(),
         ];
     }
 

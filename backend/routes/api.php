@@ -35,6 +35,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/profile', [DriverProfileController::class, 'profile']);
         Route::put('/profile', [DriverProfileController::class, 'update'])->middleware('permission:update_profile');
         Route::get('/application-status', [DriverProfileController::class, 'applicationStatus'])->middleware('permission:view_application_status');
+        Route::get('/onboarding', [DriverProfileController::class, 'onboarding'])->middleware('permission:view_application_status');
+        Route::post('/onboarding/profile-picture', [DriverProfileController::class, 'saveProfilePicture'])->middleware('permission:update_profile');
+        Route::post('/onboarding/bank-account', [DriverProfileController::class, 'saveBankAccount'])->middleware('permission:update_profile');
+        Route::post('/onboarding/riding-details', [DriverProfileController::class, 'saveRidingDetails'])->middleware('permission:update_profile');
+        Route::post('/onboarding/submit', [DriverProfileController::class, 'submitOnboarding'])->middleware('permission:update_profile');
         Route::post('/documents', [DriverProfileController::class, 'uploadDocument'])->middleware('permission:upload_documents');
         Route::get('/documents', [DriverProfileController::class, 'documents'])->middleware('permission:upload_documents');
     });

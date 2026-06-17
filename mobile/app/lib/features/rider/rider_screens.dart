@@ -16,6 +16,7 @@ import '../../core/map/route_service.dart';
 import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/services/api_client.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 import '../../core/widgets/josi_google_map.dart';
@@ -252,11 +253,57 @@ class _RiderLocationAccessScreenState
   }
 }
 
-class RiderApplicationStatusScreen extends StatelessWidget {
+class RiderApplicationStatusScreen extends ConsumerStatefulWidget {
   const RiderApplicationStatusScreen({super.key});
 
   @override
+  ConsumerState<RiderApplicationStatusScreen> createState() =>
+      _RiderApplicationStatusScreenState();
+}
+
+class _RiderApplicationStatusScreenState
+    extends ConsumerState<RiderApplicationStatusScreen> {
+  bool _isSubmitting = false;
+  String? _submitError;
+
+  Future<void> _submit() async {
+    if (_isSubmitting) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _submitError = null;
+    });
+
+    try {
+      await ref.read(riderRepositoryProvider).submitOnboarding();
+      ref.invalidate(riderOnboardingProvider);
+      if (!mounted) {
+        return;
+      }
+      _showSubmissionSheet(context);
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() => _submitError = _riderErrorMessage(
+              error,
+              'Unable to submit rider account information.',
+            ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final AuthSession session = ref.watch(authControllerProvider);
+    final AsyncValue<RiderOnboarding> onboarding =
+        ref.watch(riderOnboardingProvider);
+    final String greetingName = session.user?.greetingName ?? 'there';
+
     return Scaffold(
       key: const ValueKey<String>('rider-application-status-screen'),
       backgroundColor: JosiColors.white,
@@ -279,7 +326,7 @@ class RiderApplicationStatusScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 Text(
-                  'Welcome!, Esther',
+                  'Welcome, $greetingName',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         color: JosiColors.ink,
@@ -291,36 +338,24 @@ class RiderApplicationStatusScreen extends StatelessWidget {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        Text(
-                          'Required Steps',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: JosiColors.ink,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                    child: onboarding.when(
+                      data: (RiderOnboarding value) =>
+                          _RiderApplicationStatusBody(
+                        onboarding: value,
+                        submitError: _submitError,
+                      ),
+                      error: (Object error, StackTrace stackTrace) =>
+                          ErrorState(
+                        title: 'Account setup unavailable',
+                        message: _riderErrorMessage(
+                          error,
+                          'Rider account setup could not load.',
                         ),
-                        const SizedBox(height: 14),
-                        _RiderStepTile(
-                          label: 'Profile Picture',
-                          onTap: () =>
-                              context.go(AppRoutes.riderProfilePicture),
-                        ),
-                        const SizedBox(height: 12),
-                        _RiderStepTile(
-                          label: 'Bank Account Details',
-                          onTap: () =>
-                              context.go(AppRoutes.riderBankAccountDetails),
-                        ),
-                        const SizedBox(height: 12),
-                        _RiderStepTile(
-                          label: 'Riding Details',
-                          onTap: () => context.go(AppRoutes.riderVehicleSetup),
-                        ),
-                      ],
+                      ),
+                      loading: () => const SizedBox(
+                        height: 220,
+                        child: LoadingState(label: 'Loading account setup'),
+                      ),
                     ),
                   ),
                 ),
@@ -331,7 +366,8 @@ class RiderApplicationStatusScreen extends StatelessWidget {
       ),
       bottomNavigationBar: _RiderFixedBottomAction(
         label: 'Continue',
-        onPressed: () => _showSubmissionSheet(context),
+        isLoading: _isSubmitting,
+        onPressed: onboarding.isLoading ? null : _submit,
       ),
     );
   }
@@ -349,6 +385,179 @@ class RiderApplicationStatusScreen extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+class _RiderApplicationStatusBody extends StatelessWidget {
+  const _RiderApplicationStatusBody({
+    required this.onboarding,
+    this.submitError,
+  });
+
+  final RiderOnboarding onboarding;
+  final String? submitError;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> missingSteps = <Widget>[
+      if (!onboarding.profilePictureComplete)
+        _RiderStepTile(
+          label: 'Profile Picture',
+          onTap: () => context.go(AppRoutes.riderProfilePicture),
+        ),
+      if (!onboarding.bankAccountComplete)
+        _RiderStepTile(
+          label: 'Bank Account Details',
+          onTap: () => context.go(AppRoutes.riderBankAccountDetails),
+        ),
+      if (!onboarding.ridingDetailsComplete)
+        _RiderStepTile(
+          label: 'Riding Details',
+          onTap: () => context.go(AppRoutes.riderVehicleSetup),
+        ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (submitError != null) ...<Widget>[
+          _RiderInlineMessage(
+            message: submitError!,
+            icon: Icons.error_outline_rounded,
+            color: JosiColors.redDark,
+            backgroundColor: const Color(0xFFFFF1F2),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (missingSteps.isNotEmpty) ...<Widget>[
+          Text(
+            'Required Steps',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 14),
+          for (int index = 0; index < missingSteps.length; index++) ...<Widget>[
+            missingSteps[index],
+            if (index != missingSteps.length - 1) const SizedBox(height: 12),
+          ],
+        ] else ...<Widget>[
+          _RiderInlineMessage(
+            message: onboarding.isSubmitted
+                ? 'Your rider account information has been submitted.'
+                : 'All rider account sections are complete. Submit when ready.',
+            icon: onboarding.isSubmitted
+                ? Icons.check_circle_outline_rounded
+                : Icons.info_outline_rounded,
+            color: onboarding.isSubmitted
+                ? JosiColors.success
+                : JosiColors.warning,
+            backgroundColor: onboarding.isSubmitted
+                ? JosiColors.successSoft
+                : JosiColors.warningSoft,
+          ),
+          const SizedBox(height: 18),
+          _RiderOnboardingSummary(onboarding: onboarding),
+        ],
+      ],
+    );
+  }
+}
+
+class _RiderOnboardingSummary extends StatelessWidget {
+  const _RiderOnboardingSummary({required this.onboarding});
+
+  final RiderOnboarding onboarding;
+
+  @override
+  Widget build(BuildContext context) {
+    final RiderProfile? profile = onboarding.profile;
+    final RiderBankAccount? bank = onboarding.bankAccount;
+    final Vehicle? vehicle = onboarding.ridingDetails;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            'Account Information',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 12),
+          _SummaryRow(
+            label: 'Profile picture',
+            value: profile?.profilePhoto ?? 'Added',
+          ),
+          _SummaryRow(
+            label: 'Bank',
+            value: bank?.bankName ?? profile?.bankName ?? 'Added',
+          ),
+          _SummaryRow(
+            label: 'Account name',
+            value: bank?.accountName ?? profile?.bankAccountName ?? 'Added',
+          ),
+          _SummaryRow(
+            label: 'Riding details',
+            value: vehicle == null
+                ? 'Added'
+                : <String>[vehicle.brand, vehicle.model]
+                    .where((String value) => value.trim().isNotEmpty)
+                    .join(' '),
+          ),
+          if (vehicle?.plateNumber.trim().isNotEmpty ?? false)
+            _SummaryRow(label: 'Plate number', value: vehicle!.plateNumber),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiderInlineMessage extends StatelessWidget {
+  const _RiderInlineMessage({
+    required this.message,
+    required this.icon,
+    required this.color,
+    required this.backgroundColor,
+  });
+
+  final String message;
+  final IconData icon;
+  final Color color;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, color: color, size: 21),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: color,
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -480,39 +689,150 @@ class _RiderProfileSetupScreenState extends State<RiderProfileSetupScreen> {
   }
 }
 
-class RiderProfilePictureScreen extends StatelessWidget {
+class RiderProfilePictureScreen extends ConsumerStatefulWidget {
   const RiderProfilePictureScreen({super.key});
 
   @override
+  ConsumerState<RiderProfilePictureScreen> createState() =>
+      _RiderProfilePictureScreenState();
+}
+
+class _RiderProfilePictureScreenState
+    extends ConsumerState<RiderProfilePictureScreen> {
+  final TextEditingController _profilePhotoController = TextEditingController();
+  bool _hydrated = false;
+  bool _saving = false;
+  String? _errorText;
+  String? _message;
+
+  @override
+  void dispose() {
+    _profilePhotoController.dispose();
+    super.dispose();
+  }
+
+  void _hydrate(RiderOnboarding onboarding) {
+    if (_hydrated) {
+      return;
+    }
+
+    _profilePhotoController.text = onboarding.profile?.profilePhoto ?? '';
+    _hydrated = true;
+  }
+
+  Future<void> _submit() async {
+    if (_saving) {
+      return;
+    }
+
+    final String profilePhoto = _profilePhotoController.text.trim();
+    if (profilePhoto.isEmpty) {
+      setState(() => _errorText = 'Add a profile photo file path or URL.');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _errorText = null;
+      _message = null;
+    });
+
+    try {
+      await ref
+          .read(riderRepositoryProvider)
+          .saveProfilePicture(profilePhoto: profilePhoto);
+      ref.invalidate(riderOnboardingProvider);
+      if (mounted) {
+        context.go(AppRoutes.riderBankAccountDetails);
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() => _message = _riderErrorMessage(
+              error,
+              'Unable to save profile picture.',
+            ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final AsyncValue<RiderOnboarding> onboarding =
+        ref.watch(riderOnboardingProvider);
+
     return _RiderFlowScaffold(
       key: const ValueKey<String>('rider-profile-picture-screen'),
       fallbackRoute: AppRoutes.riderProfileSetup,
       appBarTitle: 'Profile Picture',
-      bottomLabel: 'Done',
-      onBottomPressed: () => context.go(AppRoutes.riderBankAccountDetails),
-      child: const _RiderProfilePictureFields(),
+      bottomLabel: 'Continue',
+      bottomLoading: _saving,
+      onBottomPressed: _submit,
+      child: onboarding.when(
+        data: (RiderOnboarding value) {
+          _hydrate(value);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (_message != null) ...<Widget>[
+                _RiderInlineMessage(
+                  message: _message!,
+                  icon: Icons.error_outline_rounded,
+                  color: JosiColors.redDark,
+                  backgroundColor: const Color(0xFFFFF1F2),
+                ),
+                const SizedBox(height: 16),
+              ],
+              _RiderProfilePictureFields(
+                controller: _profilePhotoController,
+                errorText: _errorText,
+              ),
+            ],
+          );
+        },
+        error: (Object error, StackTrace stackTrace) => ErrorState(
+          title: 'Profile picture unavailable',
+          message: _riderErrorMessage(
+            error,
+            'Profile picture setup could not load.',
+          ),
+        ),
+        loading: () => const SizedBox(
+          height: 220,
+          child: LoadingState(label: 'Loading profile picture'),
+        ),
+      ),
     );
   }
 }
 
 class _RiderProfilePictureFields extends StatelessWidget {
-  const _RiderProfilePictureFields();
+  const _RiderProfilePictureFields({
+    this.controller,
+    this.errorText,
+  });
+
+  final TextEditingController? controller;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _UploadRequirement('Please Upload a Clear Selfie'),
-        SizedBox(height: 16),
-        _UploadRequirement('The Selfie Should have the applicants face alone'),
-        SizedBox(height: 16),
-        _UploadRequirement('Upload PDF / JPEG / PNG'),
-        SizedBox(height: 26),
-        Divider(color: JosiColors.line),
-        SizedBox(height: 28),
-        Text(
+        const _UploadRequirement('Please Upload a Clear Selfie'),
+        const SizedBox(height: 16),
+        const _UploadRequirement(
+            'The selfie should have the applicant face alone'),
+        const SizedBox(height: 16),
+        const _UploadRequirement('Upload PDF / JPEG / PNG'),
+        const SizedBox(height: 26),
+        const Divider(color: JosiColors.line),
+        const SizedBox(height: 28),
+        const Text(
           'Profile Picture',
           style: TextStyle(
             color: JosiColors.ink,
@@ -520,21 +840,30 @@ class _RiderProfilePictureFields extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
-        SizedBox(height: 16),
-        _DashedUploadBox(),
-        SizedBox(height: 26),
-        _AttachedFilePreview(
-          title: 'Profile',
-          meta: 'JPG',
-          sizeLabel: '250 kb',
-          icon: Icons.person_rounded,
-        ),
+        const SizedBox(height: 16),
+        const _DashedUploadBox(),
+        const SizedBox(height: 18),
+        if (controller == null)
+          const _AttachedFilePreview(
+            title: 'Profile',
+            meta: 'JPG',
+            sizeLabel: '250 kb',
+            icon: Icons.person_rounded,
+          )
+        else
+          _RiderFormField(
+            label: 'Profile Photo URL or File Path',
+            hintText: 'uploads/riders/selfie.jpg',
+            controller: controller,
+            textInputAction: TextInputAction.done,
+            errorText: errorText,
+          ),
       ],
     );
   }
 }
 
-class RiderBankAccountDetailsScreen extends StatelessWidget {
+class RiderBankAccountDetailsScreen extends ConsumerStatefulWidget {
   const RiderBankAccountDetailsScreen({
     super.key,
     this.isUpdate = false,
@@ -543,36 +872,172 @@ class RiderBankAccountDetailsScreen extends StatelessWidget {
   final bool isUpdate;
 
   @override
+  ConsumerState<RiderBankAccountDetailsScreen> createState() =>
+      _RiderBankAccountDetailsScreenState();
+}
+
+class _RiderBankAccountDetailsScreenState
+    extends ConsumerState<RiderBankAccountDetailsScreen> {
+  final TextEditingController _accountNumberController =
+      TextEditingController();
+  final TextEditingController _bankNameController = TextEditingController();
+  final TextEditingController _accountNameController = TextEditingController();
+  bool _hydrated = false;
+  bool _saving = false;
+  Map<String, String> _errors = const <String, String>{};
+  String? _message;
+
+  @override
+  void dispose() {
+    _accountNumberController.dispose();
+    _bankNameController.dispose();
+    _accountNameController.dispose();
+    super.dispose();
+  }
+
+  void _hydrate(RiderOnboarding onboarding) {
+    if (_hydrated) {
+      return;
+    }
+
+    final RiderBankAccount? bank = onboarding.bankAccount;
+    _accountNumberController.text = bank?.accountNumber ?? '';
+    _bankNameController.text = bank?.bankName ?? '';
+    _accountNameController.text = bank?.accountName ?? '';
+    _hydrated = true;
+  }
+
+  Future<void> _submit() async {
+    if (_saving) {
+      return;
+    }
+
+    final String accountNumber = _accountNumberController.text.trim();
+    final String bankName = _bankNameController.text.trim();
+    final String accountName = _accountNameController.text.trim();
+    final Map<String, String> errors = <String, String>{};
+
+    if (accountNumber.isEmpty) {
+      errors['account_number'] = 'Account number is required.';
+    }
+    if (bankName.isEmpty) {
+      errors['bank_name'] = 'Bank name is required.';
+    }
+    if (accountName.isEmpty) {
+      errors['account_name'] = 'Account name is required.';
+    }
+
+    setState(() {
+      _errors = errors;
+      _message = null;
+    });
+    if (errors.isNotEmpty) {
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(riderRepositoryProvider).saveBankAccount(
+            accountNumber: accountNumber,
+            bankName: bankName,
+            accountName: accountName,
+          );
+      ref.invalidate(riderOnboardingProvider);
+      if (mounted) {
+        context.go(widget.isUpdate
+            ? AppRoutes.riderProfile
+            : AppRoutes.riderVehicleSetup);
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = _riderErrorMessage(
+            error,
+            'Unable to save bank account details.',
+          );
+          _errors = _riderFieldErrors(error);
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final bool isUpdate = widget.isUpdate;
+    final AsyncValue<RiderOnboarding> onboarding =
+        ref.watch(riderOnboardingProvider);
+
     return _RiderFlowScaffold(
       key: const ValueKey<String>('rider-bank-account-details-screen'),
       fallbackRoute:
           isUpdate ? AppRoutes.riderProfile : AppRoutes.riderProfilePicture,
       appBarTitle: 'Bank Account Details',
-      bottomLabel: isUpdate ? 'Save changes' : 'Done',
-      onBottomPressed: () => context.go(
-        isUpdate ? AppRoutes.riderProfile : AppRoutes.riderApplicationStatus,
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _RiderFormField(
-            label: 'Account Number',
-            hintText: '0123456789',
-            keyboardType: TextInputType.number,
+      bottomLabel: isUpdate ? 'Save changes' : 'Continue',
+      bottomLoading: _saving,
+      onBottomPressed: _submit,
+      child: onboarding.when(
+        data: (RiderOnboarding value) {
+          _hydrate(value);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (_message != null) ...<Widget>[
+                _RiderInlineMessage(
+                  message: _message!,
+                  icon: Icons.error_outline_rounded,
+                  color: JosiColors.redDark,
+                  backgroundColor: const Color(0xFFFFF1F2),
+                ),
+                const SizedBox(height: 16),
+              ],
+              _RiderFormField(
+                label: 'Account Number',
+                hintText: '0123456789',
+                controller: _accountNumberController,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['account_number'],
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Bank Name',
+                hintText: 'Josi Microfinance Bank',
+                controller: _bankNameController,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['bank_name'],
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Account Name',
+                hintText: 'Jenny Wilson',
+                controller: _accountNameController,
+                textInputAction: TextInputAction.done,
+                errorText: _errors['account_name'],
+              ),
+            ],
+          );
+        },
+        error: (Object error, StackTrace stackTrace) => ErrorState(
+          title: 'Bank account unavailable',
+          message: _riderErrorMessage(
+            error,
+            'Bank account setup could not load.',
           ),
-          SizedBox(height: 14),
-          _RiderFormField(
-              label: 'Bank Name', hintText: 'Josi Microfinance Bank'),
-          SizedBox(height: 14),
-          _RiderFormField(label: 'Account Name', hintText: 'Jenny Wilson'),
-        ],
+        ),
+        loading: () => const SizedBox(
+          height: 220,
+          child: LoadingState(label: 'Loading bank details'),
+        ),
       ),
     );
   }
 }
 
-class RiderVehicleSetupScreen extends StatefulWidget {
+class RiderVehicleSetupScreen extends ConsumerStatefulWidget {
   const RiderVehicleSetupScreen({
     super.key,
     this.isUpdate = false,
@@ -581,18 +1046,138 @@ class RiderVehicleSetupScreen extends StatefulWidget {
   final bool isUpdate;
 
   @override
-  State<RiderVehicleSetupScreen> createState() =>
+  ConsumerState<RiderVehicleSetupScreen> createState() =>
       _RiderVehicleSetupScreenState();
 }
 
-class _RiderVehicleSetupScreenState extends State<RiderVehicleSetupScreen> {
+class _RiderVehicleSetupScreenState
+    extends ConsumerState<RiderVehicleSetupScreen> {
+  final TextEditingController _brandController = TextEditingController();
+  final TextEditingController _modelController = TextEditingController();
+  final TextEditingController _colorController = TextEditingController();
+  final TextEditingController _plateNumberController = TextEditingController();
+  final TextEditingController _registrationNumberController =
+      TextEditingController();
   String _vehicleType = 'Bike';
-  String _city = 'Jersey City, New Jersey';
+  String _city = 'Abuja, FCT';
   bool _confirmed = true;
+  bool _hydrated = false;
+  bool _saving = false;
+  Map<String, String> _errors = const <String, String>{};
+  String? _message;
+
+  @override
+  void dispose() {
+    _brandController.dispose();
+    _modelController.dispose();
+    _colorController.dispose();
+    _plateNumberController.dispose();
+    _registrationNumberController.dispose();
+    super.dispose();
+  }
+
+  void _hydrate(RiderOnboarding onboarding) {
+    if (_hydrated) {
+      return;
+    }
+
+    final Vehicle? vehicle = onboarding.ridingDetails;
+    if (vehicle != null) {
+      _vehicleType = _vehicleTypeLabel(vehicle.type);
+      _brandController.text = vehicle.brand;
+      _modelController.text = vehicle.model;
+      _colorController.text = vehicle.color;
+      _plateNumberController.text = vehicle.plateNumber;
+      _registrationNumberController.text = vehicle.registrationNumber;
+    }
+
+    final RiderProfile? profile = onboarding.profile;
+    if ((profile?.city.trim().isNotEmpty ?? false) ||
+        (profile?.state.trim().isNotEmpty ?? false)) {
+      _city = <String>[profile?.city ?? '', profile?.state ?? '']
+          .where((String value) => value.trim().isNotEmpty)
+          .join(', ');
+    }
+    _hydrated = true;
+  }
+
+  Future<void> _submit() async {
+    if (_saving) {
+      return;
+    }
+
+    final String brand = _brandController.text.trim();
+    final String model = _modelController.text.trim();
+    final String color = _colorController.text.trim();
+    final String plateNumber = _plateNumberController.text.trim();
+    final String registrationNumber = _registrationNumberController.text.trim();
+    final Map<String, String> errors = <String, String>{};
+
+    if (brand.isEmpty) {
+      errors['brand'] = 'Vehicle brand is required.';
+    }
+    if (model.isEmpty) {
+      errors['model'] = 'Vehicle model is required.';
+    }
+    if (color.isEmpty) {
+      errors['color'] = 'Vehicle color is required.';
+    }
+    if (plateNumber.isEmpty) {
+      errors['plate_number'] = 'Plate number is required.';
+    }
+    if (registrationNumber.isEmpty) {
+      errors['registration_number'] = 'Registration number is required.';
+    }
+
+    setState(() {
+      _errors = errors;
+      _message =
+          _confirmed ? null : 'Confirm that these riding details are correct.';
+    });
+    if (errors.isNotEmpty || !_confirmed) {
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(riderRepositoryProvider).saveRidingDetails(
+            vehicleType: _vehicleTypeApiValue(_vehicleType),
+            brand: brand,
+            model: model,
+            color: color,
+            plateNumber: plateNumber,
+            registrationNumber: registrationNumber,
+            city: _cityNameFromLabel(_city),
+            state: _stateFromLabel(_city),
+          );
+      ref.invalidate(riderOnboardingProvider);
+      if (mounted) {
+        context.go(widget.isUpdate
+            ? AppRoutes.riderProfile
+            : AppRoutes.riderApplicationStatus);
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = _riderErrorMessage(
+            error,
+            'Unable to save riding details.',
+          );
+          _errors = _riderFieldErrors(error);
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final bool isUpdate = widget.isUpdate;
+    final AsyncValue<RiderOnboarding> onboarding =
+        ref.watch(riderOnboardingProvider);
 
     return _RiderFlowScaffold(
       key: const ValueKey<String>('rider-vehicle-setup-screen'),
@@ -604,97 +1189,159 @@ class _RiderVehicleSetupScreenState extends State<RiderVehicleSetupScreen> {
           ? null
           : "Don't worry, only you can see your riding data. No one else will be able to see it.",
       bottomLabel: isUpdate ? 'Save changes' : 'Continue',
-      onBottomPressed: () => context.go(
-        isUpdate ? AppRoutes.riderProfile : AppRoutes.riderApplicationStatus,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _RiderSelectField(
-            label: 'Vehicle Type',
-            value: _vehicleType,
-            items: const <String>['Bike', 'Car', 'Tricycle', 'Van'],
-            onChanged: (String? value) =>
-                setState(() => _vehicleType = value ?? _vehicleType),
-          ),
-          const SizedBox(height: 14),
-          const _RiderFormField(label: 'Vehicle Brand', hintText: 'Toyota'),
-          const SizedBox(height: 14),
-          const _RiderFormField(label: 'Vehicle Model', hintText: 'Corolla'),
-          const SizedBox(height: 14),
-          const _RiderFormField(label: 'Vehicle Color', hintText: 'White'),
-          const SizedBox(height: 14),
-          const _RiderFormField(label: 'Plate Number', hintText: 'ABC 482 JK'),
-          const SizedBox(height: 14),
-          const _RiderFormField(
-            label: 'Registration Number',
-            hintText: 'REG-2408-JR',
-          ),
-          const SizedBox(height: 14),
-          _RiderSelectField(
-            label: 'City You Ride In',
-            value: _city,
-            items: const <String>[
-              'Jersey City, New Jersey',
-              'Abuja, FCT',
-              'Lagos, Lagos',
-            ],
-            onChanged: (String? value) =>
-                setState(() => _city = value ?? _city),
-          ),
-          if (!isUpdate) ...<Widget>[
-            const SizedBox(height: 22),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => setState(() => _confirmed = !_confirmed),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: _confirmed ? JosiColors.red : JosiColors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: _confirmed ? JosiColors.red : JosiColors.line),
-                    ),
-                    child: _confirmed
-                        ? const Icon(Icons.check_rounded,
-                            color: JosiColors.white, size: 24)
-                        : null,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        text: 'By Accept, you confirm these ',
-                        children: <InlineSpan>[
+      bottomLoading: _saving,
+      onBottomPressed: _submit,
+      child: onboarding.when(
+        data: (RiderOnboarding value) {
+          _hydrate(value);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (_message != null) ...<Widget>[
+                _RiderInlineMessage(
+                  message: _message!,
+                  icon: Icons.error_outline_rounded,
+                  color: JosiColors.redDark,
+                  backgroundColor: const Color(0xFFFFF1F2),
+                ),
+                const SizedBox(height: 16),
+              ],
+              _RiderSelectField(
+                label: 'Vehicle Type',
+                value: _vehicleType,
+                items: const <String>[
+                  'Bike',
+                  'Motorcycle',
+                  'Car',
+                  'Tricycle',
+                  'Van',
+                ],
+                onChanged: (String? value) =>
+                    setState(() => _vehicleType = value ?? _vehicleType),
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Vehicle Brand',
+                hintText: 'Toyota',
+                controller: _brandController,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['brand'],
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Vehicle Model',
+                hintText: 'Corolla',
+                controller: _modelController,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['model'],
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Vehicle Color',
+                hintText: 'White',
+                controller: _colorController,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['color'],
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Plate Number',
+                hintText: 'ABC 482 JK',
+                controller: _plateNumberController,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['plate_number'],
+              ),
+              const SizedBox(height: 14),
+              _RiderFormField(
+                label: 'Registration Number',
+                hintText: 'REG-2408-JR',
+                controller: _registrationNumberController,
+                textInputAction: TextInputAction.next,
+                errorText: _errors['registration_number'],
+              ),
+              const SizedBox(height: 14),
+              _RiderSelectField(
+                label: 'City You Ride In',
+                value: _city,
+                items: const <String>[
+                  'Abuja, FCT',
+                  'Lagos, Lagos',
+                  'Port Harcourt, Rivers',
+                ],
+                onChanged: (String? value) =>
+                    setState(() => _city = value ?? _city),
+              ),
+              if (!isUpdate) ...<Widget>[
+                const SizedBox(height: 22),
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => setState(() => _confirmed = !_confirmed),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: _confirmed ? JosiColors.red : JosiColors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: _confirmed
+                                  ? JosiColors.red
+                                  : JosiColors.line),
+                        ),
+                        child: _confirmed
+                            ? const Icon(Icons.check_rounded,
+                                color: JosiColors.white, size: 24)
+                            : null,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text.rich(
                           TextSpan(
-                            text: 'Riding Details',
-                            style:
-                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            text: 'By Accept, you confirm these ',
+                            children: <InlineSpan>[
+                              TextSpan(
+                                text: 'Riding Details',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
                                       color: JosiColors.red,
                                       decoration: TextDecoration.underline,
                                       decorationColor: JosiColors.red,
                                     ),
+                              ),
+                              const TextSpan(text: ' are correct.'),
+                            ],
                           ),
-                          const TextSpan(text: ' are correct.'),
-                        ],
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: JosiColors.ink,
+                                    fontSize: 17,
+                                    height: 1.35,
+                                  ),
+                        ),
                       ),
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: JosiColors.ink,
-                            fontSize: 17,
-                            height: 1.35,
-                          ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ],
-        ],
+                ),
+              ],
+            ],
+          );
+        },
+        error: (Object error, StackTrace stackTrace) => ErrorState(
+          title: 'Riding details unavailable',
+          message: _riderErrorMessage(
+            error,
+            'Riding details setup could not load.',
+          ),
+        ),
+        loading: () => const SizedBox(
+          height: 220,
+          child: LoadingState(label: 'Loading riding details'),
+        ),
       ),
     );
   }
@@ -3219,6 +3866,7 @@ class _RiderFlowScaffold extends StatelessWidget {
     this.subtitle,
     this.bottomLabel,
     this.onBottomPressed,
+    this.bottomLoading = false,
   });
 
   final String fallbackRoute;
@@ -3227,6 +3875,7 @@ class _RiderFlowScaffold extends StatelessWidget {
   final String? subtitle;
   final String? bottomLabel;
   final VoidCallback? onBottomPressed;
+  final bool bottomLoading;
   final Widget child;
 
   @override
@@ -3308,6 +3957,7 @@ class _RiderFlowScaffold extends StatelessWidget {
           ? null
           : _RiderFixedBottomAction(
               label: bottomLabel!,
+              isLoading: bottomLoading,
               onPressed: onBottomPressed,
             ),
     );
@@ -3359,10 +4009,12 @@ class _RiderFixedBottomAction extends StatelessWidget {
   const _RiderFixedBottomAction({
     required this.label,
     required this.onPressed,
+    this.isLoading = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -3387,7 +4039,7 @@ class _RiderFixedBottomAction extends StatelessWidget {
             height: 52,
             child: ElevatedButton(
               key: ValueKey<String>('rider-bottom-action-$keyLabel'),
-              onPressed: onPressed,
+              onPressed: isLoading ? null : onPressed,
               style: ElevatedButton.styleFrom(
                 backgroundColor: JosiColors.red,
                 foregroundColor: JosiColors.white,
@@ -3399,7 +4051,15 @@ class _RiderFixedBottomAction extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
               ),
-              child: Text(label),
+              child: isLoading
+                  ? const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: JosiColors.white,
+                      ),
+                    )
+                  : Text(label),
             ),
           ),
         ),
@@ -3412,12 +4072,18 @@ class _RiderFormField extends StatelessWidget {
   const _RiderFormField({
     required this.label,
     required this.hintText,
+    this.controller,
     this.keyboardType,
+    this.textInputAction,
+    this.errorText,
   });
 
   final String label;
   final String hintText;
+  final TextEditingController? controller;
   final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -3434,13 +4100,20 @@ class _RiderFormField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextFormField(
-          initialValue: hintText,
+          controller: controller,
+          initialValue: controller == null ? hintText : null,
           keyboardType: keyboardType,
+          textInputAction: textInputAction,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: JosiColors.softMuted,
                 fontSize: 17,
               ),
           decoration: InputDecoration(
+            hintText: controller == null ? null : hintText,
+            hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: JosiColors.outline,
+                  fontSize: 16,
+                ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             filled: true,
@@ -3455,6 +4128,17 @@ class _RiderFormField extends StatelessWidget {
             ),
           ),
         ),
+        if (errorText != null) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            errorText!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: JosiColors.redDark,
+                  fontSize: 12,
+                  height: 1.2,
+                ),
+          ),
+        ],
       ],
     );
   }
@@ -4568,4 +5252,64 @@ String _paymentLabel(PaymentMethod method) {
     case PaymentMethod.wallet:
       return 'Wallet';
   }
+}
+
+String _riderErrorMessage(Object error, String fallback) {
+  if (error is ApiException) {
+    final Object? first =
+        error.errors.values.isEmpty ? null : error.errors.values.first;
+    if (first is List<Object?> && first.isNotEmpty) {
+      return '${first.first}';
+    }
+    return error.message;
+  }
+
+  return fallback;
+}
+
+Map<String, String> _riderFieldErrors(Object error) {
+  if (error is! ApiException || error.errors.isEmpty) {
+    return const <String, String>{};
+  }
+
+  return error.errors.map((String key, Object? value) {
+    if (value is List && value.isNotEmpty) {
+      return MapEntry<String, String>(key, '${value.first}');
+    }
+    return MapEntry<String, String>(key, '$value');
+  });
+}
+
+String _vehicleTypeApiValue(String label) {
+  return switch (label.toLowerCase().trim()) {
+    'motorcycle' => 'motorcycle',
+    'tricycle' => 'tricycle',
+    'car' => 'car',
+    'van' => 'van',
+    _ => 'bike',
+  };
+}
+
+String _vehicleTypeLabel(String value) {
+  return switch (value.toLowerCase().trim()) {
+    'motorcycle' => 'Motorcycle',
+    'tricycle' => 'Tricycle',
+    'car' => 'Car',
+    'van' => 'Van',
+    _ => 'Bike',
+  };
+}
+
+String _cityNameFromLabel(String label) {
+  return label.split(',').first.trim();
+}
+
+String? _stateFromLabel(String label) {
+  final List<String> parts = label.split(',');
+  if (parts.length < 2) {
+    return null;
+  }
+
+  final String state = parts.skip(1).join(',').trim();
+  return state.isEmpty ? null : state;
 }

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\VehicleType;
 use App\Enums\RiderDocumentType;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\RiderDocument;
+use App\Services\DriverOnboardingService;
 use App\Services\RbacService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -29,6 +31,10 @@ class DriverProfileController extends Controller
             'address' => ['sometimes', 'string', 'max:1000'],
             'city' => ['sometimes', 'string', 'max:100'],
             'state' => ['sometimes', 'string', 'max:100'],
+            'profile_photo' => ['sometimes', 'nullable', 'string', 'max:2048'],
+            'bank_name' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'bank_account_name' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'bank_account_number' => ['sometimes', 'nullable', 'string', 'max:30'],
             'license_number' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
@@ -47,6 +53,54 @@ class DriverProfileController extends Controller
             'application_status' => $profile?->application_status?->value,
             'rejection_reason' => $profile?->rejection_reason,
         ]);
+    }
+
+    public function onboarding(Request $request, DriverOnboardingService $onboardingService)
+    {
+        return ApiResponse::success('Driver onboarding fetched successfully', $onboardingService->snapshot($request->user()));
+    }
+
+    public function saveProfilePicture(Request $request, DriverOnboardingService $onboardingService)
+    {
+        $data = $request->validate([
+            'profile_photo' => ['required', 'string', 'max:2048'],
+        ]);
+
+        return ApiResponse::success('Profile picture saved successfully', $onboardingService->saveProfilePicture($request->user(), $data));
+    }
+
+    public function saveBankAccount(Request $request, DriverOnboardingService $onboardingService)
+    {
+        $data = $request->validate([
+            'bank_name' => ['required', 'string', 'max:100'],
+            'account_name' => ['required', 'string', 'max:150'],
+            'account_number' => ['required', 'string', 'max:30'],
+        ]);
+
+        return ApiResponse::success('Bank account details saved successfully', $onboardingService->saveBankAccount($request->user(), $data));
+    }
+
+    public function saveRidingDetails(Request $request, DriverOnboardingService $onboardingService)
+    {
+        $vehicleId = $request->user()->riderProfile?->vehicles()->oldest()->value('id');
+        $data = $request->validate([
+            'vehicle_type' => ['required', Rule::in(VehicleType::values())],
+            'brand' => ['required', 'string', 'max:100'],
+            'model' => ['required', 'string', 'max:100'],
+            'color' => ['required', 'string', 'max:80'],
+            'plate_number' => ['required', 'string', 'max:50', Rule::unique('vehicles', 'plate_number')->ignore($vehicleId)],
+            'registration_number' => ['nullable', 'string', 'max:100'],
+            'license_number' => ['nullable', 'string', 'max:100'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        return ApiResponse::success('Riding details saved successfully', $onboardingService->saveRidingDetails($request->user(), $data));
+    }
+
+    public function submitOnboarding(Request $request, DriverOnboardingService $onboardingService)
+    {
+        return ApiResponse::success('Rider account information submitted successfully', $onboardingService->submit($request->user()));
     }
 
     public function documents(Request $request)
