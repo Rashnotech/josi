@@ -114,6 +114,8 @@ Required JSON fields: `identifier`, `password`.
 
 `identifier` accepts email or phone. Frontend and mobile clients may also send `email_or_phone`; the request layer normalizes it to `identifier`. The backend detects the user role and returns permissions, profile data, `redirect_to`, `dashboard_url`, and `requires_dashboard`. Pack owner/admin web login should redirect to `dashboard_url`. Five failed attempts lock the identifier plus IP for 5 minutes.
 
+Mobile API login must not boot Filament panel discovery. `AdminPanelProvider` and `FleetPanelProvider` skip panel registration for `/api/*` requests, while still registering normally for `/admin`, `/dashboard`, and console commands. `tests/Architecture/ApiLoginBootContractTest.ps1` verifies an empty login request reaches validation quickly instead of timing out during app boot.
+
 `POST /api/v1/auth/forgot-password`
 
 Required JSON fields: `email_or_phone`.

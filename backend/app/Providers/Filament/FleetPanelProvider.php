@@ -27,6 +27,15 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class FleetPanelProvider extends PanelProvider
 {
+    public function register(): void
+    {
+        if ($this->isApiRequest()) {
+            return;
+        }
+
+        parent::register();
+    }
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -88,5 +97,14 @@ class FleetPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+    }
+
+    private function isApiRequest(): bool
+    {
+        if (! $this->app->bound('request')) {
+            return false;
+        }
+
+        return $this->app['request']->is('api/*');
     }
 }
