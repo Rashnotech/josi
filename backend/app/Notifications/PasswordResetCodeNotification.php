@@ -30,11 +30,11 @@ class PasswordResetCodeNotification extends Notification
     {
         return (new MailMessage())
             ->subject('Your Josi password reset code')
-            ->greeting("Hello {$notifiable->name},")
-            ->line('Use this 6-digit code to reset your password:')
-            ->line($this->code)
-            ->line('This code expires in 10 minutes.')
-            ->line('Expiry time: '.$this->expiresAt->toDateTimeString())
-            ->line('If you did not request this code, ignore this email and keep your account secure.');
+            ->view('emails.password-reset-code', [
+                'name' => $notifiable->name,
+                'code' => $this->code,
+                'expiryNotice' => 'This code expires in 10 minutes.',
+                'expiresAt' => $this->expiresAt->toDateTimeString(),
+            ]);
     }
 }

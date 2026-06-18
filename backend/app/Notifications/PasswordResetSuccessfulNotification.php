@@ -21,10 +21,13 @@ class PasswordResetSuccessfulNotification extends Notification
 
     public function toMail(User $notifiable): MailMessage
     {
+        $message = 'Your Josi account password was changed successfully.';
+
         return (new MailMessage())
             ->subject('Your Josi password was changed')
-            ->greeting("Hello {$notifiable->name},")
-            ->line('Your Josi account password was changed successfully.')
-            ->line('If you did not make this change, contact Josi support immediately.');
+            ->view('emails.password-reset-successful', [
+                'name' => $notifiable->name,
+                'message' => $message,
+            ]);
     }
 }

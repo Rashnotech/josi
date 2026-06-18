@@ -40,6 +40,9 @@ function Assert-Contains([string] $relativePath, [string] $needle, [string] $lab
     'app/Services/RbacService.php',
     'app/Services/PasswordResetService.php',
     'app/Notifications/AccountCreatedNotification.php',
+    'resources/views/emails/account-created.blade.php',
+    'resources/views/emails/password-reset-code.blade.php',
+    'resources/views/emails/password-reset-successful.blade.php',
     'routes/api.php',
     'routes/web.php',
     'docs/auth-api.md'
@@ -70,6 +73,7 @@ Assert-Contains 'app/Http/Requests/Api/V1/Auth/ForgotPasswordRequest.php' 'email
 Assert-Contains 'app/Http/Requests/Api/V1/Auth/ResetPasswordRequest.php' 'required_without:reset_token' 'Reset accepts code without reset token'
 Assert-Contains 'app/Notifications/AccountCreatedNotification.php' 'We will notify you when the next step is available.' 'Rider/courier account email copy'
 Assert-Contains 'app/Notifications/AccountCreatedNotification.php' 'You can now access your dashboard.' 'Pack owner account email copy'
+Assert-Contains 'app/Notifications/AccountCreatedNotification.php' "->view('emails.account-created'" 'Account created mail avoids Markdown renderer'
 Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "->path('admin')" 'Filament admin panel path'
 Assert-Contains 'app/Providers/Filament/FleetPanelProvider.php' "->path('dashboard')" 'Filament fleet panel path'
 Assert-Contains 'app/Models/User.php' 'implements FilamentUser' 'User can access Filament panels'

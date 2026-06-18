@@ -20,12 +20,30 @@ function Assert-Contains([string] $relativePath, [string] $needle, [string] $lab
     }
 }
 
+function Assert-NotContains([string] $relativePath, [string] $needle, [string] $label) {
+    $path = Resolve-RepoPath $relativePath
+    if (-not (Test-Path -LiteralPath $path)) {
+        $failures.Add("Cannot inspect missing file: $relativePath")
+        return
+    }
+
+    $content = Get-Content -LiteralPath $path -Raw
+    if ($content.Contains($needle)) {
+        $failures.Add("$label found forbidden text in $relativePath")
+    }
+}
+
 Assert-Contains 'app/Http/Requests/Api/V1/Auth/RegisterRequest.php' "'email' => ['required', 'email', 'max:255', 'unique:users,email']" 'Registration enforces unique email'
 Assert-Contains 'app/Http/Requests/Api/V1/Auth/RegisterRequest.php' "'phone' => ['required', 'string', 'max:30', 'unique:users,phone']" 'Registration enforces unique phone'
 Assert-Contains 'app/Http/Requests/Api/V1/Auth/RegisterRequest.php' "Rule::in(UserRole::publicRegistrationValues())" 'Registration blocks admin roles'
 Assert-Contains 'app/Http/Requests/Api/V1/Auth/RegisterRequest.php' "'vehicle_count' => ['required_if:role,'.UserRole::PackOwner->value, 'integer', 'min:1', 'max:10000']" 'Pack owner vehicle count validation'
 Assert-Contains 'app/Services/RegistrationService.php' "'password' => Hash::make" 'Registration hashes passwords'
 Assert-Contains 'app/Services/RegistrationService.php' 'sendAccountCreated' 'Registration sends account created notification'
+Assert-Contains 'app/Services/NotificationService.php' 'defer(function ()' 'Registration notifications are deferred after response'
+Assert-Contains 'app/Services/NotificationService.php' 'Auth notification delivery failed.' 'Notification failures are logged instead of breaking registration'
+Assert-NotContains 'app/Services/NotificationService.php' 'true);' 'Deferred registration notifications must not run after failed responses'
+Assert-Contains 'config/mail.php' "env('MAIL_TIMEOUT', 5)" 'SMTP mail has finite timeout'
+Assert-Contains 'app/Notifications/AccountCreatedNotification.php' "->view('emails.account-created'" 'Account created email avoids Markdown rendering'
 Assert-Contains 'app/Services/RegistrationService.php' "'Account created successfully. Continue your rider account setup.'" 'Rider/courier response opens mobile account setup'
 Assert-Contains 'app/Services/RegistrationService.php' "'Account created successfully. Please sign in to access your dashboard.'" 'Pack owner response sends user to login'
 Assert-Contains 'app/Services/RegistrationService.php' '$role->requiresDashboard()' 'Pack owner dashboard branch'

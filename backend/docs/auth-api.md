@@ -353,12 +353,13 @@ This skeleton uses Spatie-compatible `roles`, `permissions`, `model_has_roles`, 
 - Role and permission checks run on the backend.
 - Document uploads store private storage paths, not raw file bytes.
 - Sensitive auth/admin actions are written to `audit_logs`.
+- Auth notification emails are deferred until after the API response, use plain Blade views instead of Markdown rendering, and SMTP uses `MAIL_TIMEOUT` with a 5 second default.
 
 ## Future Improvements
 
 - Add Pest/PHPUnit feature tests once PHP and Composer are available.
 - Add Laravel policies for ownership checks.
 - Add email and phone verification flows.
-- Add queue-backed notifications.
+- Add worker-backed notification queues for production email delivery.
 - Add payment gateway verification adapters behind `PaymentService`.
 - Add Filament resources after the API layer is stable.

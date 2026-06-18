@@ -61,6 +61,9 @@ $requiredFiles = @(
     'app/Notifications/AccountCreatedNotification.php',
     'app/Notifications/PasswordResetCodeNotification.php',
     'app/Notifications/PasswordResetSuccessfulNotification.php',
+    'resources/views/emails/account-created.blade.php',
+    'resources/views/emails/password-reset-code.blade.php',
+    'resources/views/emails/password-reset-successful.blade.php',
     'database/seeders/RbacSeeder.php',
     'docs/auth-api.md'
 )
@@ -111,6 +114,9 @@ Assert-Contains 'database/migrations/2026_06_04_000020_create_model_has_permissi
 Assert-Contains 'app/Services/RbacService.php' "'manage_admins'" 'Super admin permission matrix'
 Assert-Contains 'app/Services/RbacService.php' "'upload_documents'" 'Driver permission matrix'
 Assert-Contains 'app/Services/RbacService.php' "'make_payment'" 'Customer permission matrix'
+Assert-Contains 'app/Services/NotificationService.php' 'defer(function ()' 'Auth notifications run after API response'
+Assert-Contains 'app/Services/NotificationService.php' 'Log::warning' 'Auth notification failures are logged without breaking auth'
+Assert-Contains 'config/mail.php' "env('MAIL_TIMEOUT', 5)" 'SMTP mailer has finite timeout'
 
 if ($failures.Count -gt 0) {
     Write-Host 'Auth API foundation test failed:' -ForegroundColor Red

@@ -50,6 +50,9 @@ Assert-Contains 'app/Http/Controllers/Api/V1/ForgotPasswordController.php' 'If t
 Assert-Contains 'app/Notifications/AccountCreatedNotification.php' 'Account role:' 'Account created email includes role'
 Assert-Contains 'app/Notifications/PasswordResetCodeNotification.php' 'This code expires in 10 minutes.' 'Reset email expiry notice'
 Assert-Contains 'app/Notifications/PasswordResetSuccessfulNotification.php' 'password was changed' 'Password reset success email'
+Assert-Contains 'app/Notifications/AccountCreatedNotification.php' "->view('emails.account-created'" 'Account created email uses plain Blade view'
+Assert-Contains 'app/Notifications/PasswordResetCodeNotification.php' "->view('emails.password-reset-code'" 'Reset code email uses plain Blade view'
+Assert-Contains 'app/Notifications/PasswordResetSuccessfulNotification.php' "->view('emails.password-reset-successful'" 'Reset success email uses plain Blade view'
 
 Assert-Contains 'app/Http/Middleware/RoleMiddleware.php' 'Forbidden.' 'Role middleware returns 403'
 Assert-Contains 'app/Http/Middleware/PermissionMiddleware.php' 'Forbidden.' 'Permission middleware returns 403'
