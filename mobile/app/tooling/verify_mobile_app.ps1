@@ -185,6 +185,8 @@ Assert-Contains "lib/core/repositories/repositories.dart" "/auth/forgot-password
 Assert-Contains "lib/core/repositories/repositories.dart" "/auth/verify-reset-code" "AuthRepository must call Laravel verify reset code."
 Assert-Contains "lib/core/repositories/repositories.dart" "/auth/reset-password" "AuthRepository must call Laravel reset password."
 Assert-Contains "lib/core/repositories/repositories.dart" "/auth/me" "AuthRepository must restore session through Laravel me endpoint."
+Assert-Contains "lib/core/repositories/repositories.dart" "return await _fetchAuthenticatedUser\(token\)" "AuthRepository restore must await /auth/me inside try/catch."
+Assert-Contains "lib/core/providers/app_providers.dart" "const AuthSession\.guest\(\)" "Auth restore failures must leave splash as a guest session."
 Assert-Contains "lib/core/repositories/repositories.dart" "updateProfile" "CustomerRepository must expose customer profile update."
 Assert-Contains "lib/core/repositories/repositories.dart" "/customer/profile" "CustomerRepository must call Laravel customer profile endpoint."
 Assert-Contains "lib/core/repositories/repositories.dart" "createSavedAddress" "CustomerRepository must expose saved address creation."
@@ -314,6 +316,8 @@ Assert-NotContains "lib/core/router/app_router.dart" "customerBookTrip" "Router 
 Assert-NotContains "lib/core/mock/josi_mock_data.dart" "customerBookTrip" "Customer quick actions must route through destination instead of book-trip."
 
 Assert-Contains "test/josi_ride_app_test.dart" "starts on red splash and advances to role selection" "Tests must cover splash-to-role flow."
+Assert-Contains "test/josi_ride_app_test.dart" "restore timeout still advances past splash" "Tests must cover restore timeout escaping the splash screen."
+Assert-Contains "test/auth_repository_test.dart" "session restore clears stale token when auth me times out" "Tests must cover clearing stale tokens when /auth/me times out."
 Assert-Contains "test/josi_ride_app_test.dart" "customer role opens customer login" "Tests must cover customer login."
 Assert-Contains "test/josi_ride_app_test.dart" "customer home map fills screen and where to sheet drags up" "Tests must cover the customer home full-screen map and draggable where-to sheet."
 Assert-Contains "test/josi_ride_app_test.dart" "No trips yet." "Tests must cover the customer home trip empty state."

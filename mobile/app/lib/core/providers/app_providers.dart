@@ -54,10 +54,14 @@ class AuthController extends StateNotifier<AuthSession> {
 
   Future<void> restore() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
-    final JosiUser? restoredUser = await _repository.restoreSession();
-    state = restoredUser == null
-        ? const AuthSession.guest()
-        : AuthSession(isLoading: false, user: restoredUser);
+    try {
+      final JosiUser? restoredUser = await _repository.restoreSession();
+      state = restoredUser == null
+          ? const AuthSession.guest()
+          : AuthSession(isLoading: false, user: restoredUser);
+    } on Object {
+      state = const AuthSession.guest();
+    }
   }
 
   Future<void> signIn(

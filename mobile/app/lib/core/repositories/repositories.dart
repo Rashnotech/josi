@@ -68,7 +68,7 @@ class AuthRepository {
     }
 
     try {
-      return _fetchAuthenticatedUser(token);
+      return await _fetchAuthenticatedUser(token);
     } on Object {
       await _tokens.clearToken();
       return null;

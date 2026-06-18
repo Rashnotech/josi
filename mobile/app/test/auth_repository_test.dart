@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -352,6 +353,33 @@ void main() {
     expect(bodies[4]['current_password'], 'Password123!');
     expect(bodies[4]['password'], 'NewPassword123!');
     expect(bodies[4]['password_confirmation'], 'NewPassword123!');
+  });
+
+  test('session restore clears stale token when auth me times out', () async {
+    final _MemoryTokenStorage storage = _MemoryTokenStorage();
+    await storage.saveToken('stale-token', userRole: 'customer');
+    final AuthRepository repository = AuthRepository(
+      tokenStorage: storage,
+      apiClient: ApiClient(
+        baseUrl: 'https://api.josi.test/api/v1',
+        httpRequest: (
+          Uri uri, {
+          required String method,
+          required Map<String, String> headers,
+          Object? body,
+        }) async {
+          expect(uri.path, '/api/v1/auth/me');
+          expect(headers['Authorization'], 'Bearer stale-token');
+          throw TimeoutException('Auth me timed out');
+        },
+      ),
+    );
+
+    final JosiUser? restoredUser = await repository.restoreSession();
+
+    expect(restoredUser, isNull);
+    expect(await storage.readToken(), isNull);
+    expect(await storage.readUserRole(), isNull);
   });
 }
 

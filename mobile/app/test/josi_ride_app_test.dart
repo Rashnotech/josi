@@ -43,6 +43,22 @@ void main() {
     _expectVisibleInViewport(tester, find.text('POWERED BY JOSI RIDE'));
   });
 
+  testWidgets('restore timeout still advances past splash',
+      (WidgetTester tester) async {
+    await _pumpApp(
+      tester,
+      authRepository: const _RestoreTimeoutAuthRepository(),
+    );
+
+    expect(find.byKey(const ValueKey<String>('splash-screen')), findsOneWidget);
+
+    await _finishSplash(tester);
+
+    expect(find.byKey(const ValueKey<String>('role-selection-screen')),
+        findsOneWidget);
+    expect(find.text('Welcome to Josi Ride'), findsOneWidget);
+  });
+
   testWidgets('guest customer dashboard access redirects to customer login',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
@@ -1294,7 +1310,10 @@ void main() {
   });
 }
 
-Future<void> _pumpApp(WidgetTester tester) async {
+Future<void> _pumpApp(
+  WidgetTester tester, {
+  AuthRepository authRepository = const _FakeAuthRepository(),
+}) async {
   JosiGoogleMap.debugUseStaticMap = true;
   tester.view.physicalSize = const Size(430, 932);
   tester.view.devicePixelRatio = 1;
@@ -1306,7 +1325,7 @@ Future<void> _pumpApp(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        authRepositoryProvider.overrideWithValue(const _FakeAuthRepository()),
+        authRepositoryProvider.overrideWithValue(authRepository),
         customerRepositoryProvider.overrideWithValue(_FakeCustomerRepository()),
         riderRepositoryProvider.overrideWithValue(_FakeRiderRepository()),
         locationServiceProvider.overrideWithValue(
@@ -1410,6 +1429,15 @@ class _FakeAuthRepository extends AuthRepository {
 
   @override
   Future<void> signOut() async {}
+}
+
+class _RestoreTimeoutAuthRepository extends _FakeAuthRepository {
+  const _RestoreTimeoutAuthRepository();
+
+  @override
+  Future<JosiUser?> restoreSession() async {
+    throw const ApiException('The request timed out. Please try again.');
+  }
 }
 
 class _FakeCustomerRepository extends CustomerRepository {
