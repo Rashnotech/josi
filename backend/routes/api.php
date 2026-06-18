@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CustomerAddressController;
 use App\Http\Controllers\Api\V1\CustomerProfileController;
 use App\Http\Controllers\Api\V1\CustomerRegistrationController;
+use App\Http\Controllers\Api\V1\CustomerTripController;
 use App\Http\Controllers\Api\V1\DriverProfileController;
 use App\Http\Controllers\Api\V1\DriverRegistrationController;
 use App\Http\Controllers\Api\V1\FleetProfileController;
@@ -58,6 +60,10 @@ Route::prefix('v1')->group(function () {
     Route::prefix('customer')->middleware(['jwt.auth', 'active', 'role:customer'])->group(function () {
         Route::get('/profile', [CustomerProfileController::class, 'profile']);
         Route::put('/profile', [CustomerProfileController::class, 'update'])->middleware('permission:update_profile');
+        Route::get('/addresses', [CustomerAddressController::class, 'index'])->middleware('permission:view_profile');
+        Route::post('/addresses', [CustomerAddressController::class, 'store'])->middleware('permission:update_profile');
+        Route::get('/trips', [CustomerTripController::class, 'index'])->middleware('permission:view_own_trips');
+        Route::post('/trips', [CustomerTripController::class, 'store'])->middleware('permission:create_trip');
     });
 
     Route::prefix('admin')->middleware(['jwt.auth', 'active', 'role:admin,super_admin'])->group(function () {

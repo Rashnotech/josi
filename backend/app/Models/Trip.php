@@ -18,6 +18,7 @@ class Trip extends Model
         'customer_id',
         'driver_profile_id',
         'vehicle_id',
+        'service_type',
         'pickup_zone_id',
         'destination_zone_id',
         'pickup_address',

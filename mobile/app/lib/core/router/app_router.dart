@@ -144,7 +144,9 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.customerSelectLocation,
         builder: (BuildContext context, GoRouterState state) =>
-            const CustomerSelectLocationScreen(),
+            CustomerSelectLocationScreen(
+          serviceType: state.uri.queryParameters['service'] ?? 'ride',
+        ),
       ),
       GoRoute(
         path: AppRoutes.customerManageAddress,

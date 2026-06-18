@@ -87,6 +87,15 @@ class AppRoutes {
     return Uri(path: resetPassword, queryParameters: query).toString();
   }
 
+  static String customerSelectLocationFor(String serviceType) {
+    final String normalized =
+        serviceType.trim().toLowerCase() == 'courier' ? 'courier' : 'ride';
+    return Uri(
+      path: customerSelectLocation,
+      queryParameters: <String, String>{'service': normalized},
+    ).toString();
+  }
+
   static String riderTripRequestPath(String id) => '/rider/trip-request/$id';
 
   static String riderActiveTripPath(String id) => '/rider/active-trip/$id';

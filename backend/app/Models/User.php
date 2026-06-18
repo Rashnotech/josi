@@ -26,6 +26,7 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'phone',
+        'gender',
         'password',
         'role',
         'status',
@@ -80,6 +81,11 @@ class User extends Authenticatable implements FilamentUser
     public function trips(): HasMany
     {
         return $this->hasMany(Trip::class, 'customer_id');
+    }
+
+    public function savedAddresses(): HasMany
+    {
+        return $this->hasMany(CustomerSavedAddress::class);
     }
 
     public function auditLogs(): HasMany

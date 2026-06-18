@@ -23,6 +23,11 @@ function Assert-Contains([string] $relativePath, [string] $needle, [string] $lab
 Assert-Contains 'app/Services/PricingService.php' 'ActiveZonePriceNotFoundException' 'Pricing error when no active zone price exists'
 Assert-Contains 'app/Services/PricingService.php' "where('is_active', true)" 'Pricing uses active zone prices only'
 Assert-Contains 'app/Services/PricingService.php' 'assertPaymentMethodAllowed' 'Pricing controls allowed payment methods'
+Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' "Rule::in(['ride', 'courier'])" 'Customer trip service type limited to ride/courier'
+Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' 'resolveZonePair' 'Customer trip requests resolve backend zone pricing'
+Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' 'No active customer route pricing is available yet.' 'Customer trip has user-friendly missing-pricing error'
+Assert-Contains 'app/Http/Controllers/Api/V1/CustomerAddressController.php' "'address' => ['required', 'string', 'max:1000']" 'Customer saved addresses require real address text'
+Assert-Contains 'app/Http/Controllers/Api/V1/CustomerProfileController.php' "'gender' => ['sometimes', 'nullable', 'string', 'max:50']" 'Customer profile update accepts gender'
 
 Assert-Contains 'app/Services/PaymentService.php' 'markVerifiedPaid' 'Online payment backend verification path'
 Assert-Contains 'app/Services/PaymentService.php' 'markCashCollected' 'Cash collection path'
@@ -32,6 +37,8 @@ Assert-Contains 'app/Services/CashLedgerService.php' 'createForCashTrip' 'Cash l
 Assert-Contains 'app/Services/CashLedgerService.php' 'TripStatus::Completed' 'Cash ledger requires completed trip'
 Assert-Contains 'app/Services/CashLedgerService.php' 'firstOrCreate' 'Cash ledger avoids duplicate trip ledgers'
 Assert-Contains 'app/Services/CashLedgerService.php' 'recordRemittance' 'Admin remittance update path'
+Assert-Contains 'app/Services/TripService.php' "'service_type'" 'Trip request persists ride/courier service type'
+Assert-Contains 'app/Models/CustomerSavedAddress.php' "'user_id'" 'Saved addresses are owned by customer user'
 
 Assert-Contains 'app/Services/DriverApprovalService.php' 'driver.approved' 'Driver approval audit action'
 Assert-Contains 'app/Services/FleetApprovalService.php' 'fleet.approved' 'Fleet approval audit action'
@@ -46,6 +53,9 @@ Assert-Contains 'database/migrations/2026_06_04_000007_create_vehicle_documents_
 Assert-Contains 'README.md' 'Riders do not control pricing' 'Business rule documented'
 Assert-Contains 'README.md' 'Frontend payment status is not trusted' 'Payment trust rule documented'
 Assert-Contains 'README.md' 'Raw files belong in private storage' 'KYC storage rule documented'
+Assert-Contains 'docs/auth-api.md' 'POST /api/v1/customer/addresses' 'Customer saved address endpoint documented'
+Assert-Contains 'docs/auth-api.md' 'POST /api/v1/customer/trips' 'Customer trip request endpoint documented'
+Assert-Contains 'docs/auth-api.md' '`service_type` accepts `ride` or `courier`' 'Customer trip service type documented'
 
 $tripService = Get-Content -LiteralPath (Resolve-RepoPath 'app/Services/TripService.php') -Raw
 foreach ($forbidden in @('WebSocket', 'broadcast(', 'push notification', 'matching engine')) {

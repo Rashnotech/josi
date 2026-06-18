@@ -177,6 +177,7 @@ class RbacService
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'gender' => $user->gender,
             'role' => $this->roleValue($user),
             'status' => $this->enumValue($user->status),
             'last_login_at' => $user->last_login_at?->toISOString(),

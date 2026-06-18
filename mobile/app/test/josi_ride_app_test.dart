@@ -90,6 +90,7 @@ void main() {
         findsOneWidget);
     expect(find.text('Where to?'), findsOneWidget);
     expect(find.text('Destination'), findsOneWidget);
+    expect(find.text('Courier'), findsOneWidget);
     expect(
         tester.widget<Text>(find.text('Current Location')).style?.fontSize, 14);
     expect(tester.widget<Text>(find.text('Destination')).style?.fontSize, 16);
@@ -867,32 +868,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-        find.byKey(const ValueKey<String>('customer-payment-methods-screen')),
-        findsOneWidget);
-    expect(find.text('Payment Methods'), findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('payment-cash-option')),
-        findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('payment-wallet-option')),
-        findsOneWidget);
-    expect(find.text('Credit & Debit Card'), findsOneWidget);
-    expect(find.text('Add Card'), findsOneWidget);
-    expect(find.text('More Payment Options'), findsNothing);
-    expect(find.text('Paypal'), findsNothing);
-    expect(find.text('Apple Pay'), findsNothing);
-    expect(find.text('Google Pay'), findsNothing);
-    expect(find.text('Confirm Payment'), findsOneWidget);
-    expect(
-        tester
-            .getSize(
-                find.byKey(const ValueKey<String>('confirm-payment-button')))
-            .height,
-        52);
-
-    await tester
-        .tap(find.byKey(const ValueKey<String>('confirm-payment-button')));
-    await tester.pumpAndSettle();
-
-    expect(
         find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
         findsOneWidget);
     expect(find.text('Searching Ride...'), findsOneWidget);
@@ -1003,14 +978,10 @@ void main() {
       (WidgetTester tester) async {
     await _loginAsCustomer(tester);
 
-    await tester
-        .tap(find.byKey(const ValueKey<String>('home-destination-tile')));
-    await tester.pumpAndSettle();
-    await tester
-        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
-    await tester.pumpAndSettle();
-    await tester
-        .tap(find.byKey(const ValueKey<String>('confirm-payment-button')));
+    final BuildContext homeContext = tester.element(
+      find.byKey(const ValueKey<String>('customer-home-screen')),
+    );
+    homeContext.go(AppRoutes.customerSearchingRider);
     await tester.pumpAndSettle();
 
     final BuildContext context = tester.element(
@@ -1095,13 +1066,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-        find.byKey(const ValueKey<String>('customer-payment-methods-screen')),
+        find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
         findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('confirm-trip-summary-card')),
-        findsOneWidget);
-    expect(find.text('Trip summary'), findsOneWidget);
-    expect(find.text('Estimated fare'), findsOneWidget);
-    expect(find.text('To be calculated'), findsOneWidget);
+    expect(find.text('Searching Ride...'), findsOneWidget);
   });
 
   testWidgets('customer profile opens editable profile form',
@@ -1144,6 +1111,18 @@ void main() {
                 find.byKey(const ValueKey<String>('profile-update-button')))
             .height,
         52);
+
+    await tester.enterText(find.byType(TextField).at(0), 'Ada Johnson');
+    await tester.enterText(find.byType(TextField).at(1), '+2348099990000');
+    await tester.enterText(find.byType(TextField).at(2), 'ada@example.com');
+    await tester
+        .tap(find.byKey(const ValueKey<String>('profile-update-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-profile-screen')),
+        findsOneWidget);
+    expect(find.text('Ada Johnson'), findsOneWidget);
+    expect(find.text('Profile updated successfully.'), findsOneWidget);
   });
 
   testWidgets('customer profile manage address opens add address flow',
@@ -1193,11 +1172,20 @@ void main() {
             .height,
         52);
 
+    await tester.enterText(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('complete-address-field')),
+        matching: find.byType(TextField),
+      ),
+      '12 Jabi Lake Road, Abuja',
+    );
     await tester.tap(find.byKey(const ValueKey<String>('save-address-button')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('customer-manage-address-screen')),
         findsOneWidget);
+    expect(find.text('12 Jabi Lake Road, Abuja'), findsOneWidget);
+    expect(find.text('Address saved successfully.'), findsOneWidget);
   });
 
   testWidgets('customer profile opens payment methods instead of wallet',
@@ -1319,8 +1307,7 @@ Future<void> _pumpApp(WidgetTester tester) async {
     ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(const _FakeAuthRepository()),
-        customerRepositoryProvider
-            .overrideWithValue(const _FakeCustomerRepository()),
+        customerRepositoryProvider.overrideWithValue(_FakeCustomerRepository()),
         riderRepositoryProvider.overrideWithValue(_FakeRiderRepository()),
         locationServiceProvider.overrideWithValue(
           _FakeLocationService(onCall: () => _mockLocationCall?.call()),
@@ -1426,20 +1413,101 @@ class _FakeAuthRepository extends AuthRepository {
 }
 
 class _FakeCustomerRepository extends CustomerRepository {
-  const _FakeCustomerRepository();
+  _FakeCustomerRepository();
+
+  JosiUser _profile = JosiMockData.customer;
+  final List<CustomerSavedAddress> _addresses = <CustomerSavedAddress>[];
+  final List<Trip> _trips = <Trip>[];
 
   @override
-  Future<JosiUser> profile() async => JosiMockData.customer;
+  Future<JosiUser> profile() async => _profile;
+
+  @override
+  Future<JosiUser> updateProfile({
+    required String name,
+    required String phone,
+    required String email,
+    String? gender,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final List<String> nameParts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((String value) => value.isNotEmpty)
+        .toList();
+    _profile = JosiUser(
+      id: _profile.id,
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      role: _profile.role,
+      city: _profile.city,
+      firstName: nameParts.isEmpty ? null : nameParts.first,
+      lastName: nameParts.length > 1 ? nameParts.skip(1).join(' ') : null,
+      gender: gender == 'Select' ? null : gender,
+    );
+    return _profile;
+  }
 
   @override
   Future<List<String>> recentLocations() async => const <String>[];
 
   @override
   Future<List<CustomerSavedAddress>> savedAddresses() async =>
-      const <CustomerSavedAddress>[];
+      List<CustomerSavedAddress>.unmodifiable(_addresses);
 
   @override
-  Future<List<Trip>> trips() async => const <Trip>[];
+  Future<CustomerSavedAddress> createSavedAddress({
+    required String label,
+    required String address,
+    String? floor,
+    String? landmark,
+    double? latitude,
+    double? longitude,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final CustomerSavedAddress savedAddress = CustomerSavedAddress(
+      id: '${_addresses.length + 1}',
+      title: label,
+      address: address.trim(),
+      floor: floor?.trim(),
+      landmark: landmark?.trim(),
+    );
+    _addresses.add(savedAddress);
+    return savedAddress;
+  }
+
+  @override
+  Future<List<Trip>> trips() async => List<Trip>.unmodifiable(_trips);
+
+  @override
+  Future<Trip> requestTrip({
+    required String pickupAddress,
+    required double pickupLatitude,
+    required double pickupLongitude,
+    required String destinationAddress,
+    required double destinationLatitude,
+    required double destinationLongitude,
+    String paymentMethod = 'cash',
+    String serviceType = 'ride',
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final Trip trip = Trip(
+      id: '${_trips.length + 1}',
+      pickup: pickupAddress.trim(),
+      destination: destinationAddress.trim(),
+      fare: 'To be calculated',
+      status: TripStatus.searching,
+      paymentMethod: PaymentMethod.cash,
+      dateLabel: 'Now',
+      riderName: '',
+      customerName: _profile.displayName,
+      distance: '',
+      duration: '',
+    );
+    _trips.add(trip);
+    return trip;
+  }
 }
 
 class _FakeRiderRepository extends RiderRepository {

@@ -36,6 +36,8 @@ $requiredFiles = @(
     'app/Http/Controllers/Api/V1/DriverProfileController.php',
     'app/Http/Controllers/Api/V1/FleetProfileController.php',
     'app/Http/Controllers/Api/V1/CustomerProfileController.php',
+    'app/Http/Controllers/Api/V1/CustomerAddressController.php',
+    'app/Http/Controllers/Api/V1/CustomerTripController.php',
     'app/Http/Controllers/Api/V1/AdminUserController.php',
     'app/Http/Requests/Api/V1/Auth/RegisterDriverRequest.php',
     'app/Http/Requests/Api/V1/Auth/RegisterFleetRequest.php',
@@ -52,6 +54,7 @@ $requiredFiles = @(
     'app/Services/LoginAttemptService.php',
     'app/Services/RbacService.php',
     'app/Services/NotificationService.php',
+    'app/Models/CustomerSavedAddress.php',
     'app/Http/Middleware/JwtAuthMiddleware.php',
     'app/Http/Middleware/RoleMiddleware.php',
     'app/Http/Middleware/PermissionMiddleware.php',
@@ -84,6 +87,11 @@ $routes = @{
     'POST /api/v1/auth/forgot-password' = "Route::post('/forgot-password'"
     'POST /api/v1/auth/verify-reset-code' = "Route::post('/verify-reset-code'"
     'POST /api/v1/auth/reset-password' = "Route::post('/reset-password'"
+    'PUT /api/v1/customer/profile' = "Route::put('/profile', [CustomerProfileController::class, 'update']"
+    'GET /api/v1/customer/addresses' = "Route::get('/addresses', [CustomerAddressController::class, 'index']"
+    'POST /api/v1/customer/addresses' = "Route::post('/addresses', [CustomerAddressController::class, 'store']"
+    'GET /api/v1/customer/trips' = "Route::get('/trips', [CustomerTripController::class, 'index']"
+    'POST /api/v1/customer/trips' = "Route::post('/trips', [CustomerTripController::class, 'store']"
     'POST /api/v1/admin/users/create-admin' = "Route::post('/users/create-admin'"
 }
 
@@ -94,12 +102,18 @@ foreach ($entry in $routes.GetEnumerator()) {
 Assert-Contains 'routes/api.php' "'jwt.auth'" 'Protected auth route middleware'
 Assert-Contains 'routes/api.php' "'role:rider,courier,driver'" 'Driver role route protection'
 Assert-Contains 'routes/api.php' "'role:pack_owner,fleet_owner'" 'Fleet owner role route protection'
+Assert-Contains 'routes/api.php' "'role:customer'" 'Customer route protection'
+Assert-Contains 'routes/api.php' "'permission:create_trip'" 'Customer trip create permission route protection'
+Assert-Contains 'routes/api.php' "'permission:update_profile'" 'Customer profile/address update permission route protection'
 Assert-Contains 'routes/api.php' "'role:super_admin'" 'Super admin create-admin route protection'
 Assert-Contains 'routes/api.php' "'permission:manage_admins'" 'Create admin permission route protection'
 
 Assert-Contains 'app/Models/User.php' 'use HasApiTokens' 'Sanctum HasApiTokens on User model'
 Assert-Contains 'app/Models/User.php' 'password_reset_code' 'User reset code fillable/hidden'
 Assert-Contains 'app/Models/User.php' 'last_login_at' 'User last login cast/fillable'
+Assert-Contains 'app/Models/User.php' 'function savedAddresses' 'User saved addresses relationship'
+Assert-Contains 'app/Models/User.php' "'gender'" 'User gender fillable'
+Assert-Contains 'app/Models/Trip.php' "'service_type'" 'Trip service type fillable'
 
 Assert-Contains 'database/migrations/2026_06_04_000001_create_users_table.php' "string('phone')->unique()" 'Phone unique in users migration'
 Assert-Contains 'database/migrations/2026_06_04_000001_create_users_table.php' 'phone_verified_at' 'Phone verified timestamp'
@@ -110,10 +124,17 @@ Assert-Contains 'database/migrations/2026_06_04_000017_create_permissions_table.
 Assert-Contains 'database/migrations/2026_06_04_000018_create_permission_role_table.php' "Schema::create('role_has_permissions'" 'Spatie role permission pivot'
 Assert-Contains 'database/migrations/2026_06_04_000019_create_role_user_table.php' "Schema::create('model_has_roles'" 'Spatie model roles pivot'
 Assert-Contains 'database/migrations/2026_06_04_000020_create_model_has_permissions_table.php' "Schema::create('model_has_permissions'" 'Spatie model permissions pivot'
+Assert-Contains 'database/migrations/2026_06_18_000001_create_customer_saved_addresses_table.php' "Schema::create('customer_saved_addresses'" 'Customer saved addresses table'
+Assert-Contains 'database/migrations/2026_06_18_000002_add_gender_to_users_table.php' "string('gender'" 'Customer profile gender column'
+Assert-Contains 'database/migrations/2026_06_18_000003_add_service_type_to_trips_table.php' "string('service_type'" 'Customer trip service type column'
 
 Assert-Contains 'app/Services/RbacService.php' "'manage_admins'" 'Super admin permission matrix'
 Assert-Contains 'app/Services/RbacService.php' "'upload_documents'" 'Driver permission matrix'
 Assert-Contains 'app/Services/RbacService.php' "'make_payment'" 'Customer permission matrix'
+Assert-Contains 'app/Services/RbacService.php' "'gender' =>" 'Auth/customer payload includes gender'
+Assert-Contains 'app/Http/Controllers/Api/V1/CustomerAddressController.php' "'address' => ['required'" 'Customer address validates required address'
+Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' "'service_type' =>" 'Customer trip validates service type'
+Assert-Contains 'app/Services/TripService.php' "'service_type'" 'Trip service persists service type'
 Assert-Contains 'app/Services/NotificationService.php' 'defer(function ()' 'Auth notifications run after API response'
 Assert-Contains 'app/Services/NotificationService.php' 'Log::warning' 'Auth notification failures are logged without breaking auth'
 Assert-Contains 'config/mail.php' "env('MAIL_TIMEOUT', 5)" 'SMTP mailer has finite timeout'

@@ -242,6 +242,16 @@ All require role `customer`.
 
 - `GET /api/v1/customer/profile`
 - `PUT /api/v1/customer/profile`
+- `GET /api/v1/customer/addresses`
+- `POST /api/v1/customer/addresses`
+- `GET /api/v1/customer/trips`
+- `POST /api/v1/customer/trips`
+
+Customer profile update accepts partial JSON fields: `name`, `email`, `phone`, and `gender`.
+
+Customer saved address create requires `label` and `address`. Optional JSON fields: `floor`, `landmark`, `latitude`, `longitude`, `is_default`.
+
+Customer trip request requires `pickup_address` and `destination_address`. Mobile clients should also send `pickup_latitude`, `pickup_longitude`, `destination_latitude`, `destination_longitude`, `payment_method`, and `service_type`. `service_type` accepts `ride` or `courier`. If zone IDs are not provided, the API resolves the closest active priced zone pair from backend zone data.
 
 ## Admin Endpoints
 

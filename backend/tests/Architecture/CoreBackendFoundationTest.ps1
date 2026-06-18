@@ -37,6 +37,7 @@ $requiredFiles = @(
     'app/Models/Zone.php',
     'app/Models/ZonePrice.php',
     'app/Models/Trip.php',
+    'app/Models/CustomerSavedAddress.php',
     'app/Models/Payment.php',
     'app/Models/RiderCashLedger.php',
     'app/Models/AuditLog.php',
@@ -95,11 +96,12 @@ foreach ($entry in $enumCases.GetEnumerator()) {
 }
 
 $relationships = @{
-    'app/Models/User.php' = @('function riderProfile', 'function fleet', 'function trips', 'function auditLogs')
+    'app/Models/User.php' = @('function riderProfile', 'function fleet', 'function trips', 'function savedAddresses', 'function auditLogs')
     'app/Models/RiderProfile.php' = @('function user', 'function fleet', 'function vehicles', 'function riderDocuments', 'function trips', 'function riderCashLedgers')
     'app/Models/Fleet.php' = @('function user', 'function riderProfiles', 'function driverProfiles', 'function vehicles', 'function fleetDocuments')
     'app/Models/Vehicle.php' = @('function fleet', 'function riderProfile', 'function driverProfile', 'function vehicleDocuments', 'function trips')
     'app/Models/Trip.php' = @('function customer', 'function riderProfile', 'function vehicle', 'function pickupZone', 'function destinationZone', 'function payment', 'function riderCashLedger')
+    'app/Models/CustomerSavedAddress.php' = @('function user')
     'app/Models/AuditLog.php' = @('function user', 'function auditable')
 }
 
@@ -120,6 +122,7 @@ $tables = @(
     'zones',
     'zone_prices',
     'trips',
+    'customer_saved_addresses',
     'payments',
     'rider_cash_ledgers',
     'audit_logs',
@@ -141,6 +144,11 @@ foreach ($table in $tables) {
 }
 
 Assert-Contains 'database/migrations/2026_06_04_000010_create_trips_table.php' "foreignId('driver_profile_id')" 'driver_profile_id FK'
+Assert-Contains 'database/migrations/2026_06_18_000001_create_customer_saved_addresses_table.php' "foreignId('user_id')->constrained()->cascadeOnDelete()" 'customer saved addresses user FK'
+Assert-Contains 'database/migrations/2026_06_18_000002_add_gender_to_users_table.php' "string('gender', 50)->nullable()" 'customer profile gender column'
+Assert-Contains 'database/migrations/2026_06_18_000003_add_service_type_to_trips_table.php' "string('service_type', 30)->default('ride')" 'trip service type column'
+Assert-Contains 'app/Models/CustomerSavedAddress.php' "'is_default' => 'boolean'" 'customer saved address boolean cast'
+Assert-Contains 'app/Models/Trip.php' "'service_type'" 'Trip service type fillable'
 Assert-Contains 'database/migrations/2026_06_04_000011_create_payments_table.php' "payment_reference" 'payment_reference index/unique column'
 Assert-Contains 'database/migrations/2026_06_04_000013_create_audit_logs_table.php' 'nullableMorphs' 'audit morph columns'
 Assert-Contains 'database/seeders/JosiMvpSeeder.php' 'superadmin@josi.test' 'super admin seed'

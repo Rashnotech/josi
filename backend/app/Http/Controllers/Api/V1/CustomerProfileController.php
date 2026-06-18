@@ -25,6 +25,7 @@ class CustomerProfileController extends Controller
             'name' => ['sometimes', 'string', 'max:150'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->getKey())],
             'phone' => ['sometimes', 'string', 'max:30', Rule::unique('users', 'phone')->ignore($user->getKey())],
+            'gender' => ['sometimes', 'nullable', 'string', 'max:50'],
         ]);
 
         $user->update($data);

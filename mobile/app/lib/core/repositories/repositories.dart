@@ -369,6 +369,7 @@ class AuthRepository {
         profile?['application_status'] ?? user['application_status'],
       ),
       city: _string(user['city']) ?? _string(profile?['city']) ?? 'Abuja',
+      gender: _string(user['gender']) ?? _string(profile?['gender']),
     );
   }
 
@@ -450,6 +451,28 @@ class CustomerRepository {
     return AuthRepository.userFromPayload(data['user']);
   }
 
+  Future<JosiUser> updateProfile({
+    required String name,
+    required String phone,
+    required String email,
+    String? gender,
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.put(
+      '/customer/profile',
+      token: token,
+      body: <String, Object?>{
+        'name': name.trim(),
+        'phone': phone.trim(),
+        'email': email.trim(),
+        if (gender != null && gender.trim().isNotEmpty && gender != 'Select')
+          'gender': gender.trim(),
+      },
+    );
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    return AuthRepository.userFromPayload(data['user']);
+  }
+
   Future<List<QuickAction>> quickActions() async =>
       JosiMockData.customerActions;
 
@@ -460,15 +483,97 @@ class CustomerRepository {
   }
 
   Future<List<CustomerSavedAddress>> savedAddresses() async {
-    await _requireToken();
-    // No backend endpoint exists yet for customer saved addresses.
-    return const <CustomerSavedAddress>[];
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/customer/addresses', token: token);
+    final Object? addresses = ApiClient.dataFromEnvelope(envelope)['addresses'];
+    if (addresses is! List) {
+      return const <CustomerSavedAddress>[];
+    }
+
+    return addresses
+        .whereType<Map>()
+        .map((Map<Object?, Object?> value) => _addressFromPayload(value))
+        .toList();
+  }
+
+  Future<CustomerSavedAddress> createSavedAddress({
+    required String label,
+    required String address,
+    String? floor,
+    String? landmark,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/customer/addresses',
+      token: token,
+      body: <String, Object?>{
+        'label': label.trim(),
+        'address': address.trim(),
+        if (floor?.trim().isNotEmpty ?? false) 'floor': floor!.trim(),
+        if (landmark?.trim().isNotEmpty ?? false) 'landmark': landmark!.trim(),
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      },
+    );
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? addressPayload = _mapFrom(data['address']);
+    if (addressPayload == null) {
+      throw const ApiException('Saved address was not returned by the API.');
+    }
+
+    return _addressFromPayload(addressPayload);
   }
 
   Future<List<Trip>> trips() async {
-    await _requireToken();
-    // No customer trip listing endpoint is exposed in routes/api.php yet.
-    return const <Trip>[];
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/customer/trips', token: token);
+    final Object? trips = ApiClient.dataFromEnvelope(envelope)['trips'];
+    if (trips is! List) {
+      return const <Trip>[];
+    }
+
+    return trips
+        .whereType<Map>()
+        .map((Map<Object?, Object?> value) => _tripFromPayload(value))
+        .toList();
+  }
+
+  Future<Trip> requestTrip({
+    required String pickupAddress,
+    required double pickupLatitude,
+    required double pickupLongitude,
+    required String destinationAddress,
+    required double destinationLatitude,
+    required double destinationLongitude,
+    String paymentMethod = 'cash',
+    String serviceType = 'ride',
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/customer/trips',
+      token: token,
+      body: <String, Object?>{
+        'pickup_address': pickupAddress.trim(),
+        'pickup_latitude': pickupLatitude,
+        'pickup_longitude': pickupLongitude,
+        'destination_address': destinationAddress.trim(),
+        'destination_latitude': destinationLatitude,
+        'destination_longitude': destinationLongitude,
+        'payment_method': paymentMethod,
+        'service_type': serviceType,
+      },
+    );
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
+    if (tripPayload == null) {
+      throw const ApiException('Trip was not returned by the API.');
+    }
+
+    return _tripFromPayload(tripPayload);
   }
 
   Future<String> _requireToken() async {
@@ -483,6 +588,91 @@ class CustomerRepository {
     }
 
     return token;
+  }
+
+  static CustomerSavedAddress _addressFromPayload(Map<Object?, Object?> value) {
+    final Map<String, Object?> payload = value.map(
+      (Object? key, Object? fieldValue) =>
+          MapEntry<String, Object?>('$key', fieldValue),
+    );
+    return CustomerSavedAddress(
+      id: _string(payload['id']),
+      title:
+          _string(payload['label']) ?? _string(payload['title']) ?? 'Address',
+      address: _string(payload['address']) ?? '',
+      floor: _string(payload['floor']),
+      landmark: _string(payload['landmark']),
+    );
+  }
+
+  static Trip _tripFromPayload(Map<Object?, Object?> value) {
+    final Map<String, Object?> payload = value.map(
+      (Object? key, Object? fieldValue) =>
+          MapEntry<String, Object?>('$key', fieldValue),
+    );
+    final String destination = _string(payload['destination_address']) ??
+        _string(payload['destination']) ??
+        'Destination';
+    return Trip(
+      id: _string(payload['id']) ?? '',
+      pickup: _string(payload['pickup_address']) ?? 'Pickup',
+      destination: destination,
+      fare: _fareLabel(payload['amount']),
+      status: _tripStatus(payload['trip_status']),
+      paymentMethod: _paymentMethod(payload['payment_method']),
+      dateLabel: _string(payload['requested_at']) ?? '',
+      riderName: _string(payload['rider_name']) ?? '',
+      customerName: _string(payload['customer_name']) ?? '',
+      distance: _string(payload['distance']) ?? '',
+      duration: _string(payload['duration']) ?? '',
+    );
+  }
+
+  static String _fareLabel(Object? value) {
+    final double? amount =
+        value is num ? value.toDouble() : double.tryParse(_string(value) ?? '');
+    if (amount == null) {
+      return 'To be calculated';
+    }
+
+    return 'NGN ${amount.toStringAsFixed(0)}';
+  }
+
+  static TripStatus _tripStatus(Object? value) {
+    return switch (_string(value)) {
+      'completed' => TripStatus.completed,
+      'cancelled' => TripStatus.cancelled,
+      'requested' || 'assigned' => TripStatus.searching,
+      _ => TripStatus.active,
+    };
+  }
+
+  static PaymentMethod _paymentMethod(Object? value) {
+    return switch (_string(value)) {
+      'wallet' => PaymentMethod.wallet,
+      'card' || 'transfer' || 'online' => PaymentMethod.online,
+      _ => PaymentMethod.cash,
+    };
+  }
+
+  static Map<String, Object?>? _mapFrom(Object? value) {
+    if (value is Map) {
+      return value.map(
+        (Object? key, Object? fieldValue) =>
+            MapEntry<String, Object?>('$key', fieldValue),
+      );
+    }
+
+    return null;
+  }
+
+  static String? _string(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final String stringValue = '$value'.trim();
+    return stringValue.isEmpty ? null : stringValue;
   }
 }
 

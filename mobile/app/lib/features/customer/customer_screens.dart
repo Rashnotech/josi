@@ -13,6 +13,7 @@ import '../../core/map/route_providers.dart';
 import '../../core/map/route_service.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
+import '../../core/services/api_client.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 import '../../core/widgets/josi_google_map.dart';
@@ -460,7 +461,21 @@ class _WhereToPanel extends StatelessWidget {
                   subtitle: 'Enter Destination',
                   asset: AppAssets.location,
                   isPrimary: true,
-                  onTap: () => context.go(AppRoutes.customerSelectLocation),
+                  onTap: () => context.go(
+                    AppRoutes.customerSelectLocationFor('ride'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _HomePlaceTile(
+                  key: const ValueKey<String>('home-courier-tile'),
+                  title: 'Courier',
+                  subtitle: 'Send a package',
+                  asset: AppAssets.bike,
+                  onTap: () => context.go(
+                    AppRoutes.customerSelectLocationFor('courier'),
+                  ),
                 ),
               ),
             ],
@@ -683,7 +698,12 @@ class _SavedPlaceButton extends StatelessWidget {
 }
 
 class CustomerSelectLocationScreen extends ConsumerStatefulWidget {
-  const CustomerSelectLocationScreen({super.key});
+  const CustomerSelectLocationScreen({
+    super.key,
+    this.serviceType = 'ride',
+  });
+
+  final String serviceType;
 
   @override
   ConsumerState<CustomerSelectLocationScreen> createState() =>
@@ -703,6 +723,7 @@ class _CustomerSelectLocationScreenState
   bool _isLocating = false;
   bool _isFetchingPickupAddress = false;
   bool _isFetchingDestinationAddress = false;
+  bool _isRequestingTrip = false;
   String? _mapErrorMessage;
   bool _isPermissionPermanentlyDenied = false;
   String? _lastCameraFitKey;
@@ -918,9 +939,70 @@ class _CustomerSelectLocationScreenState
     });
   }
 
+  Future<void> _confirmTrip() async {
+    if (_isRequestingTrip) {
+      return;
+    }
+
+    final String pickupAddress = _pickupController.text.trim();
+    final String destinationAddress = _destinationController.text.trim();
+    if (pickupAddress.isEmpty ||
+        pickupAddress == 'Fetching location address...' ||
+        destinationAddress.isEmpty ||
+        destinationAddress == 'Fetching location address...') {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Enter a pickup and destination before confirming.'),
+          ),
+        );
+      return;
+    }
+
+    setState(() => _isRequestingTrip = true);
+    try {
+      final Trip trip = await ref.read(customerRepositoryProvider).requestTrip(
+            pickupAddress: pickupAddress,
+            pickupLatitude: _selectedPickup.latitude,
+            pickupLongitude: _selectedPickup.longitude,
+            destinationAddress: destinationAddress,
+            destinationLatitude: _selectedDestination.latitude,
+            destinationLongitude: _selectedDestination.longitude,
+            serviceType: _normalizedCustomerServiceType(widget.serviceType),
+          );
+      ref.read(activeCustomerTripProvider.notifier).state = trip;
+      ref.invalidate(customerTripsProvider);
+      ref.invalidate(customerRecentLocationsProvider);
+      if (mounted) {
+        context.go(AppRoutes.customerSearchingRider);
+      }
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(_customerErrorMessage(
+              error,
+              'Unable to request trip. Please try again.',
+            )),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _isRequestingTrip = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<RouteDetails> route = ref.watch(selectedTripRouteProvider);
+    final AsyncValue<List<CustomerSavedAddress>> savedAddresses =
+        ref.watch(customerSavedAddressesProvider);
     final RouteDetails? routeDetails = route.value;
     _fitCameraAfterRoute(routeDetails);
 
@@ -960,6 +1042,7 @@ class _CustomerSelectLocationScreenState
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 5, 24, 0),
               child: _DestinationHeader(
+                title: _customerServiceTitle(widget.serviceType),
                 onBack: () => context.go(AppRoutes.customerHome),
               ),
             ),
@@ -1027,14 +1110,33 @@ class _CustomerSelectLocationScreenState
                           onTap: () => context.go(AppRoutes.customerProfile),
                         ),
                         const SizedBox(height: 18),
-                        for (final String location in const <String>[
-                          '2118 Thornridge Cir. Syracuse, C...',
-                          '4517 Washington Ave. Manche...',
-                          '2715 Ash Dr. San Jose, South Da...',
-                        ]) ...<Widget>[
-                          _RecentDestinationTile(location: location),
-                          const SizedBox(height: 12),
-                        ],
+                        savedAddresses.when(
+                          data: (List<CustomerSavedAddress> values) => values
+                                  .isEmpty
+                              ? const _HomeEmptyState(
+                                  message: 'No saved addresses yet.',
+                                )
+                              : Column(
+                                  children: values
+                                      .map(
+                                        (CustomerSavedAddress address) =>
+                                            Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12),
+                                          child: _RecentDestinationTile(
+                                            location: address.address,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                          error: (Object error, StackTrace stackTrace) =>
+                              const _HomeEmptyState(
+                            message: 'No saved addresses yet.',
+                          ),
+                          loading: () =>
+                              const _HomeLoadingState(label: 'Loading places'),
+                        ),
                       ],
                     ),
                   ),
@@ -1045,10 +1147,48 @@ class _CustomerSelectLocationScreenState
         ],
       ),
       bottomNavigationBar: _DestinationBottomBar(
-        onConfirm: () => context.go(AppRoutes.customerConfirmTrip),
+        isLoading: _isRequestingTrip,
+        onConfirm: _confirmTrip,
       ),
     );
   }
+}
+
+String _normalizedCustomerServiceType(String value) {
+  return value.trim().toLowerCase() == 'courier' ? 'courier' : 'ride';
+}
+
+String _customerServiceTitle(String value) {
+  return _normalizedCustomerServiceType(value) == 'courier'
+      ? 'Courier'
+      : 'Destination';
+}
+
+String _customerErrorMessage(Object error, String fallback) {
+  if (error is ApiException) {
+    final Object? first =
+        error.errors.values.isEmpty ? null : error.errors.values.first;
+    if (first is List<Object?> && first.isNotEmpty) {
+      return '${first.first}';
+    }
+    return error.message;
+  }
+
+  return fallback;
+}
+
+Map<String, String> _customerFieldErrors(Object error) {
+  if (error is! ApiException || error.errors.isEmpty) {
+    return const <String, String>{};
+  }
+
+  return error.errors.map((String key, Object? value) {
+    if (value is List && value.isNotEmpty) {
+      return MapEntry<String, String>(key, '${value.first}');
+    }
+
+    return MapEntry<String, String>(key, '$value');
+  });
 }
 
 Set<Polyline> _routePolylines(
@@ -1210,9 +1350,13 @@ class _LastTripTile extends StatelessWidget {
 }
 
 class _DestinationHeader extends StatelessWidget {
-  const _DestinationHeader({required this.onBack});
+  const _DestinationHeader({
+    required this.onBack,
+    this.title = 'Destination',
+  });
 
   final VoidCallback onBack;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -1229,7 +1373,7 @@ class _DestinationHeader extends StatelessWidget {
         Expanded(
           child: Text(
             key: const ValueKey<String>('destination-screen-title'),
-            'Destination',
+            title,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: JosiColors.redDark,
@@ -1845,9 +1989,13 @@ class _DestinationListCard extends StatelessWidget {
 }
 
 class _DestinationBottomBar extends StatelessWidget {
-  const _DestinationBottomBar({required this.onConfirm});
+  const _DestinationBottomBar({
+    required this.onConfirm,
+    this.isLoading = false,
+  });
 
   final VoidCallback onConfirm;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -1863,7 +2011,7 @@ class _DestinationBottomBar extends StatelessWidget {
               height: 52,
               child: ElevatedButton(
                 key: const ValueKey<String>('destination-confirm-button'),
-                onPressed: onConfirm,
+                onPressed: isLoading ? null : onConfirm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: JosiColors.red,
                   foregroundColor: JosiColors.white,
@@ -1876,7 +2024,15 @@ class _DestinationBottomBar extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                 ),
-                child: const Text('Confirm'),
+                child: isLoading
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: JosiColors.white,
+                        ),
+                      )
+                    : const Text('Confirm'),
               ),
             ),
           ),
@@ -5235,7 +5391,7 @@ class CustomerManageAddressScreen extends ConsumerWidget {
                             return const EmptyState(
                               title: 'No saved addresses yet.',
                               message:
-                                  'Saved customer addresses will appear here when the backend endpoint is available.',
+                                  'Tap Add New Address to save your first address.',
                               icon: Icons.location_on_outlined,
                             );
                           }
@@ -5257,7 +5413,7 @@ class CustomerManageAddressScreen extends ConsumerWidget {
                             const EmptyState(
                           title: 'No saved addresses yet.',
                           message:
-                              'Saved customer addresses will appear here when the backend endpoint is available.',
+                              'Saved customer addresses could not be loaded.',
                           icon: Icons.location_on_outlined,
                         ),
                         loading: () =>
@@ -5500,16 +5656,30 @@ enum _AddAddressLabel {
   final String label;
 }
 
-class CustomerAddAddressScreen extends StatefulWidget {
+class CustomerAddAddressScreen extends ConsumerStatefulWidget {
   const CustomerAddAddressScreen({super.key});
 
   @override
-  State<CustomerAddAddressScreen> createState() =>
+  ConsumerState<CustomerAddAddressScreen> createState() =>
       _CustomerAddAddressScreenState();
 }
 
-class _CustomerAddAddressScreenState extends State<CustomerAddAddressScreen> {
+class _CustomerAddAddressScreenState
+    extends ConsumerState<CustomerAddAddressScreen> {
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _floorController = TextEditingController();
+  final TextEditingController _landmarkController = TextEditingController();
   _AddAddressLabel _selectedLabel = _AddAddressLabel.home;
+  bool _saving = false;
+  Map<String, String> _errors = const <String, String>{};
+
+  @override
+  void dispose() {
+    _addressController.dispose();
+    _floorController.dispose();
+    _landmarkController.dispose();
+    super.dispose();
+  }
 
   void _selectLabel(_AddAddressLabel label) {
     setState(() {
@@ -5517,173 +5687,96 @@ class _CustomerAddAddressScreenState extends State<CustomerAddAddressScreen> {
     });
   }
 
+  Future<void> _saveAddress() async {
+    if (_saving) {
+      return;
+    }
+
+    final String address = _addressController.text.trim();
+    final Map<String, String> errors = <String, String>{};
+    if (address.isEmpty) {
+      errors['address'] = 'Enter the complete address.';
+    }
+    setState(() => _errors = errors);
+    if (errors.isNotEmpty) {
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(customerRepositoryProvider).createSavedAddress(
+            label: _selectedLabel.label,
+            address: address,
+            floor: _floorController.text,
+            landmark: _landmarkController.text,
+          );
+      ref.invalidate(customerSavedAddressesProvider);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Address saved successfully.')),
+        );
+      context.go(AppRoutes.customerManageAddress);
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _errors = _customerFieldErrors(error));
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(_customerErrorMessage(
+              error,
+              'Unable to save address. Please try again.',
+            )),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: const ValueKey<String>('customer-add-address-screen'),
       backgroundColor: JosiColors.white,
-      body: Stack(
-        children: <Widget>[
-          const Positioned.fill(child: _AddAddressMapBackdrop()),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
-                child: Padding(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Column(
+              children: <Widget>[
+                Padding(
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
                   child: _ProfileHeader(
                     title: 'Add Address',
                     onBack: () => context.go(AppRoutes.customerManageAddress),
                   ),
                 ),
-              ),
+                const SizedBox(height: 18),
+                Expanded(
+                  child: _AddAddressSheet(
+                    selectedLabel: _selectedLabel,
+                    onLabelSelected: _selectLabel,
+                    addressController: _addressController,
+                    floorController: _floorController,
+                    landmarkController: _landmarkController,
+                    errors: _errors,
+                    saving: _saving,
+                    onSave: _saveAddress,
+                  ),
+                ),
+              ],
             ),
           ),
-          const Positioned.fill(child: _AddAddressMapMarker()),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: _AddAddressSheet(
-                selectedLabel: _selectedLabel,
-                onLabelSelected: _selectLabel,
-                onSave: () => context.go(AppRoutes.customerManageAddress),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AddAddressMapBackdrop extends StatelessWidget {
-  const _AddAddressMapBackdrop();
-
-  @override
-  Widget build(BuildContext context) {
-    return const CustomPaint(painter: _AddAddressMapPainter());
-  }
-}
-
-class _AddAddressMapPainter extends CustomPainter {
-  const _AddAddressMapPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawColor(const Color(0xFFEDEFF1), BlendMode.src);
-
-    final Paint road = Paint()
-      ..color = JosiColors.white
-      ..strokeWidth = 24
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final Paint lane = Paint()
-      ..color = const Color(0xFFB7BDC5)
-      ..strokeWidth = 1.2
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final Paint minor = Paint()
-      ..color = const Color(0xFFF8F9FA)
-      ..strokeWidth = 9
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    for (double x = -size.width * 0.35; x < size.width * 1.2; x += 110) {
-      canvas.drawLine(Offset(x, -40), Offset(x + 220, size.height), road);
-      canvas.drawLine(Offset(x + 22, -40), Offset(x + 242, size.height), lane);
-    }
-    for (double y = -40; y < size.height * 0.8; y += 115) {
-      canvas.drawLine(Offset(-40, y), Offset(size.width + 60, y + 80), road);
-      canvas.drawLine(
-          Offset(-40, y + 18), Offset(size.width + 60, y + 98), lane);
-    }
-    for (double y = 90; y < size.height * 0.64; y += 86) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y - 70), minor);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y - 70), lane);
-    }
-
-    _drawStreetLabel(
-        canvas, 'W Broadway', size.width * 0.16, size.height * 0.12, -1.08);
-    _drawStreetLabel(
-        canvas, 'Worth St', size.width * 0.36, size.height * 0.03, 0.58);
-    _drawStreetLabel(
-        canvas, 'Leonard St', size.width * 0.63, size.height * 0.05, 0.58);
-    _drawStreetLabel(
-        canvas, 'Reade St', size.width * 0.37, size.height * 0.29, 0.38);
-    _drawStreetLabel(
-        canvas, 'Broadway', size.width * 0.70, size.height * 0.22, -0.98);
-    _drawStreetLabel(
-        canvas, 'Chambers St', size.width * 0.28, size.height * 0.42, 0.38);
-  }
-
-  void _drawStreetLabel(
-      Canvas canvas, String label, double x, double y, double angle) {
-    canvas.save();
-    canvas.translate(x, y);
-    canvas.rotate(angle);
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: const TextStyle(
-          color: Color(0xFF9EA3AA),
-          fontSize: 24,
-          fontWeight: FontWeight.w500,
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(canvas, Offset.zero);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _AddAddressMapPainter oldDelegate) => false;
-}
-
-class _AddAddressMapMarker extends StatelessWidget {
-  const _AddAddressMapMarker();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: const Alignment(0, -0.25),
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: <Widget>[
-          const Padding(
-            padding: EdgeInsets.only(top: 36),
-            child: Icon(Icons.location_on_rounded,
-                color: JosiColors.red, size: 86),
-          ),
-          Container(
-            width: 54,
-            height: 54,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: JosiColors.white,
-              border: Border.all(color: JosiColors.red, width: 5),
-            ),
-            child: Container(
-              width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: JosiColors.ink,
-              ),
-              child: Text(
-                'RS',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: JosiColors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -5693,11 +5786,21 @@ class _AddAddressSheet extends StatelessWidget {
   const _AddAddressSheet({
     required this.selectedLabel,
     required this.onLabelSelected,
+    required this.addressController,
+    required this.floorController,
+    required this.landmarkController,
+    required this.errors,
+    required this.saving,
     required this.onSave,
   });
 
   final _AddAddressLabel selectedLabel;
   final ValueChanged<_AddAddressLabel> onLabelSelected;
+  final TextEditingController addressController;
+  final TextEditingController floorController;
+  final TextEditingController landmarkController;
+  final Map<String, String> errors;
+  final bool saving;
   final VoidCallback onSave;
 
   @override
@@ -5728,25 +5831,31 @@ class _AddAddressSheet extends StatelessWidget {
                 onSelected: onLabelSelected,
               ),
               const SizedBox(height: 22),
-              const _AddAddressField(
-                key: ValueKey<String>('complete-address-field'),
+              _AddAddressField(
+                key: const ValueKey<String>('complete-address-field'),
                 label: 'Complete address',
                 hintText: 'Enter address *',
                 height: 86,
+                controller: addressController,
+                errorText: errors['address'],
               ),
               const SizedBox(height: 18),
-              const _AddAddressField(
-                key: ValueKey<String>('address-floor-field'),
+              _AddAddressField(
+                key: const ValueKey<String>('address-floor-field'),
                 label: 'Floor',
                 hintText: 'Enter Floor',
                 height: 58,
+                controller: floorController,
+                errorText: errors['floor'],
               ),
               const SizedBox(height: 18),
-              const _AddAddressField(
-                key: ValueKey<String>('address-landmark-field'),
+              _AddAddressField(
+                key: const ValueKey<String>('address-landmark-field'),
                 label: 'Landmark',
                 hintText: 'Enter Landmark',
                 height: 58,
+                controller: landmarkController,
+                errorText: errors['landmark'],
               ),
               const SizedBox(height: 26),
               SizedBox(
@@ -5754,7 +5863,7 @@ class _AddAddressSheet extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   key: const ValueKey<String>('save-address-button'),
-                  onPressed: onSave,
+                  onPressed: saving ? null : onSave,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: JosiColors.red,
                     foregroundColor: JosiColors.white,
@@ -5765,7 +5874,15 @@ class _AddAddressSheet extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                         ),
                   ),
-                  child: const Text('Save address'),
+                  child: saving
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: JosiColors.white,
+                          ),
+                        )
+                      : const Text('Save address'),
                 ),
               ),
             ],
@@ -5852,12 +5969,16 @@ class _AddAddressField extends StatelessWidget {
     required this.label,
     required this.hintText,
     required this.height,
+    required this.controller,
     super.key,
+    this.errorText,
   });
 
   final String label;
   final String hintText;
   final double height;
+  final TextEditingController controller;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -5876,9 +5997,11 @@ class _AddAddressField extends StatelessWidget {
         SizedBox(
           height: height,
           child: TextField(
+            controller: controller,
             maxLines: height > 70 ? 3 : 1,
             decoration: InputDecoration(
               hintText: hintText,
+              errorText: errorText,
               hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: JosiColors.softMuted.withValues(alpha: 0.62),
                     fontSize: 18,

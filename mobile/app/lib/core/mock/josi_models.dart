@@ -27,6 +27,7 @@ class JosiUser {
     this.city = 'Abuja',
     this.firstName,
     this.lastName,
+    this.gender,
   });
 
   final String id;
@@ -38,6 +39,7 @@ class JosiUser {
   final String city;
   final String? firstName;
   final String? lastName;
+  final String? gender;
 
   String get displayName {
     final String trimmedName = name.trim();
@@ -286,8 +288,14 @@ class CustomerSavedAddress {
   const CustomerSavedAddress({
     required this.title,
     required this.address,
+    this.id,
+    this.floor,
+    this.landmark,
   });
 
+  final String? id;
   final String title;
   final String address;
+  final String? floor;
+  final String? landmark;
 }

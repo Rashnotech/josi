@@ -265,6 +265,9 @@ final FutureProvider<List<Trip>> customerTripsProvider =
   return ref.watch(customerRepositoryProvider).trips();
 });
 
+final StateProvider<Trip?> activeCustomerTripProvider =
+    StateProvider<Trip?>((Ref ref) => null);
+
 final FutureProvider<JosiUser> currentRiderProvider =
     FutureProvider<JosiUser>((Ref ref) {
   return ref.watch(riderRepositoryProvider).profile();

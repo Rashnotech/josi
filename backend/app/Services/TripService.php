@@ -45,6 +45,7 @@ class TripService
                     'destination_address',
                     'destination_latitude',
                     'destination_longitude',
+                    'service_type',
                 ]),
                 [
                     'customer_id' => $customer?->getKey(),
