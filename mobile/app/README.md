@@ -28,11 +28,34 @@ flutter test
 flutter run
 ```
 
-Route configuration:
+Map display configuration:
+
+Google map tiles on Android need the Maps SDK key at build time. Put this in
+`mobile/app/android/local.properties`:
+
+```properties
+JOSI_ANDROID_MAPS_API_KEY=your-google-maps-sdk-android-key
+```
+
+Then rebuild the app:
+
+```powershell
+flutter clean
+flutter pub get
+flutter run --dart-define=JOSI_API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+
+Use an API key with **Maps SDK for Android** enabled. If the key is restricted,
+allow the app package and signing certificate used by this local build.
+
+Route line configuration:
 
 ```powershell
 flutter run --dart-define=JOSI_GOOGLE_ROUTES_API_KEY=<google-routes-api-key>
 ```
+
+`JOSI_GOOGLE_ROUTES_API_KEY` is only for drawing route polylines with the Google
+Routes API. It does not enable the Android Google map widget.
 
 Laravel auth API configuration:
 
@@ -57,6 +80,10 @@ Routes key in the mobile client:
 flutter run --dart-define=JOSI_BACKEND_ROUTE_ENDPOINT=https://your-api.test/api/v1/maps/route
 ```
 
+`JOSI_BACKEND_ROUTE_ENDPOINT` is optional and only replaces the Google Routes API
+polyline request. It does not replace `JOSI_API_BASE_URL`, which is still needed
+for authentication, profile, addresses, trips, and other Laravel API calls.
+
 Deterministic source check:
 
 ```powershell
@@ -66,6 +93,6 @@ powershell -ExecutionPolicy Bypass -File tooling/verify_mobile_app.ps1
 
 Notes:
 
-- No payment processor, Google Maps SDK, WebSocket tracking, or backend keys are required for this UI pass.
+- No payment processor, WebSocket tracking, or backend route key is required for this UI pass. Real Google map tiles on Android do require `JOSI_ANDROID_MAPS_API_KEY`.
 - Splash uses `assets/images/josi_log.png`; role/login use `assets/images/josi-logo.jpeg` plus local SVG icons.
 - The bundled Josi image and Inter font assets are used locally.

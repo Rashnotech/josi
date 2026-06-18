@@ -63,6 +63,7 @@ function Assert-MinBytes {
 
 $requiredFiles = @(
   "pubspec.yaml",
+  "README.md",
   "lib/main.dart",
   "lib/core/constants/app_assets.dart",
   "lib/core/constants/app_routes.dart",
@@ -122,6 +123,10 @@ Assert-Contains "pubspec.yaml" "go_router:\s+\^" "pubspec.yaml must include GoRo
 Assert-Contains "pubspec.yaml" "flutter_riverpod:\s+\^" "pubspec.yaml must include Riverpod."
 Assert-Contains "pubspec.yaml" "assets/images/" "pubspec.yaml must bundle the images folder."
 Assert-Contains "pubspec.yaml" "family:\s+Inter" "pubspec.yaml must register the Inter font family."
+Assert-Contains "README.md" "JOSI_ANDROID_MAPS_API_KEY" "README must document the Android Maps SDK key name."
+Assert-Contains "README.md" "mobile/app/android/local.properties" "README must document where the Android Maps SDK key belongs."
+Assert-Contains "README.md" "JOSI_BACKEND_ROUTE_ENDPOINT" "README must document the backend route endpoint option."
+Assert-Contains "README.md" 'does not replace `JOSI_API_BASE_URL`' "README must explain route endpoint does not replace the Laravel API base URL."
 
 Assert-Contains "lib/main.dart" "ProviderScope" "main.dart must wrap the app in ProviderScope."
 Assert-Contains "lib/main.dart" "MaterialApp\.router" "The app must use router-based navigation."
