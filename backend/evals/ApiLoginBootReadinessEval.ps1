@@ -27,6 +27,8 @@ Assert-Contains 'tests/Architecture/ApiLoginBootContractTest.ps1' 'elapsed_ms -g
 Assert-Contains 'tests/Architecture/ApiLoginBootProbe.php' "'/api/v1/auth/login'" 'Real login route probe'
 Assert-Contains 'tests/Architecture/ApiLoginBootProbe.php' "'status' => `$response->getStatusCode()" 'Probe captures HTTP status'
 Assert-Contains 'docs/auth-api.md' 'Mobile API login must not boot Filament panel discovery.' 'Auth API boot note'
+Assert-Contains 'docs/auth-api.md' 'the local `php artisan serve` process is stale' 'Stale artisan serve timeout troubleshooting'
+Assert-Contains 'docs/auth-api.md' 'A healthy empty login request returns `422` validation quickly' 'Healthy login probe expectation'
 
 if ($failures.Count -gt 0) {
     Write-Host 'API login boot readiness eval failed:' -ForegroundColor Red

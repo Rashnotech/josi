@@ -134,6 +134,8 @@ Required JSON fields: `identifier`, `password`.
 
 Mobile API login must not boot Filament panel discovery. `AdminPanelProvider` and `FleetPanelProvider` skip panel registration for `/api/*` requests, while still registering normally for `/admin`, `/dashboard`, and console commands. `tests/Architecture/ApiLoginBootContractTest.ps1` verifies an empty login request reaches validation quickly instead of timing out during app boot.
 
+If `/api/v1/auth/login` times out with `Maximum execution time of 30 seconds exceeded` while a fresh probe passes, the local `php artisan serve` process is stale. On Windows, find the process bound to port `8000` with `Get-NetTCPConnection -LocalPort 8000`, stop that PHP process, then restart Laravel with `php artisan optimize:clear` and `php artisan serve --host=127.0.0.1 --port=8000`. A healthy empty login request returns `422` validation quickly; it should not hang for 30 seconds.
+
 `POST /api/v1/auth/forgot-password`
 
 Required JSON fields: `email_or_phone`.
