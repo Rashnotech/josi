@@ -32,7 +32,7 @@ class AdminPanelProvider extends PanelProvider
 {
     public function register(): void
     {
-        if ($this->isApiRequest()) {
+        if (! $this->shouldRegisterPanel()) {
             return;
         }
 
@@ -109,12 +109,24 @@ class AdminPanelProvider extends PanelProvider
             ]);
     }
 
-    private function isApiRequest(): bool
+    private function shouldRegisterPanel(): bool
     {
+        if ($this->app->runningInConsole()) {
+            return $this->isFilamentConsoleCommand();
+        }
+
         if (! $this->app->bound('request')) {
             return false;
         }
 
-        return $this->app['request']->is('api/*');
+        return $this->app['request']->is('admin') || $this->app['request']->is('admin/*');
+    }
+
+    private function isFilamentConsoleCommand(): bool
+    {
+        $command = $_SERVER['argv'][1] ?? '';
+
+        return str_starts_with($command, 'filament:')
+            || str_starts_with($command, 'make:filament');
     }
 }

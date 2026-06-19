@@ -20,15 +20,37 @@ function Assert-Contains([string] $relativePath, [string] $needle, [string] $lab
     }
 }
 
+function Assert-NotContains([string] $relativePath, [string] $needle, [string] $label) {
+    $path = Resolve-RepoPath $relativePath
+    if (-not (Test-Path -LiteralPath $path)) {
+        $failures.Add("Cannot inspect missing file: $relativePath")
+        return
+    }
+
+    $content = Get-Content -LiteralPath $path -Raw
+    if ($content.Contains($needle)) {
+        $failures.Add("$label found forbidden text in $relativePath")
+    }
+}
+
 foreach ($provider in @(
     'app/Providers/Filament/AdminPanelProvider.php',
     'app/Providers/Filament/FleetPanelProvider.php'
 )) {
     Assert-Contains $provider 'public function register(): void' 'Panel provider register override'
-    Assert-Contains $provider 'isApiRequest()' 'API request guard'
-    Assert-Contains $provider "return `$this->app['request']->is('api/*');" 'API path skip'
+    Assert-Contains $provider 'shouldRegisterPanel()' 'Panel request guard'
+    Assert-Contains $provider '$this->app->runningInConsole()' 'Console boot guard'
+    Assert-Contains $provider 'isFilamentConsoleCommand()' 'Filament command opt-in'
     Assert-Contains $provider 'parent::register();' 'Non-API Filament registration'
 }
+
+Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "`$this->app['request']->is('admin/*')" 'Admin panel path opt-in'
+Assert-Contains 'app/Providers/Filament/FleetPanelProvider.php' "`$this->app['request']->is('dashboard/*')" 'Fleet panel path opt-in'
+Assert-NotContains 'config/app.php' 'Filament\FilamentServiceProvider::class' 'Filament package provider duplicate'
+Assert-NotContains 'config/app.php' 'Livewire\LivewireServiceProvider::class' 'Livewire package provider duplicate'
+Assert-NotContains 'config/app.php' 'Spatie\Permission\PermissionServiceProvider::class' 'Spatie package provider duplicate'
+Assert-Contains 'composer.json' '"filament/filament"' 'Filament package remains composer-managed'
+Assert-Contains 'composer.json' '"spatie/laravel-permission"' 'Spatie package remains composer-managed'
 
 $probePath = Resolve-RepoPath 'tests/Architecture/ApiLoginBootProbe.php'
 $output = & php $probePath 2>&1

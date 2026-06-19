@@ -94,10 +94,10 @@ function Assert-Contains([string] $relativePath, [string] $needle, [string] $lab
 
 Assert-Contains 'composer.json' '"filament/filament"' 'Filament package'
 Assert-Contains 'composer.json' '"spatie/laravel-permission"' 'Spatie permission package'
-Assert-Contains 'config/app.php' 'Filament\FilamentServiceProvider::class' 'Filament service provider'
-Assert-Contains 'config/app.php' 'Spatie\Permission\PermissionServiceProvider::class' 'Spatie service provider'
 Assert-Contains 'config/app.php' 'App\Providers\Filament\AdminPanelProvider::class' 'Admin panel provider registration'
 Assert-Contains 'config/app.php' 'App\Providers\Filament\FleetPanelProvider::class' 'Fleet panel provider registration'
+Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' 'shouldRegisterPanel()' 'Admin panel has boot guard'
+Assert-Contains 'app/Providers/Filament/FleetPanelProvider.php' 'shouldRegisterPanel()' 'Fleet panel has boot guard'
 
 Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "->id(DashboardAccess::ADMIN_PANEL)" 'Admin panel id'
 Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "->path('admin')" 'Admin panel path'

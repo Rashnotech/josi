@@ -49,9 +49,6 @@ return [
 
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
-        Filament\FilamentServiceProvider::class,
-        Livewire\LivewireServiceProvider::class,
-        Spatie\Permission\PermissionServiceProvider::class,
         App\Providers\Filament\AdminPanelProvider::class,
         App\Providers\Filament\FleetPanelProvider::class,
         App\Providers\RouteServiceProvider::class,
