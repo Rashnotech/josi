@@ -150,6 +150,8 @@ Assert-Contains "lib/core/constants/app_assets.dart" "hugeicons--office\.svg" "O
 Assert-Contains "lib/core/services/device_location_service.dart" "josi_ride/device_location" "Device location service must use the native GPS channel."
 Assert-Contains "android/app/src/main/AndroidManifest.xml" "ACCESS_FINE_LOCATION" "Android manifest must request fine location permission."
 Assert-Contains "android/app/src/main/AndroidManifest.xml" "ACCESS_COARSE_LOCATION" "Android manifest must request coarse location permission."
+Assert-Contains "android/app/src/main/AndroidManifest.xml" "android.permission.INTERNET" "Android manifest must allow backend API networking."
+Assert-Contains "android/app/src/main/AndroidManifest.xml" 'usesCleartextTraffic="true"' "Android manifest must allow local HTTP API calls during development."
 Assert-Contains "android/app/src/main/kotlin/com/example/josi_ride/MainActivity.kt" "LocationManager" "Android activity must resolve phone GPS location."
 
 Assert-Contains "lib/features/splash/splash_screen.dart" "AppAssets\.splashLogo" "Splash must use josi_log.png through AppAssets."

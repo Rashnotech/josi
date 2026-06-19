@@ -63,6 +63,24 @@ Laravel auth API configuration:
 flutter run --dart-define=JOSI_API_BASE_URL=https://your-api.test/api/v1
 ```
 
+For the Android emulator talking to Laravel on this Windows machine, use
+`10.0.2.2` because `localhost` inside the emulator points to the emulator
+itself:
+
+```powershell
+flutter run --dart-define=JOSI_API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+
+Start Laravel so the emulator can reach it:
+
+```powershell
+cd ../../backend
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+If you use a physical phone, replace `10.0.2.2` with the computer's LAN IP and
+serve Laravel on `0.0.0.0`.
+
 Auth tokens are stored with `flutter_secure_storage`. The app sends:
 
 - `POST /auth/login`
