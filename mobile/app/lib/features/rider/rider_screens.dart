@@ -1566,7 +1566,7 @@ class AvailableTripsScreen extends ConsumerWidget {
   }
 }
 
-class RiderTripRequestDetailScreen extends ConsumerWidget {
+class RiderTripRequestDetailScreen extends ConsumerStatefulWidget {
   const RiderTripRequestDetailScreen({
     required this.tripId,
     super.key,
@@ -1575,19 +1575,56 @@ class RiderTripRequestDetailScreen extends ConsumerWidget {
   final String tripId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Trip>> trips = ref.watch(tripsProvider);
+  ConsumerState<RiderTripRequestDetailScreen> createState() =>
+      _RiderTripRequestDetailScreenState();
+}
+
+class _RiderTripRequestDetailScreenState
+    extends ConsumerState<RiderTripRequestDetailScreen> {
+  bool _isAccepting = false;
+
+  Future<void> _acceptTrip(Trip trip) async {
+    setState(() => _isAccepting = true);
+    try {
+      await ref.read(riderRepositoryProvider).acceptTrip(trip.id);
+      if (!mounted) {
+        return;
+      }
+      ref.invalidate(tripsProvider);
+      ref.invalidate(riderTripProvider(trip.id));
+      context.go(AppRoutes.riderActiveTripPath(trip.id));
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trip could not be accepted.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isAccepting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AsyncValue<Trip> trip = ref.watch(riderTripProvider(widget.tripId));
 
     return AppScaffold(
       title: 'Trip request',
-      subtitle: tripId,
+      subtitle: widget.tripId,
       child: AppScreenBody(
         children: <Widget>[
-          trips.when(
-            data: (List<Trip> values) {
-              final Trip trip = values.firstWhere(
-                  (Trip value) => value.id == tripId,
-                  orElse: () => values.first);
+          trip.when(
+            data: (Trip trip) {
               return Column(
                 children: <Widget>[
                   TripCard(trip: trip),
@@ -1609,8 +1646,8 @@ class RiderTripRequestDetailScreen extends ConsumerWidget {
                   AppButton(
                     label: 'Accept trip',
                     icon: Icons.check_rounded,
-                    onPressed: () =>
-                        context.go(AppRoutes.riderActiveTripPath(trip.id)),
+                    isLoading: _isAccepting,
+                    onPressed: () => _acceptTrip(trip),
                   ),
                   const SizedBox(height: 10),
                   AppButton(
@@ -1634,7 +1671,7 @@ class RiderTripRequestDetailScreen extends ConsumerWidget {
   }
 }
 
-class RiderActiveTripScreen extends StatefulWidget {
+class RiderActiveTripScreen extends ConsumerStatefulWidget {
   const RiderActiveTripScreen({
     required this.tripId,
     super.key,
@@ -1643,24 +1680,84 @@ class RiderActiveTripScreen extends StatefulWidget {
   final String tripId;
 
   @override
-  State<RiderActiveTripScreen> createState() => _RiderActiveTripScreenState();
+  ConsumerState<RiderActiveTripScreen> createState() =>
+      _RiderActiveTripScreenState();
 }
 
-class _RiderActiveTripScreenState extends State<RiderActiveTripScreen> {
+class _RiderActiveTripScreenState extends ConsumerState<RiderActiveTripScreen> {
   int _stage = 0;
+  bool _isMarkingArrived = false;
+
+  Future<void> _markArrivedAtPickup(Trip trip) async {
+    setState(() => _isMarkingArrived = true);
+    try {
+      await ref.read(riderRepositoryProvider).markArrivedAtPickup(trip.id);
+      if (!mounted) {
+        return;
+      }
+      ref.invalidate(tripsProvider);
+      ref.invalidate(riderTripProvider(trip.id));
+      setState(() => _stage = 1);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customer has been notified.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Arrival could not be confirmed.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isMarkingArrived = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final Trip trip = JosiMockData.trips.firstWhere(
-      (Trip value) => value.id == widget.tripId,
-      orElse: () => JosiMockData.trips.first,
+    final AsyncValue<Trip> trip = ref.watch(riderTripProvider(widget.tripId));
+    return trip.when(
+      data: _buildTrip,
+      error: (Object error, StackTrace stackTrace) => const Scaffold(
+        backgroundColor: JosiColors.white,
+        body: SafeArea(
+          child: AppScreenBody(
+            children: <Widget>[
+              ErrorState(
+                title: 'Trip unavailable',
+                message: 'Trip details could not load.',
+              ),
+            ],
+          ),
+        ),
+      ),
+      loading: () => const Scaffold(
+        backgroundColor: JosiColors.white,
+        body: SafeArea(
+          child: Center(child: LoadingState(label: 'Loading active trip')),
+        ),
+      ),
     );
+  }
+
+  Widget _buildTrip(Trip trip) {
     final List<String> titles = <String>[
       'Customer Location',
       'Destination',
       'Arrived At Destination',
     ];
-    final int stageIndex = _stage.clamp(0, titles.length - 1).toInt();
+    final int resolvedStage =
+        trip.isArrivedAtPickup && _stage == 0 ? 1 : _stage;
+    final int stageIndex = resolvedStage.clamp(0, titles.length - 1).toInt();
     final String title = titles[stageIndex];
 
     return Scaffold(
@@ -1707,9 +1804,11 @@ class _RiderActiveTripScreenState extends State<RiderActiveTripScreen> {
               0 => _RiderCustomerLocationSheet(
                   title: title,
                   trip: trip,
-                  onContinue: () => setState(() => _stage = 1),
+                  isLoading: _isMarkingArrived,
+                  onContinue: () => _markArrivedAtPickup(trip),
                 ),
               1 => _RiderDestinationPanel(
+                  destination: trip.destination,
                   onNavigate: () => setState(() => _stage = 2),
                 ),
               _ => _RiderArrivedDestinationSheet(
@@ -4598,15 +4697,22 @@ class _RiderCustomerLocationSheet extends StatelessWidget {
   const _RiderCustomerLocationSheet({
     required this.title,
     required this.trip,
+    required this.isLoading,
     required this.onContinue,
   });
 
   final String title;
   final Trip trip;
+  final bool isLoading;
   final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context) {
+    final String customerName =
+        trip.customerName.trim().isEmpty ? 'Customer' : trip.customerName;
+    final String etaLabel =
+        trip.duration.trim().isEmpty ? 'ETA pending' : '${trip.duration} away';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 18),
@@ -4651,7 +4757,7 @@ class _RiderCustomerLocationSheet extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '5 mins Away',
+                  etaLabel,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: JosiColors.softMuted,
                         fontSize: 14,
@@ -4664,14 +4770,16 @@ class _RiderCustomerLocationSheet extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: <Widget>[
-                const ProfileAvatar(name: 'Esther Howard', size: 56),
+                ProfileAvatar(name: customerName, size: 56),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        'Esther Howard',
+                        customerName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               color: JosiColors.ink,
                               fontSize: 18,
@@ -4705,7 +4813,7 @@ class _RiderCustomerLocationSheet extends StatelessWidget {
               height: 52,
               child: ElevatedButton(
                 key: const ValueKey<String>('rider-active-trip-continue'),
-                onPressed: onContinue,
+                onPressed: isLoading ? null : onContinue,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: JosiColors.red,
                   foregroundColor: JosiColors.white,
@@ -4717,7 +4825,15 @@ class _RiderCustomerLocationSheet extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                 ),
-                child: const Text('Continue'),
+                child: isLoading
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: JosiColors.white,
+                        ),
+                      )
+                    : const Text('Continue'),
               ),
             ),
           ],
@@ -4728,12 +4844,19 @@ class _RiderCustomerLocationSheet extends StatelessWidget {
 }
 
 class _RiderDestinationPanel extends StatelessWidget {
-  const _RiderDestinationPanel({required this.onNavigate});
+  const _RiderDestinationPanel({
+    required this.destination,
+    required this.onNavigate,
+  });
 
+  final String destination;
   final VoidCallback onNavigate;
 
   @override
   Widget build(BuildContext context) {
+    final String destinationLabel =
+        destination.trim().isEmpty ? 'Destination unavailable' : destination;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 18),
@@ -4779,7 +4902,7 @@ class _RiderDestinationPanel extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      '1901 Thornridge Cir. Shiloh, Howoi 0802',
+                      destinationLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(

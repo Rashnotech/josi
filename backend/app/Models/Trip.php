@@ -97,4 +97,9 @@ class Trip extends Model
     {
         return $this->hasOne(RiderCashLedger::class);
     }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(TripReview::class);
+    }
 }

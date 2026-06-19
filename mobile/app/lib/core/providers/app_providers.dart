@@ -5,6 +5,7 @@ import '../auth/token_storage.dart';
 import '../mock/josi_models.dart';
 import '../repositories/repositories.dart';
 import '../services/api_client.dart';
+import '../services/phone_call_service.dart';
 
 class AuthSession {
   const AuthSession({
@@ -227,6 +228,11 @@ final Provider<RiderRepository> riderRepositoryProvider =
   );
 });
 
+final Provider<PhoneCallService> phoneCallServiceProvider =
+    Provider<PhoneCallService>((Ref ref) {
+  return const PhoneCallService();
+});
+
 final Provider<TripRepository> tripRepositoryProvider =
     Provider<TripRepository>((Ref ref) {
   return const TripRepository();
@@ -272,6 +278,11 @@ final FutureProvider<List<Trip>> customerTripsProvider =
 final StateProvider<Trip?> activeCustomerTripProvider =
     StateProvider<Trip?>((Ref ref) => null);
 
+final customerTripProvider =
+    FutureProvider.family<Trip, String>((Ref ref, String id) {
+  return ref.watch(customerRepositoryProvider).trip(id);
+});
+
 final FutureProvider<JosiUser> currentRiderProvider =
     FutureProvider<JosiUser>((Ref ref) {
   return ref.watch(riderRepositoryProvider).profile();
@@ -294,7 +305,12 @@ final FutureProvider<List<DocumentRequirement>> riderDocumentsProvider =
 
 final FutureProvider<List<Trip>> tripsProvider =
     FutureProvider<List<Trip>>((Ref ref) {
-  return ref.watch(tripRepositoryProvider).trips();
+  return ref.watch(riderRepositoryProvider).availableTrips();
+});
+
+final riderTripProvider =
+    FutureProvider.family<Trip, String>((Ref ref, String id) {
+  return ref.watch(riderRepositoryProvider).trip(id);
 });
 
 final FutureProvider<WalletSummary> customerWalletProvider =

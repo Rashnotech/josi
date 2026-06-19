@@ -538,8 +538,21 @@ class CustomerRepository {
 
     return trips
         .whereType<Map>()
-        .map((Map<Object?, Object?> value) => _tripFromPayload(value))
+        .map((Map<Object?, Object?> value) => tripFromPayload(value))
         .toList();
+  }
+
+  Future<Trip> trip(String id) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/customer/trips/$id', token: token);
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
+    if (tripPayload == null) {
+      throw const ApiException('Trip was not returned by the API.');
+    }
+
+    return tripFromPayload(tripPayload);
   }
 
   Future<Trip> requestTrip({
@@ -573,7 +586,61 @@ class CustomerRepository {
       throw const ApiException('Trip was not returned by the API.');
     }
 
-    return _tripFromPayload(tripPayload);
+    return tripFromPayload(tripPayload);
+  }
+
+  Future<List<AvailableRider>> availableRiders(String tripId) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.get(
+      '/customer/trips/$tripId/available-riders',
+      token: token,
+    );
+    final Object? riders = ApiClient.dataFromEnvelope(envelope)['riders'];
+    if (riders is! List) {
+      return const <AvailableRider>[];
+    }
+
+    return riders
+        .whereType<Map>()
+        .map((Map<Object?, Object?> value) => _availableRiderFromPayload(value))
+        .toList();
+  }
+
+  Future<Trip> requestRider({
+    required String tripId,
+    required String riderProfileId,
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/customer/trips/$tripId/request-rider',
+      token: token,
+      body: <String, Object?>{'rider_profile_id': riderProfileId},
+    );
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
+    if (tripPayload == null) {
+      throw const ApiException('Trip was not returned by the API.');
+    }
+
+    return tripFromPayload(tripPayload);
+  }
+
+  Future<String> submitRiderReview({
+    required String tripId,
+    required int rating,
+    String? review,
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/customer/trips/$tripId/review',
+      token: token,
+      body: <String, Object?>{
+        'rating': rating,
+        if (review?.trim().isNotEmpty ?? false) 'review': review!.trim(),
+      },
+    );
+    final String message = ApiClient.messageFromEnvelope(envelope);
+    return message.isEmpty ? 'Review submitted successfully.' : message;
   }
 
   Future<String> _requireToken() async {
@@ -605,14 +672,21 @@ class CustomerRepository {
     );
   }
 
-  static Trip _tripFromPayload(Map<Object?, Object?> value) {
+  static Trip tripFromPayload(Map<Object?, Object?> value) {
     final Map<String, Object?> payload = value.map(
       (Object? key, Object? fieldValue) =>
           MapEntry<String, Object?>('$key', fieldValue),
     );
+    final Map<String, Object?>? rider = _mapFrom(payload['rider']);
+    final Map<String, Object?>? vehicle =
+        _mapFrom(payload['vehicle']) ?? _mapFrom(rider?['vehicle']);
+    final Map<String, Object?>? review = _mapFrom(payload['review']);
     final String destination = _string(payload['destination_address']) ??
         _string(payload['destination']) ??
         'Destination';
+    final String vehicleLabel = _string(payload['vehicle_label']) ??
+        _string(vehicle?['label']) ??
+        _vehicleLabel(vehicle);
     return Trip(
       id: _string(payload['id']) ?? '',
       pickup: _string(payload['pickup_address']) ?? 'Pickup',
@@ -621,10 +695,41 @@ class CustomerRepository {
       status: _tripStatus(payload['trip_status']),
       paymentMethod: _paymentMethod(payload['payment_method']),
       dateLabel: _string(payload['requested_at']) ?? '',
-      riderName: _string(payload['rider_name']) ?? '',
+      riderName:
+          _string(payload['rider_name']) ?? _string(rider?['name']) ?? '',
       customerName: _string(payload['customer_name']) ?? '',
       distance: _string(payload['distance']) ?? '',
       duration: _string(payload['duration']) ?? '',
+      riderId: _string(rider?['id']) ?? '',
+      riderPhone:
+          _string(payload['rider_phone']) ?? _string(rider?['phone']) ?? '',
+      vehicleLabel: vehicleLabel,
+      plateNumber: _string(payload['plate_number']) ??
+          _string(vehicle?['plate_number']) ??
+          '',
+      isArrivedAtPickup: _bool(payload['is_arrived_at_pickup']) ?? false,
+      reviewRating: _int(review?['rating']),
+      reviewText: _string(review?['review']),
+    );
+  }
+
+  static AvailableRider _availableRiderFromPayload(
+    Map<Object?, Object?> value,
+  ) {
+    final Map<String, Object?> payload = value.map(
+      (Object? key, Object? fieldValue) =>
+          MapEntry<String, Object?>('$key', fieldValue),
+    );
+    final Map<String, Object?>? vehicle = _mapFrom(payload['vehicle']);
+    return AvailableRider(
+      id: _string(payload['id']) ?? '',
+      name: _string(payload['name']) ?? 'Available rider',
+      phone: _string(payload['phone']) ?? '',
+      city: _string(payload['city']) ?? '',
+      state: _string(payload['state']) ?? '',
+      profilePhoto: _string(payload['profile_photo']),
+      vehicleLabel: _string(vehicle?['label']) ?? _vehicleLabel(vehicle),
+      plateNumber: _string(vehicle?['plate_number']) ?? '',
     );
   }
 
@@ -645,6 +750,43 @@ class CustomerRepository {
       'requested' || 'assigned' => TripStatus.searching,
       _ => TripStatus.active,
     };
+  }
+
+  static String _vehicleLabel(Map<String, Object?>? vehicle) {
+    if (vehicle == null) {
+      return '';
+    }
+
+    return <String?>[
+      _string(vehicle['color']),
+      _string(vehicle['brand']),
+      _string(vehicle['model']),
+    ].whereType<String>().where((String value) => value.isNotEmpty).join(' ');
+  }
+
+  static bool? _bool(Object? value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    final String? stringValue = _string(value)?.toLowerCase();
+    return switch (stringValue) {
+      'true' || '1' || 'yes' => true,
+      'false' || '0' || 'no' => false,
+      _ => null,
+    };
+  }
+
+  static int? _int(Object? value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return int.tryParse(_string(value) ?? '');
   }
 
   static PaymentMethod _paymentMethod(Object? value) {
@@ -764,6 +906,61 @@ class RiderRepository {
         .whereType<Map>()
         .map((Map<Object?, Object?> value) => _documentFromPayload(value))
         .toList();
+  }
+
+  Future<List<Trip>> availableTrips() async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/driver/trips', token: token);
+    final Object? trips = ApiClient.dataFromEnvelope(envelope)['trips'];
+    if (trips is! List) {
+      return const <Trip>[];
+    }
+
+    return trips
+        .whereType<Map>()
+        .map((Map<Object?, Object?> value) =>
+            CustomerRepository.tripFromPayload(value))
+        .toList();
+  }
+
+  Future<Trip> trip(String id) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/driver/trips/$id', token: token);
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
+    if (tripPayload == null) {
+      throw const ApiException('Trip was not returned by the API.');
+    }
+
+    return CustomerRepository.tripFromPayload(tripPayload);
+  }
+
+  Future<Trip> acceptTrip(String id) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.post('/driver/trips/$id/accept', token: token);
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
+    if (tripPayload == null) {
+      throw const ApiException('Trip was not returned by the API.');
+    }
+
+    return CustomerRepository.tripFromPayload(tripPayload);
+  }
+
+  Future<Trip> markArrivedAtPickup(String id) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.post('/driver/trips/$id/arrived', token: token);
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
+    if (tripPayload == null) {
+      throw const ApiException('Trip was not returned by the API.');
+    }
+
+    return CustomerRepository.tripFromPayload(tripPayload);
   }
 
   Future<RiderOnboarding> saveProfilePicture({

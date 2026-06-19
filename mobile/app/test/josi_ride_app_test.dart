@@ -479,6 +479,8 @@ void main() {
 
     expect(find.text('Destination'), findsWidgets);
     expect(find.text('Navigate to Destination'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
 
     await tester.tap(find
         .byKey(const ValueKey<String>('rider-navigate-destination-button')));
@@ -883,27 +885,19 @@ void main() {
         .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
     await tester.pumpAndSettle();
 
-    expect(
-        find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
-        findsOneWidget);
-    expect(find.text('Searching Ride...'), findsOneWidget);
-    expect(find.text('Book Mini'), findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('searching-ride-bike-icon')),
-        findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('ride-map-bike-marker-0')),
-        findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey<String>('book-mini-button')));
-    await tester.pumpAndSettle();
-
     expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
         findsOneWidget);
+    expect(find.text('Book Mini'), findsNothing);
     expect(find.byKey(const ValueKey<String>('request-ride-bottom-sheet')),
         findsOneWidget);
     expect(find.byKey(const ValueKey<String>('request-ride-bike-icon')),
         findsOneWidget);
     expect(find.text('Ride Found'), findsOneWidget);
-    expect(find.text('Request Ride'), findsOneWidget);
+    expect(find.text('1 available'), findsOneWidget);
+    expect(find.text('Ayo Balogun'), findsOneWidget);
+    expect(find.text('Red Bajaj Boxer'), findsOneWidget);
+    expect(find.text('JOS-123AB'), findsOneWidget);
+    expect(find.text('Request Rider'), findsOneWidget);
     expect(
         find.byKey(const ValueKey<String>('request-ride-driver-details-link')),
         findsOneWidget);
@@ -957,11 +951,14 @@ void main() {
     expect(find.byKey(const ValueKey<String>('customer-active-trip-screen')),
         findsOneWidget);
     expect(find.text('Rider Arrived'), findsWidgets);
-    expect(find.text('Jenny Wilson'), findsOneWidget);
-    expect(find.text('Sedan'), findsOneWidget);
-    expect(find.text('OTP - 6546'), findsOneWidget);
-    expect(find.text('GR 678-UVWX'), findsOneWidget);
-    expect(find.text('Trip preview'), findsOneWidget);
+    expect(find.text('Ayo Balogun'), findsOneWidget);
+    expect(find.textContaining('Red Bajaj Boxer'), findsOneWidget);
+    expect(find.text('OTP - 6546'), findsNothing);
+    expect(find.text('Bike Number'), findsOneWidget);
+    expect(find.text('JOS-123AB'), findsWidgets);
+    expect(find.text('Rate Rider'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('active-trip-call-button')),
+        findsOneWidget);
     expect(find.text('Cancel Ride'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey<String>('trip-preview-button')));
@@ -970,18 +967,21 @@ void main() {
     expect(find.byKey(const ValueKey<String>('customer-trip-completed-screen')),
         findsOneWidget);
     expect(find.text('Rate Rider'), findsOneWidget);
-    expect(find.text('Jenny Wilson'), findsOneWidget);
-    expect(find.text('Hyundai Verna'), findsOneWidget);
-    expect(find.text('OR 678-UVWX'), findsOneWidget);
-    expect(find.text('NGN 3,500 cash payment recorded for this trip.'),
-        findsOneWidget);
-    expect(find.text('How was your trip with\nJenny Wilson'), findsOneWidget);
+    expect(find.text('Ayo Balogun'), findsOneWidget);
+    expect(find.text('Red Bajaj Boxer'), findsOneWidget);
+    expect(find.text('JOS-123AB'), findsOneWidget);
+    expect(find.text('NGN 3500 is due for this trip.'), findsOneWidget);
+    expect(find.text('How was your trip with\nAyo Balogun'), findsOneWidget);
     expect(find.text('Your overall rating'), findsOneWidget);
     expect(find.byIcon(Icons.star_rounded), findsNWidgets(5));
     expect(find.byKey(const ValueKey<String>('trip-rating-review-field')),
         findsOneWidget);
     expect(find.text('Submit'), findsOneWidget);
 
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('trip-rating-review-field')),
+      'Fast pickup and careful riding.',
+    );
     await tester
         .tap(find.byKey(const ValueKey<String>('submit-trip-rating-button')));
     await tester.pumpAndSettle();
@@ -997,13 +997,7 @@ void main() {
     final BuildContext homeContext = tester.element(
       find.byKey(const ValueKey<String>('customer-home-screen')),
     );
-    homeContext.go(AppRoutes.customerSearchingRider);
-    await tester.pumpAndSettle();
-
-    final BuildContext context = tester.element(
-      find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
-    );
-    context.go(AppRoutes.customerRideNotFound);
+    homeContext.go(AppRoutes.customerRideNotFound);
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('customer-ride-not-found-screen')),
@@ -1081,10 +1075,9 @@ void main() {
         .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
     await tester.pumpAndSettle();
 
-    expect(
-        find.byKey(const ValueKey<String>('customer-searching-rider-screen')),
+    expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
         findsOneWidget);
-    expect(find.text('Searching Ride...'), findsOneWidget);
+    expect(find.text('Ride Found'), findsOneWidget);
   });
 
   testWidgets('customer profile opens editable profile form',
@@ -1446,6 +1439,7 @@ class _FakeCustomerRepository extends CustomerRepository {
   JosiUser _profile = JosiMockData.customer;
   final List<CustomerSavedAddress> _addresses = <CustomerSavedAddress>[];
   final List<Trip> _trips = <Trip>[];
+  bool _arrivalReturned = false;
 
   @override
   Future<JosiUser> profile() async => _profile;
@@ -1524,7 +1518,7 @@ class _FakeCustomerRepository extends CustomerRepository {
       id: '${_trips.length + 1}',
       pickup: pickupAddress.trim(),
       destination: destinationAddress.trim(),
-      fare: 'To be calculated',
+      fare: 'NGN 3500',
       status: TripStatus.searching,
       paymentMethod: PaymentMethod.cash,
       dateLabel: 'Now',
@@ -1536,6 +1530,136 @@ class _FakeCustomerRepository extends CustomerRepository {
     _trips.add(trip);
     return trip;
   }
+
+  @override
+  Future<Trip> trip(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final Trip trip = _trips.firstWhere(
+      (Trip value) => value.id == id,
+      orElse: () =>
+          throw const ApiException('Trip was not returned by the API.'),
+    );
+    if (trip.riderName.isNotEmpty && !_arrivalReturned) {
+      _arrivalReturned = true;
+      final Trip arrived = _copyTrip(trip, isArrivedAtPickup: true);
+      _replaceTrip(arrived);
+      return arrived;
+    }
+    return trip;
+  }
+
+  @override
+  Future<List<AvailableRider>> availableRiders(String tripId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    if (!_trips.any((Trip trip) => trip.id == tripId)) {
+      return const <AvailableRider>[];
+    }
+    return const <AvailableRider>[
+      AvailableRider(
+        id: '44',
+        name: 'Ayo Balogun',
+        phone: '+2348000000004',
+        vehicleLabel: 'Red Bajaj Boxer',
+        plateNumber: 'JOS-123AB',
+        city: 'Abuja',
+        state: 'FCT',
+      ),
+    ];
+  }
+
+  @override
+  Future<Trip> requestRider({
+    required String tripId,
+    required String riderProfileId,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final Trip trip = _trips.firstWhere(
+      (Trip value) => value.id == tripId,
+      orElse: () =>
+          throw const ApiException('Trip was not returned by the API.'),
+    );
+    final Trip requested = _copyTrip(
+      trip,
+      riderId: riderProfileId,
+      riderName: 'Ayo Balogun',
+      riderPhone: '+2348000000004',
+      vehicleLabel: 'Red Bajaj Boxer',
+      plateNumber: 'JOS-123AB',
+      status: TripStatus.searching,
+      isArrivedAtPickup: false,
+    );
+    _arrivalReturned = false;
+    _replaceTrip(requested);
+    return requested;
+  }
+
+  @override
+  Future<String> submitRiderReview({
+    required String tripId,
+    required int rating,
+    String? review,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final Trip trip = _trips.firstWhere(
+      (Trip value) => value.id == tripId,
+      orElse: () =>
+          throw const ApiException('Trip was not returned by the API.'),
+    );
+    _replaceTrip(_copyTrip(trip, reviewRating: rating, reviewText: review));
+    return 'Rider review submitted successfully';
+  }
+
+  void _replaceTrip(Trip updated) {
+    final int index = _trips.indexWhere((Trip trip) => trip.id == updated.id);
+    if (index == -1) {
+      _trips.add(updated);
+      return;
+    }
+    _trips[index] = updated;
+  }
+}
+
+Trip _copyTrip(
+  Trip trip, {
+  String? id,
+  String? pickup,
+  String? destination,
+  String? fare,
+  TripStatus? status,
+  PaymentMethod? paymentMethod,
+  String? dateLabel,
+  String? riderName,
+  String? customerName,
+  String? distance,
+  String? duration,
+  String? riderId,
+  String? riderPhone,
+  String? vehicleLabel,
+  String? plateNumber,
+  bool? isArrivedAtPickup,
+  int? reviewRating,
+  String? reviewText,
+}) {
+  return Trip(
+    id: id ?? trip.id,
+    pickup: pickup ?? trip.pickup,
+    destination: destination ?? trip.destination,
+    fare: fare ?? trip.fare,
+    status: status ?? trip.status,
+    paymentMethod: paymentMethod ?? trip.paymentMethod,
+    dateLabel: dateLabel ?? trip.dateLabel,
+    riderName: riderName ?? trip.riderName,
+    customerName: customerName ?? trip.customerName,
+    distance: distance ?? trip.distance,
+    duration: duration ?? trip.duration,
+    riderId: riderId ?? trip.riderId,
+    riderPhone: riderPhone ?? trip.riderPhone,
+    vehicleLabel: vehicleLabel ?? trip.vehicleLabel,
+    plateNumber: plateNumber ?? trip.plateNumber,
+    isArrivedAtPickup: isArrivedAtPickup ?? trip.isArrivedAtPickup,
+    reviewRating: reviewRating ?? trip.reviewRating,
+    reviewText: reviewText ?? trip.reviewText,
+  );
 }
 
 class _FakeRiderRepository extends RiderRepository {
@@ -1544,6 +1668,25 @@ class _FakeRiderRepository extends RiderRepository {
   RiderOnboarding _onboarding = const RiderOnboarding(
     profile: JosiMockData.riderProfile,
   );
+  final List<Trip> _trips = <Trip>[
+    const Trip(
+      id: 'TRP-2408',
+      pickup: 'Wuse Market',
+      destination: 'Jabi Lake Mall',
+      fare: 'NGN 3500',
+      status: TripStatus.searching,
+      paymentMethod: PaymentMethod.cash,
+      dateLabel: 'Now',
+      riderName: 'Amina Yusuf',
+      customerName: 'Esther Howard',
+      distance: '7.6 km',
+      duration: '18 mins',
+      riderId: '44',
+      riderPhone: '+2348000000004',
+      vehicleLabel: 'Red Bajaj Boxer',
+      plateNumber: 'JOS-123AB',
+    ),
+  ];
 
   @override
   Future<JosiUser> profile() async => JosiMockData.rider;
@@ -1561,6 +1704,41 @@ class _FakeRiderRepository extends RiderRepository {
 
   @override
   Future<List<DocumentRequirement>> documents() async => JosiMockData.documents;
+
+  @override
+  Future<List<Trip>> availableTrips() async => List<Trip>.unmodifiable(_trips);
+
+  @override
+  Future<Trip> trip(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    return _trips.firstWhere(
+      (Trip trip) => trip.id == id,
+      orElse: () =>
+          throw const ApiException('Trip was not returned by the API.'),
+    );
+  }
+
+  @override
+  Future<Trip> acceptTrip(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final Trip trip = await this.trip(id);
+    final Trip accepted = _copyTrip(trip, status: TripStatus.active);
+    _replaceTrip(accepted);
+    return accepted;
+  }
+
+  @override
+  Future<Trip> markArrivedAtPickup(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final Trip trip = await this.trip(id);
+    final Trip arrived = _copyTrip(
+      trip,
+      status: TripStatus.active,
+      isArrivedAtPickup: true,
+    );
+    _replaceTrip(arrived);
+    return arrived;
+  }
 
   @override
   Future<RiderOnboarding> updateProfile({
@@ -1730,6 +1908,15 @@ class _FakeRiderRepository extends RiderRepository {
       bankAccountNumber: bank?.accountNumber,
       applicationStatus: RiderApplicationStatus.underReview,
     );
+  }
+
+  void _replaceTrip(Trip updated) {
+    final int index = _trips.indexWhere((Trip trip) => trip.id == updated.id);
+    if (index == -1) {
+      _trips.add(updated);
+      return;
+    }
+    _trips[index] = updated;
   }
 }
 

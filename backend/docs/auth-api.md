@@ -167,6 +167,59 @@ Refresh deletes the current Sanctum token and issues a new one.
 
 Change password required JSON fields: `current_password`, `password`, `password_confirmation`.
 
+## Customer Trip Matching Endpoints
+
+All require role `customer`.
+
+- `POST /api/v1/customer/trips`
+- `GET /api/v1/customer/trips`
+- `GET /api/v1/customer/trips/{trip}`
+- `GET /api/v1/customer/trips/{trip}/available-riders`
+- `POST /api/v1/customer/trips/{trip}/request-rider`
+- `POST /api/v1/customer/trips/{trip}/review`
+
+Trip requests create a zone-priced trip using the configured `ZonePrice.base_price`; the mobile app displays the returned `amount` as the payable fare.
+
+Available riders returns approved rider profiles with active, verified bikes only. Busy, unavailable, and already assigned riders are excluded.
+
+`POST /customer/trips/{trip}/request-rider` required JSON:
+
+```json
+{
+  "rider_profile_id": 44
+}
+```
+
+The endpoint assigns the selected rider, marks them busy, and returns:
+
+```json
+{
+  "rider_notified": true,
+  "trip": {
+    "id": 99,
+    "trip_status": "assigned",
+    "rider_name": "Ayo Balogun",
+    "rider_phone": "+2348000000004",
+    "vehicle_label": "Red Bajaj Boxer",
+    "plate_number": "JOS-123AB",
+    "is_arrived_at_pickup": false
+  }
+}
+```
+
+The customer app should show the waiting state until `is_arrived_at_pickup` is `true`. That flag becomes true after the rider calls the driver arrival endpoint.
+
+`POST /customer/trips/{trip}/review` required JSON:
+
+```json
+{
+  "rating": 5,
+  "review": "Fast pickup and careful riding."
+}
+```
+
+`rating` must be from 1 to 5. `review` is optional and limited to 2000 characters.
+
 ## Laravel Dashboard Scaffold
 
 `GET /dashboard` and `GET /admin` render the Laravel-side dashboard scaffold in `resources/views/dashboard/index.blade.php`.
@@ -192,10 +245,20 @@ All require role `rider`, `courier`, or `driver`.
 - `POST /api/v1/driver/onboarding/bank-account`
 - `POST /api/v1/driver/onboarding/riding-details`
 - `POST /api/v1/driver/onboarding/submit`
+- `GET /api/v1/driver/trips`
+- `GET /api/v1/driver/trips/{trip}`
+- `POST /api/v1/driver/trips/{trip}/accept`
+- `POST /api/v1/driver/trips/{trip}/arrived`
 - `POST /api/v1/driver/documents`
 - `GET /api/v1/driver/documents`
 
 Rider profile update accepts partial JSON fields: `first_name`, `last_name`, `phone`, `gender`, `date_of_birth`, `address`, `city`, `state`, `profile_photo`, and `license_number`. When `first_name`, `last_name`, or `phone` changes, the API also syncs the authenticated user summary returned by `/auth/me`.
+
+Driver trip flow:
+
+- `GET /driver/trips` returns assigned, accepted, and ongoing trips for the authenticated rider.
+- `POST /driver/trips/{trip}/accept` moves an assigned trip to `accepted`.
+- `POST /driver/trips/{trip}/arrived` records `started_at`, moves the trip to `ongoing`, and makes the customer payload return `is_arrived_at_pickup: true`.
 
 Rider onboarding payloads:
 

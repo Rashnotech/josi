@@ -2,10 +2,12 @@ package com.example.josi_ride
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -16,6 +18,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val locationChannelName = "josi_ride/device_location"
+    private val phoneChannelName = "josi_ride/phone"
     private val locationPermissionRequest = 4810
     private val locationTimeoutMs = 10000L
     private var pendingLocationResult: MethodChannel.Result? = null
@@ -34,6 +37,36 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            phoneChannelName,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "dial" -> dialPhoneNumber(call.argument<String>("phone"), result)
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun dialPhoneNumber(phoneNumber: String?, result: MethodChannel.Result) {
+        val normalized = phoneNumber?.trim().orEmpty()
+        if (normalized.isEmpty()) {
+            result.error("PHONE_EMPTY", "Rider phone number is not available.", null)
+            return
+        }
+
+        val intent = Intent(Intent.ACTION_DIAL).apply {
+            data = Uri.parse("tel:$normalized")
+        }
+
+        if (intent.resolveActivity(packageManager) == null) {
+            result.error("PHONE_UNAVAILABLE", "No phone app is available on this device.", null)
+            return
+        }
+
+        startActivity(intent)
+        result.success(true)
     }
 
     private fun startLocationLookup(result: MethodChannel.Result) {

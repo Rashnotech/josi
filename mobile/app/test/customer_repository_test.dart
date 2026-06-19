@@ -233,6 +233,173 @@ void main() {
     expect(trip.status, TripStatus.searching);
     expect(trip.fare, 'NGN 3500');
   });
+
+  test('customer rider matching, assignment, arrival, and review use backend',
+      () async {
+    final List<Map<String, Object?>> requests = <Map<String, Object?>>[];
+    final _MemoryTokenStorage storage = _MemoryTokenStorage();
+    await storage.saveToken('token-123', userRole: 'customer');
+
+    final CustomerRepository repository = CustomerRepository(
+      tokenStorage: storage,
+      apiClient: ApiClient(
+        baseUrl: 'https://api.josi.test/api/v1',
+        httpRequest: (
+          Uri uri, {
+          required String method,
+          required Map<String, String> headers,
+          Object? body,
+        }) async {
+          requests.add(<String, Object?>{
+            'method': method,
+            'path': uri.path,
+            'headers': headers,
+            'body': body == null ? null : jsonDecode(body as String),
+          });
+
+          if (uri.path.endsWith('/available-riders')) {
+            return const ApiHttpResponse(
+              statusCode: 200,
+              body: '''
+{
+  "status": true,
+  "data": {
+    "riders": [
+      {
+        "id": 44,
+        "name": "Ayo Balogun",
+        "phone": "+2348000000004",
+        "city": "Abuja",
+        "state": "FCT",
+        "vehicle": {
+          "label": "Red Bajaj Boxer",
+          "plate_number": "JOS-123AB"
+        }
+      }
+    ]
+  }
+}
+''',
+            );
+          }
+
+          if (uri.path.endsWith('/request-rider')) {
+            return const ApiHttpResponse(
+              statusCode: 200,
+              body: '''
+{
+  "status": true,
+  "message": "Rider requested and notified successfully",
+  "data": {
+    "rider_notified": true,
+    "trip": {
+      "id": 99,
+      "pickup_address": "Wuse 2, Abuja",
+      "destination_address": "Jabi Lake Mall",
+      "amount": 3500,
+      "trip_status": "assigned",
+      "payment_method": "cash",
+      "rider_name": "Ayo Balogun",
+      "rider_phone": "+2348000000004",
+      "vehicle_label": "Red Bajaj Boxer",
+      "plate_number": "JOS-123AB",
+      "is_arrived_at_pickup": false
+    }
+  }
+}
+''',
+            );
+          }
+
+          if (uri.path.endsWith('/review')) {
+            return const ApiHttpResponse(
+              statusCode: 200,
+              body: '''
+{
+  "status": true,
+  "message": "Rider review submitted successfully",
+  "data": {
+    "review": {
+      "id": 7,
+      "rating": 5,
+      "review": "Fast pickup."
+    }
+  }
+}
+''',
+            );
+          }
+
+          return const ApiHttpResponse(
+            statusCode: 200,
+            body: '''
+{
+  "status": true,
+  "data": {
+    "trip": {
+      "id": 99,
+      "pickup_address": "Wuse 2, Abuja",
+      "destination_address": "Jabi Lake Mall",
+      "amount": 3500,
+      "trip_status": "ongoing",
+      "payment_method": "cash",
+      "rider_name": "Ayo Balogun",
+      "rider_phone": "+2348000000004",
+      "vehicle_label": "Red Bajaj Boxer",
+      "plate_number": "JOS-123AB",
+      "is_arrived_at_pickup": true,
+      "review": {
+        "rating": 4,
+        "review": "Smooth ride."
+      }
+    }
+  }
+}
+''',
+          );
+        },
+      ),
+    );
+
+    final List<AvailableRider> riders = await repository.availableRiders('99');
+    final Trip assigned = await repository.requestRider(
+      tripId: '99',
+      riderProfileId: '44',
+    );
+    final Trip arrived = await repository.trip('99');
+    final String reviewMessage = await repository.submitRiderReview(
+      tripId: '99',
+      rating: 5,
+      review: 'Fast pickup.',
+    );
+
+    expect(requests[0]['method'], 'GET');
+    expect(requests[0]['path'], '/api/v1/customer/trips/99/available-riders');
+    expect(riders.single.name, 'Ayo Balogun');
+    expect(riders.single.vehicleLabel, 'Red Bajaj Boxer');
+    expect(riders.single.plateNumber, 'JOS-123AB');
+
+    expect(requests[1]['method'], 'POST');
+    expect(requests[1]['path'], '/api/v1/customer/trips/99/request-rider');
+    expect((requests[1]['body']! as Map<String, Object?>)['rider_profile_id'],
+        '44');
+    expect(assigned.riderName, 'Ayo Balogun');
+    expect(assigned.riderPhone, '+2348000000004');
+    expect(assigned.plateNumber, 'JOS-123AB');
+    expect(assigned.isArrivedAtPickup, isFalse);
+
+    expect(requests[2]['method'], 'GET');
+    expect(requests[2]['path'], '/api/v1/customer/trips/99');
+    expect(arrived.isArrivedAtPickup, isTrue);
+    expect(arrived.reviewRating, 4);
+
+    expect(requests[3]['method'], 'POST');
+    expect(requests[3]['path'], '/api/v1/customer/trips/99/review');
+    expect((requests[3]['body']! as Map<String, Object?>)['rating'], 5);
+    expect((requests[3]['body']! as Map<String, Object?>)['review'],
+        'Fast pickup.');
+    expect(reviewMessage, 'Rider review submitted successfully');
+  });
 }
 
 class _MemoryTokenStorage implements TokenStorage {

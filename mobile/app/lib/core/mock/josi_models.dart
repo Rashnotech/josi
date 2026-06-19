@@ -179,6 +179,13 @@ class Trip {
     required this.customerName,
     required this.distance,
     required this.duration,
+    this.riderId = '',
+    this.riderPhone = '',
+    this.vehicleLabel = '',
+    this.plateNumber = '',
+    this.isArrivedAtPickup = false,
+    this.reviewRating,
+    this.reviewText,
   });
 
   final String id;
@@ -192,6 +199,35 @@ class Trip {
   final String customerName;
   final String distance;
   final String duration;
+  final String riderId;
+  final String riderPhone;
+  final String vehicleLabel;
+  final String plateNumber;
+  final bool isArrivedAtPickup;
+  final int? reviewRating;
+  final String? reviewText;
+}
+
+class AvailableRider {
+  const AvailableRider({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.vehicleLabel,
+    required this.plateNumber,
+    this.city = '',
+    this.state = '',
+    this.profilePhoto,
+  });
+
+  final String id;
+  final String name;
+  final String phone;
+  final String vehicleLabel;
+  final String plateNumber;
+  final String city;
+  final String state;
+  final String? profilePhoto;
 }
 
 class WalletTransaction {

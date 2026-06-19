@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\CustomerProfileController;
 use App\Http\Controllers\Api\V1\CustomerRegistrationController;
 use App\Http\Controllers\Api\V1\CustomerTripController;
 use App\Http\Controllers\Api\V1\DriverProfileController;
+use App\Http\Controllers\Api\V1\DriverTripController;
 use App\Http\Controllers\Api\V1\DriverRegistrationController;
 use App\Http\Controllers\Api\V1\FleetProfileController;
 use App\Http\Controllers\Api\V1\FleetRegistrationController;
@@ -38,6 +39,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/profile', [DriverProfileController::class, 'profile']);
         Route::put('/profile', [DriverProfileController::class, 'update'])->middleware('permission:update_profile');
         Route::get('/application-status', [DriverProfileController::class, 'applicationStatus'])->middleware('permission:view_application_status');
+        Route::get('/trips', [DriverTripController::class, 'index'])->middleware('permission:view_assigned_trips');
+        Route::get('/trips/{trip}', [DriverTripController::class, 'show'])->middleware('permission:view_assigned_trips');
+        Route::post('/trips/{trip}/accept', [DriverTripController::class, 'accept'])->middleware('permission:view_assigned_trips');
+        Route::post('/trips/{trip}/arrived', [DriverTripController::class, 'arrived'])->middleware('permission:view_assigned_trips');
         Route::get('/onboarding', [DriverProfileController::class, 'onboarding'])->middleware('permission:view_application_status');
         Route::post('/onboarding/profile-picture', [DriverProfileController::class, 'saveProfilePicture'])->middleware('permission:update_profile');
         Route::post('/onboarding/bank-account', [DriverProfileController::class, 'saveBankAccount'])->middleware('permission:update_profile');
@@ -64,6 +69,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/addresses', [CustomerAddressController::class, 'store'])->middleware('permission:update_profile');
         Route::get('/trips', [CustomerTripController::class, 'index'])->middleware('permission:view_own_trips');
         Route::post('/trips', [CustomerTripController::class, 'store'])->middleware('permission:create_trip');
+        Route::get('/trips/{trip}', [CustomerTripController::class, 'show'])->middleware('permission:view_own_trips');
+        Route::get('/trips/{trip}/available-riders', [CustomerTripController::class, 'availableRiders'])->middleware('permission:create_trip');
+        Route::post('/trips/{trip}/request-rider', [CustomerTripController::class, 'requestRider'])->middleware('permission:create_trip');
+        Route::post('/trips/{trip}/review', [CustomerTripController::class, 'review'])->middleware('permission:view_own_trips');
     });
 
     Route::prefix('admin')->middleware(['jwt.auth', 'active', 'role:admin,super_admin'])->group(function () {

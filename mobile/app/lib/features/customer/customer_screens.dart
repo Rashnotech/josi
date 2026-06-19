@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -2548,7 +2550,7 @@ class _PaymentMaterialIcon extends StatelessWidget {
 
 enum _RideSearchStage { searching, found, notFound }
 
-class CustomerSearchingRiderScreen extends StatefulWidget {
+class CustomerSearchingRiderScreen extends ConsumerStatefulWidget {
   const CustomerSearchingRiderScreen({
     super.key,
     this.showNotFound = false,
@@ -2557,15 +2559,28 @@ class CustomerSearchingRiderScreen extends StatefulWidget {
   final bool showNotFound;
 
   @override
-  State<CustomerSearchingRiderScreen> createState() =>
+  ConsumerState<CustomerSearchingRiderScreen> createState() =>
       _CustomerSearchingRiderScreenState();
 }
 
 class _CustomerSearchingRiderScreenState
-    extends State<CustomerSearchingRiderScreen> {
+    extends ConsumerState<CustomerSearchingRiderScreen> {
   late _RideSearchStage _stage = widget.showNotFound
       ? _RideSearchStage.notFound
       : _RideSearchStage.searching;
+  Timer? _searchTimer;
+  Trip? _trip;
+  List<AvailableRider> _riders = const <AvailableRider>[];
+  String? _errorMessage;
+  bool _isRequestingRider = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.showNotFound) {
+      _scheduleSearch();
+    }
+  }
 
   @override
   void didUpdateWidget(covariant CustomerSearchingRiderScreen oldWidget) {
@@ -2574,6 +2589,116 @@ class _CustomerSearchingRiderScreenState
       _stage = widget.showNotFound
           ? _RideSearchStage.notFound
           : _RideSearchStage.searching;
+      if (!widget.showNotFound) {
+        _scheduleSearch();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleSearch() {
+    _searchTimer?.cancel();
+    _searchTimer = Timer(const Duration(milliseconds: 650), _searchRiders);
+  }
+
+  Future<void> _searchRiders() async {
+    if (!mounted || widget.showNotFound) {
+      return;
+    }
+
+    setState(() {
+      _stage = _RideSearchStage.searching;
+      _errorMessage = null;
+    });
+
+    try {
+      Trip? trip = ref.read(activeCustomerTripProvider);
+      if (trip == null || trip.id.trim().isEmpty) {
+        final List<Trip> trips =
+            await ref.read(customerRepositoryProvider).trips();
+        trip = trips.cast<Trip?>().firstWhere(
+              (Trip? value) =>
+                  value?.status == TripStatus.searching ||
+                  value?.status == TripStatus.active,
+              orElse: () => null,
+            );
+      }
+
+      if (trip == null || trip.id.trim().isEmpty) {
+        if (!mounted) {
+          return;
+        }
+        setState(() => _stage = _RideSearchStage.notFound);
+        return;
+      }
+
+      final List<AvailableRider> riders =
+          await ref.read(customerRepositoryProvider).availableRiders(trip.id);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _trip = trip;
+        _riders = riders;
+        _stage =
+            riders.isEmpty ? _RideSearchStage.notFound : _RideSearchStage.found;
+      });
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorMessage = _customerErrorMessage(
+          error,
+          'Unable to search available riders. Please try again.',
+        );
+        _stage = _RideSearchStage.notFound;
+      });
+    }
+  }
+
+  Future<void> _requestRide(AvailableRider rider) async {
+    final Trip? trip = _trip;
+    if (_isRequestingRider || trip == null) {
+      return;
+    }
+
+    setState(() => _isRequestingRider = true);
+    try {
+      final Trip requestedTrip =
+          await ref.read(customerRepositoryProvider).requestRider(
+                tripId: trip.id,
+                riderProfileId: rider.id,
+              );
+      ref.read(activeCustomerTripProvider.notifier).state = requestedTrip;
+      ref.invalidate(customerTripsProvider);
+      if (mounted) {
+        context.go(AppRoutes.customerTripActive);
+      }
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(_customerErrorMessage(
+              error,
+              'Unable to request this rider. Please try again.',
+            )),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _isRequestingRider = false);
+      }
     }
   }
 
@@ -2583,19 +2708,21 @@ class _CustomerSearchingRiderScreenState
       case _RideSearchStage.searching:
         return _SearchingRideView(
           onBack: () => context.go(AppRoutes.customerSelectLocation),
-          onBookMini: () => setState(() => _stage = _RideSearchStage.found),
         );
       case _RideSearchStage.found:
         return _RideFoundView(
           onBack: () => setState(() => _stage = _RideSearchStage.searching),
-          onRequestRide: () => context.go(AppRoutes.customerTripActive),
+          riders: _riders,
+          isRequesting: _isRequestingRider,
+          onRequestRide: _requestRide,
         );
       case _RideSearchStage.notFound:
         return _RideNotFoundView(
+          message: _errorMessage,
           onBack: () => context.go(AppRoutes.customerSelectLocation),
           onTryAgain: () {
             context.go(AppRoutes.customerSearchingRider);
-            setState(() => _stage = _RideSearchStage.searching);
+            _scheduleSearch();
           },
         );
     }
@@ -2605,11 +2732,9 @@ class _CustomerSearchingRiderScreenState
 class _SearchingRideView extends StatelessWidget {
   const _SearchingRideView({
     required this.onBack,
-    required this.onBookMini,
   });
 
   final VoidCallback onBack;
-  final VoidCallback onBookMini;
 
   @override
   Widget build(BuildContext context) {
@@ -2620,7 +2745,7 @@ class _SearchingRideView extends StatelessWidget {
         children: <Widget>[
           const Positioned.fill(
             child: _RideMapBackdrop(
-              showBikes: true,
+              showBikes: false,
               showRoute: false,
             ),
           ),
@@ -2648,7 +2773,7 @@ class _SearchingRideView extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'This may take a few seconds...',
+                  'Checking approved riders for this route.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: JosiColors.softMuted,
@@ -2660,10 +2785,6 @@ class _SearchingRideView extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: _RideBottomAction(
-        label: 'Book Mini',
-        onPressed: onBookMini,
-      ),
     );
   }
 }
@@ -2671,11 +2792,15 @@ class _SearchingRideView extends StatelessWidget {
 class _RideFoundView extends StatelessWidget {
   const _RideFoundView({
     required this.onBack,
+    required this.riders,
+    required this.isRequesting,
     required this.onRequestRide,
   });
 
   final VoidCallback onBack;
-  final VoidCallback onRequestRide;
+  final List<AvailableRider> riders;
+  final bool isRequesting;
+  final ValueChanged<AvailableRider> onRequestRide;
 
   @override
   Widget build(BuildContext context) {
@@ -2685,7 +2810,7 @@ class _RideFoundView extends StatelessWidget {
       body: Stack(
         children: <Widget>[
           const Positioned.fill(
-            child: _RideMapBackdrop(showBikes: true, showRoute: true),
+            child: _RideMapBackdrop(showBikes: false, showRoute: true),
           ),
           Positioned(
             left: 24,
@@ -2706,6 +2831,8 @@ class _RideFoundView extends StatelessWidget {
             builder: (BuildContext context, ScrollController scrollController) {
               return _RideFoundSheet(
                 scrollController: scrollController,
+                riders: riders,
+                isRequesting: isRequesting,
                 onRequestRide: onRequestRide,
               );
             },
@@ -2720,10 +2847,12 @@ class _RideNotFoundView extends StatelessWidget {
   const _RideNotFoundView({
     required this.onBack,
     required this.onTryAgain,
+    this.message,
   });
 
   final VoidCallback onBack;
   final VoidCallback onTryAgain;
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -2754,7 +2883,10 @@ class _RideNotFoundView extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: _RideNotFoundSheet(onTryAgain: onTryAgain),
+            child: _RideNotFoundSheet(
+              message: message,
+              onTryAgain: onTryAgain,
+            ),
           ),
         ],
       ),
@@ -2818,14 +2950,24 @@ class _SearchingRideBadge extends StatelessWidget {
 class _RideFoundSheet extends StatelessWidget {
   const _RideFoundSheet({
     required this.scrollController,
+    required this.riders,
+    required this.isRequesting,
     required this.onRequestRide,
   });
 
   final ScrollController scrollController;
-  final VoidCallback onRequestRide;
+  final List<AvailableRider> riders;
+  final bool isRequesting;
+  final ValueChanged<AvailableRider> onRequestRide;
 
   @override
   Widget build(BuildContext context) {
+    final AvailableRider rider = riders.first;
+    final String plate =
+        rider.plateNumber.isEmpty ? 'Plate pending' : rider.plateNumber;
+    final String vehicle =
+        rider.vehicleLabel.isEmpty ? 'Bike rider' : rider.vehicleLabel;
+
     return Material(
       key: const ValueKey<String>('request-ride-bottom-sheet'),
       color: JosiColors.white,
@@ -2866,7 +3008,7 @@ class _RideFoundSheet extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  '5 min Away',
+                  '${riders.length} available',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: JosiColors.softMuted,
                         fontSize: 12,
@@ -2890,14 +3032,14 @@ class _RideFoundSheet extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        const _DriverAvatar(name: 'Jenny Wilson', size: 52),
+                        _DriverAvatar(name: rider.name, size: 52),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                'Jenny Wilson',
+                                rider.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context)
@@ -2911,7 +3053,7 @@ class _RideFoundSheet extends StatelessWidget {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                'Bike rider',
+                                vehicle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context)
@@ -2941,29 +3083,18 @@ class _RideFoundSheet extends StatelessWidget {
                   children: <Widget>[
                     Text.rich(
                       TextSpan(
-                        text: '\$1.25',
+                        text: 'Bike',
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: JosiColors.ink,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
                                 ),
-                        children: <InlineSpan>[
-                          TextSpan(
-                            text: '/mi',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: JosiColors.softMuted,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                          ),
-                        ],
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'GR 678',
+                      plate,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: JosiColors.softMuted,
                             fontSize: 11,
@@ -2976,8 +3107,9 @@ class _RideFoundSheet extends StatelessWidget {
             const SizedBox(height: 18),
             _RidePrimaryButton(
               key: const ValueKey<String>('request-ride-button'),
-              label: 'Request Ride',
-              onPressed: onRequestRide,
+              label: isRequesting ? 'Requesting...' : 'Request Rider',
+              isLoading: isRequesting,
+              onPressed: () => onRequestRide(rider),
             ),
           ],
         ),
@@ -2987,9 +3119,13 @@ class _RideFoundSheet extends StatelessWidget {
 }
 
 class _RideNotFoundSheet extends StatelessWidget {
-  const _RideNotFoundSheet({required this.onTryAgain});
+  const _RideNotFoundSheet({
+    required this.onTryAgain,
+    this.message,
+  });
 
   final VoidCallback onTryAgain;
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -3014,7 +3150,7 @@ class _RideNotFoundSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'please try again in a few minutes',
+            message ?? 'No approved rider is available for this route yet.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.softMuted,
@@ -3076,53 +3212,17 @@ class _RideSheet extends StatelessWidget {
   }
 }
 
-class _RideBottomAction extends StatelessWidget {
-  const _RideBottomAction({
-    required this.label,
-    required this.onPressed,
-  });
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: JosiColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Color(0x10000000),
-            blurRadius: 18,
-            offset: Offset(0, -6),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(30, 18, 30, 20),
-          child: _RidePrimaryButton(
-            key: const ValueKey<String>('book-mini-button'),
-            label: label,
-            onPressed: onPressed,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _RidePrimaryButton extends StatelessWidget {
   const _RidePrimaryButton({
     required this.label,
     required this.onPressed,
     super.key,
+    this.isLoading = false,
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -3130,7 +3230,7 @@ class _RidePrimaryButton extends StatelessWidget {
       width: double.infinity,
       height: 54,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: JosiColors.red,
           foregroundColor: JosiColors.white,
@@ -3142,7 +3242,15 @@ class _RidePrimaryButton extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
         ),
-        child: Text(label),
+        child: isLoading
+            ? const SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: JosiColors.white,
+                ),
+              )
+            : Text(label),
       ),
     );
   }
@@ -3307,33 +3415,13 @@ class _RideMapBackdrop extends ConsumerWidget {
             ),
           )
         : const AsyncValue<RouteDetails>.loading();
-    final List<Offset> bikes = showRoute
-        ? const <Offset>[Offset(0.58, 0.43)]
-        : const <Offset>[
-            Offset(0.22, 0.44),
-            Offset(0.75, 0.45),
-            Offset(0.52, 0.64),
-            Offset(0.22, 0.72),
-            Offset(0.78, 0.71),
-            Offset(0.42, 0.90),
-          ];
+    final List<Offset> bikes =
+        showRoute ? const <Offset>[Offset(0.58, 0.43)] : const <Offset>[];
     final Set<Marker> markers = showRoute
         ? mapState.customerTripMarkers
         : <Marker>{
             MapConstants.pickupMarker(mapState.pickup),
             MapConstants.destinationMarker(mapState.destination),
-            MapConstants.riderMarker(
-              MapConstants.mockRiderLocation,
-              id: 'rider-1',
-            ),
-            MapConstants.riderMarker(
-              const LatLng(9.0832, 7.4321),
-              id: 'rider-2',
-            ),
-            MapConstants.riderMarker(
-              const LatLng(9.0614, 7.4102),
-              id: 'rider-3',
-            ),
           };
 
     return LayoutBuilder(
@@ -3377,98 +3465,171 @@ class _RideMapBackdrop extends ConsumerWidget {
   }
 }
 
-class CustomerActiveTripScreen extends StatelessWidget {
+Trip? _customerActiveTripFrom(List<Trip> trips) {
+  for (final Trip trip in trips) {
+    if (trip.isArrivedAtPickup ||
+        trip.status == TripStatus.active ||
+        trip.status == TripStatus.searching) {
+      return trip;
+    }
+  }
+  return null;
+}
+
+class CustomerActiveTripScreen extends ConsumerStatefulWidget {
   const CustomerActiveTripScreen({super.key});
 
   @override
+  ConsumerState<CustomerActiveTripScreen> createState() =>
+      _CustomerActiveTripScreenState();
+}
+
+class _CustomerActiveTripScreenState
+    extends ConsumerState<CustomerActiveTripScreen> {
+  Timer? _pollTimer;
+  String? _pollingTripId;
+  bool _isCallingRider = false;
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _ensurePolling(Trip trip) {
+    if (_pollingTripId == trip.id) {
+      return;
+    }
+    _pollTimer?.cancel();
+    _pollingTripId = trip.id;
+    unawaited(_refreshTrip(trip.id));
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _refreshTrip(trip.id),
+    );
+  }
+
+  Future<void> _refreshTrip(String tripId) async {
+    try {
+      final Trip latest =
+          await ref.read(customerRepositoryProvider).trip(tripId);
+      if (!mounted) {
+        return;
+      }
+      ref.read(activeCustomerTripProvider.notifier).state = latest;
+      if (latest.isArrivedAtPickup || latest.status == TripStatus.completed) {
+        _pollTimer?.cancel();
+      }
+    } on Object {
+      // The visible screen keeps the last known trip while the next poll retries.
+    }
+  }
+
+  Future<void> _callRider(Trip trip) async {
+    if (trip.riderPhone.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rider phone number is not available.')),
+      );
+      return;
+    }
+
+    setState(() => _isCallingRider = true);
+    final bool opened =
+        await ref.read(phoneCallServiceProvider).call(trip.riderPhone);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isCallingRider = false);
+    if (!opened) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open the phone dialer.')),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return _ActiveTripScaffold(
-      key: const ValueKey<String>('customer-active-trip-shell'),
-      title: 'Rider Arrived',
-      subtitle: 'Rider arrived',
-      child: AppScreenBody(
-        children: <Widget>[
-          const SizedBox(height: 300, child: _ActiveTripMapBackdrop()),
-          const SizedBox(height: 16),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    const ProfileAvatar(name: 'Amina Yusuf'),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text('Amina Yusuf',
-                              style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Toyota Corolla • ABC 482 JK',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: JosiColors.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const StatusBadge(
-                        label: '4.8',
-                        color: JosiColors.warning,
-                        softColor: JosiColors.warningSoft),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const _Timeline(labels: <String>[
-                  'Rider accepted',
-                  'Arriving at pickup',
-                  'Trip in progress'
-                ]),
-                const SizedBox(height: 16),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: AppButton(
-                        label: 'Call',
-                        icon: Icons.call_rounded,
-                        variant: AppButtonVariant.secondary,
-                        onPressed: () {},
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: AppButton(
-                        label: 'Help',
-                        icon: Icons.chat_bubble_rounded,
-                        variant: AppButtonVariant.secondary,
-                        onPressed: () {},
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+    final Trip? activeTrip = ref.watch(activeCustomerTripProvider);
+    if (activeTrip != null) {
+      _ensurePolling(activeTrip);
+      return _ActiveTripScaffold(
+        key: const ValueKey<String>('customer-active-trip-shell'),
+        trip: activeTrip,
+        isCallingRider: _isCallingRider,
+        onCallRider: () => _callRider(activeTrip),
+      );
+    }
+
+    final AsyncValue<List<Trip>> trips = ref.watch(customerTripsProvider);
+    return trips.when(
+      data: (List<Trip> values) {
+        final Trip? trip = _customerActiveTripFrom(values);
+        if (trip == null) {
+          return const _ActiveTripUnavailableScaffold(
+            title: 'No active trip',
+            message: 'Request a rider to see live trip updates here.',
+          );
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(activeCustomerTripProvider.notifier).state = trip;
+          }
+        });
+        _ensurePolling(trip);
+        return _ActiveTripScaffold(
+          key: const ValueKey<String>('customer-active-trip-shell'),
+          trip: trip,
+          isCallingRider: _isCallingRider,
+          onCallRider: () => _callRider(trip),
+        );
+      },
+      error: (Object error, StackTrace stackTrace) =>
+          const _ActiveTripUnavailableScaffold(
+        title: 'Trip unavailable',
+        message: 'Live trip details could not load. Please try again.',
+      ),
+      loading: () => const _ActiveTripUnavailableScaffold(
+        title: 'Loading trip',
+        message: 'Checking your latest rider request.',
+        isLoading: true,
+      ),
+    );
+  }
+}
+
+class _ActiveTripUnavailableScaffold extends StatelessWidget {
+  const _ActiveTripUnavailableScaffold({
+    required this.title,
+    required this.message,
+    this.isLoading = false,
+  });
+
+  final String title;
+  final String message;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-active-trip-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: AppScreenBody(
+          children: <Widget>[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _FloatingBackButton(
+                onTap: () => context.go(AppRoutes.customerHome),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          const AppCard(
-            child: Column(
-              children: <Widget>[
-                _SummaryRow(label: 'Fare', value: 'NGN 3,500'),
-                _SummaryRow(
-                    label: 'Payment status', value: 'Cash due at drop-off'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          AppButton(
-            label: 'Trip preview',
-            icon: Icons.check_circle_rounded,
-            onPressed: () => context.go(AppRoutes.customerTripCompleted),
-          ),
-        ],
+            const SizedBox(height: 120),
+            if (isLoading)
+              const LoadingState(label: 'Loading trip')
+            else
+              EmptyState(title: title, message: message),
+          ],
+        ),
       ),
     );
   }
@@ -3476,14 +3637,44 @@ class CustomerActiveTripScreen extends StatelessWidget {
 
 class _ActiveTripScaffold extends StatelessWidget {
   const _ActiveTripScaffold({
-    required Widget child,
+    required this.trip,
+    required this.isCallingRider,
+    required this.onCallRider,
     super.key,
-    String? title,
-    String? subtitle,
   });
+
+  final Trip trip;
+  final bool isCallingRider;
+  final VoidCallback onCallRider;
 
   @override
   Widget build(BuildContext context) {
+    return _ActiveTripShell(
+      key: const ValueKey<String>('customer-active-trip-shell'),
+      trip: trip,
+      isCallingRider: isCallingRider,
+      onCallRider: onCallRider,
+    );
+  }
+}
+
+class _ActiveTripShell extends StatelessWidget {
+  const _ActiveTripShell({
+    required this.trip,
+    required this.isCallingRider,
+    required this.onCallRider,
+    super.key,
+  });
+
+  final Trip trip;
+  final bool isCallingRider;
+  final VoidCallback onCallRider;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool riderArrived = trip.isArrivedAtPickup;
+    final String title = riderArrived ? 'Rider Arrived' : 'Rider on the way';
+
     return Scaffold(
       key: const ValueKey<String>('customer-active-trip-screen'),
       backgroundColor: JosiColors.white,
@@ -3502,7 +3693,7 @@ class _ActiveTripScaffold extends StatelessWidget {
             left: 0,
             right: 0,
             child: Text(
-              'Rider Arrived',
+              title,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: JosiColors.ink,
@@ -3518,9 +3709,19 @@ class _ActiveTripScaffold extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: _ActiveTripSheet(
-              onTripPreview: () => context.go(AppRoutes.customerTripCompleted),
-            ),
+            child: riderArrived
+                ? _ActiveTripSheet(
+                    trip: trip,
+                    isCallingRider: isCallingRider,
+                    onCallRider: onCallRider,
+                    onTripPreview: () =>
+                        context.go(AppRoutes.customerTripCompleted),
+                  )
+                : _WaitingForRiderArrivalSheet(
+                    trip: trip,
+                    isCallingRider: isCallingRider,
+                    onCallRider: onCallRider,
+                  ),
           ),
         ],
       ),
@@ -3653,12 +3854,28 @@ class _CarMapMarker extends StatelessWidget {
 }
 
 class _ActiveTripSheet extends StatelessWidget {
-  const _ActiveTripSheet({required this.onTripPreview});
+  const _ActiveTripSheet({
+    required this.trip,
+    required this.isCallingRider,
+    required this.onCallRider,
+    required this.onTripPreview,
+  });
 
+  final Trip trip;
+  final bool isCallingRider;
+  final VoidCallback onCallRider;
   final VoidCallback onTripPreview;
 
   @override
   Widget build(BuildContext context) {
+    final String riderName =
+        trip.riderName.trim().isEmpty ? 'Assigned rider' : trip.riderName;
+    final String vehicleLabel =
+        trip.vehicleLabel.trim().isEmpty ? 'Bike' : trip.vehicleLabel;
+    final String plateNumber = trip.plateNumber.trim().isEmpty
+        ? 'Bike number unavailable'
+        : trip.plateNumber;
+
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 430),
@@ -3703,7 +3920,7 @@ class _ActiveTripSheet extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '5 min Away',
+                  trip.duration.trim().isEmpty ? 'At pickup' : trip.duration,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: JosiColors.softMuted,
                         fontSize: 14,
@@ -3724,14 +3941,14 @@ class _ActiveTripSheet extends StatelessWidget {
                     onTap: () => context.push(AppRoutes.customerDriverDetails),
                     child: Row(
                       children: <Widget>[
-                        const _DriverAvatar(name: 'Jenny Wilson', size: 56),
+                        _DriverAvatar(name: riderName, size: 56),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                'Jenny Wilson',
+                                riderName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context)
@@ -3745,7 +3962,9 @@ class _ActiveTripSheet extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Sedan',
+                                '$vehicleLabel • $plateNumber',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
@@ -3762,37 +3981,163 @@ class _ActiveTripSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const _ContactRoundButton(asset: AppAssets.sms),
-                const SizedBox(width: 12),
-                const _ContactRoundButton(asset: AppAssets.call),
+                _ContactRoundButton(
+                  key: const ValueKey<String>('active-trip-call-button'),
+                  asset: AppAssets.call,
+                  isLoading: isCallingRider,
+                  onTap: onCallRider,
+                ),
               ],
             ),
             const SizedBox(height: 18),
-            const _ActiveTripRouteSummary(),
+            _ActiveTripRouteSummary(trip: trip),
             const SizedBox(height: 16),
             const Divider(color: JosiColors.line),
             const SizedBox(height: 14),
-            const Row(
+            Row(
               children: <Widget>[
                 Expanded(
-                  child: _ActiveTripStat(label: 'Rate per', value: r'$1.25'),
+                  child: _ActiveTripStat(label: 'Fare', value: trip.fare),
                 ),
                 Expanded(
                   child: _ActiveTripStat(
-                      label: 'Car Number', value: 'GR 678-UVWX'),
+                    label: 'Bike Number',
+                    value: plateNumber,
+                  ),
                 ),
                 Expanded(
-                  child:
-                      _ActiveTripStat(label: 'No. of Seats', value: '4 Seats'),
+                  child: _ActiveTripStat(
+                    label: 'Payment',
+                    value: _paymentLabel(trip.paymentMethod),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 18),
             _RidePrimaryButton(
               key: const ValueKey<String>('trip-preview-button'),
-              label: 'Trip preview',
+              label: 'Rate Rider',
               onPressed: onTripPreview,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WaitingForRiderArrivalSheet extends StatelessWidget {
+  const _WaitingForRiderArrivalSheet({
+    required this.trip,
+    required this.isCallingRider,
+    required this.onCallRider,
+  });
+
+  final Trip trip;
+  final bool isCallingRider;
+  final VoidCallback onCallRider;
+
+  @override
+  Widget build(BuildContext context) {
+    final String riderName =
+        trip.riderName.trim().isEmpty ? 'Assigned rider' : trip.riderName;
+    final String vehicleLabel =
+        trip.vehicleLabel.trim().isEmpty ? 'Bike' : trip.vehicleLabel;
+    final String plateNumber = trip.plateNumber.trim().isEmpty
+        ? 'Bike number unavailable'
+        : trip.plateNumber;
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 430),
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+      decoration: const BoxDecoration(
+        color: JosiColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x18000000),
+            blurRadius: 24,
+            offset: Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Align(
+              child: Container(
+                width: 96,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: JosiColors.line,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Rider notified',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: JosiColors.ink,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'This screen will update when the rider arrives at pickup.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: JosiColors.softMuted,
+                    fontSize: 14,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: <Widget>[
+                _DriverAvatar(name: riderName, size: 54),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        riderName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: JosiColors.ink,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$vehicleLabel • $plateNumber',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 14,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _ContactRoundButton(
+                  key: const ValueKey<String>('waiting-trip-call-button'),
+                  asset: AppAssets.call,
+                  isLoading: isCallingRider,
+                  onTap: onCallRider,
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _ActiveTripRouteSummary(trip: trip),
           ],
         ),
       ),
@@ -3804,38 +4149,65 @@ class _ContactRoundButton extends StatelessWidget {
   const _ContactRoundButton({
     this.icon,
     this.asset,
+    this.onTap,
+    this.isLoading = false,
+    super.key,
   }) : assert(icon != null || asset != null);
 
   final IconData? icon;
   final String? asset;
+  final VoidCallback? onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 54,
-      height: 54,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: JosiColors.surface,
-        shape: BoxShape.circle,
-        border: Border.all(color: JosiColors.line),
+    return Material(
+      color: JosiColors.surface,
+      shape: const CircleBorder(side: BorderSide(color: JosiColors.line)),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: isLoading ? null : onTap,
+        child: SizedBox.square(
+          dimension: 54,
+          child: Center(
+            child: isLoading
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: JosiColors.red,
+                    ),
+                  )
+                : asset != null
+                    ? _AssetIcon(asset: asset!, color: JosiColors.red, size: 22)
+                    : Icon(icon, color: JosiColors.red, size: 24),
+          ),
+        ),
       ),
-      child: asset != null
-          ? _AssetIcon(asset: asset!, color: JosiColors.red, size: 22)
-          : Icon(icon, color: JosiColors.red, size: 24),
     );
   }
 }
 
 class _ActiveTripRouteSummary extends ConsumerWidget {
-  const _ActiveTripRouteSummary();
+  const _ActiveTripRouteSummary({required this.trip});
+
+  final Trip trip;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final String pickupAddress = ref.watch(selectedPickupAddressProvider);
-    final String destinationAddress =
+    final String selectedPickup = ref.watch(selectedPickupAddressProvider);
+    final String selectedDestination =
         ref.watch(selectedDestinationAddressProvider);
+    final String pickupAddress =
+        selectedPickup.trim().isEmpty ? trip.pickup : selectedPickup;
+    final String destinationAddress = selectedDestination.trim().isEmpty
+        ? trip.destination
+        : selectedDestination;
     final RouteDetails? route = ref.watch(selectedTripRouteProvider).value;
+    final String distanceLabel = route?.distanceLabel ??
+        (trip.distance.trim().isEmpty ? 'N/A' : trip.distance);
+    final String durationLabel = route?.durationLabel ??
+        (trip.duration.trim().isEmpty ? 'N/A' : trip.duration);
 
     return Stack(
       children: <Widget>[
@@ -3851,22 +4223,6 @@ class _ActiveTripRouteSummary extends ConsumerWidget {
               icon: Icons.radio_button_checked_rounded,
               iconColor: JosiColors.ink,
               label: pickupAddress,
-              trailing: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: JosiColors.white,
-                  border: Border.all(color: JosiColors.line),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'OTP - 6546',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: JosiColors.softMuted,
-                        fontSize: 14,
-                      ),
-                ),
-              ),
             ),
             const SizedBox(height: 14),
             _ActiveRoutePoint(
@@ -3874,25 +4230,23 @@ class _ActiveTripRouteSummary extends ConsumerWidget {
               iconColor: JosiColors.red,
               label: destinationAddress,
             ),
-            if (route != null) ...<Widget>[
-              const SizedBox(height: 12),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _ActiveTripStat(
-                      label: 'Distance',
-                      value: route.distanceLabel,
-                    ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: _ActiveTripStat(
+                    label: 'Distance',
+                    value: distanceLabel,
                   ),
-                  Expanded(
-                    child: _ActiveTripStat(
-                      label: 'Duration',
-                      value: route.durationLabel,
-                    ),
+                ),
+                Expanded(
+                  child: _ActiveTripStat(
+                    label: 'Duration',
+                    value: durationLabel,
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ],
         ),
       ],
@@ -3905,13 +4259,11 @@ class _ActiveRoutePoint extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.label,
-    this.trailing,
   });
 
   final IconData icon;
   final Color iconColor;
   final String label;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -3933,10 +4285,6 @@ class _ActiveRoutePoint extends StatelessWidget {
                 ),
           ),
         ),
-        if (trailing != null) ...<Widget>[
-          const SizedBox(width: 8),
-          trailing!,
-        ],
       ],
     );
   }
@@ -3996,12 +4344,130 @@ class _ActiveTripStat extends StatelessWidget {
   }
 }
 
-class CustomerTripCompletedScreen extends StatelessWidget {
+String _paymentLabel(PaymentMethod method) {
+  return switch (method) {
+    PaymentMethod.cash => 'Cash',
+    PaymentMethod.online => 'Online',
+    PaymentMethod.wallet => 'Wallet',
+  };
+}
+
+Trip? _customerRatingTripFrom(List<Trip> trips) {
+  for (final Trip trip in trips) {
+    if (trip.status == TripStatus.completed ||
+        trip.isArrivedAtPickup ||
+        trip.status == TripStatus.active ||
+        trip.status == TripStatus.searching) {
+      return trip;
+    }
+  }
+  return trips.isEmpty ? null : trips.first;
+}
+
+class CustomerTripCompletedScreen extends ConsumerStatefulWidget {
   const CustomerTripCompletedScreen({super.key});
 
   @override
+  ConsumerState<CustomerTripCompletedScreen> createState() =>
+      _CustomerTripCompletedScreenState();
+}
+
+class _CustomerTripCompletedScreenState
+    extends ConsumerState<CustomerTripCompletedScreen> {
+  final TextEditingController _reviewController = TextEditingController();
+  int _rating = 5;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitReview(Trip trip) async {
+    if (_rating < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a rating.')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final String message =
+          await ref.read(customerRepositoryProvider).submitRiderReview(
+                tripId: trip.id,
+                rating: _rating,
+                review: _reviewController.text,
+              );
+      if (!mounted) {
+        return;
+      }
+      ref.invalidate(customerTripsProvider);
+      ref.read(activeCustomerTripProvider.notifier).state = null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+      context.go(AppRoutes.customerHome);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review could not be submitted.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    const String amount = 'NGN 3,500';
+    final Trip? activeTrip = ref.watch(activeCustomerTripProvider);
+    if (activeTrip != null) {
+      return _buildTrip(context, activeTrip);
+    }
+
+    final AsyncValue<List<Trip>> trips = ref.watch(customerTripsProvider);
+    return trips.when(
+      data: (List<Trip> values) {
+        final Trip? trip = _customerRatingTripFrom(values);
+        if (trip == null) {
+          return const _TripRatingUnavailableScreen();
+        }
+        return _buildTrip(context, trip);
+      },
+      error: (Object error, StackTrace stackTrace) =>
+          const _TripRatingUnavailableScreen(),
+      loading: () => const Scaffold(
+        key: ValueKey<String>('customer-trip-completed-screen'),
+        backgroundColor: JosiColors.white,
+        body: SafeArea(
+          child: Center(child: LoadingState(label: 'Loading trip')),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrip(BuildContext context, Trip trip) {
+    final String riderName =
+        trip.riderName.trim().isEmpty ? 'Assigned rider' : trip.riderName;
+    final String vehicleLabel =
+        trip.vehicleLabel.trim().isEmpty ? 'Bike' : trip.vehicleLabel;
+    final String plateNumber = trip.plateNumber.trim().isEmpty
+        ? 'Bike number unavailable'
+        : trip.plateNumber;
+    final String amount =
+        trip.fare.trim().isEmpty ? 'Amount unavailable' : trip.fare;
 
     return Scaffold(
       key: const ValueKey<String>('customer-trip-completed-screen'),
@@ -4024,12 +4490,12 @@ class CustomerTripCompletedScreen extends StatelessWidget {
                   onTap: () => context.push(AppRoutes.customerDriverDetails),
                   child: Column(
                     children: <Widget>[
-                      const Center(
-                        child: _DriverAvatar(name: 'Jenny Wilson', size: 96),
+                      Center(
+                        child: _DriverAvatar(name: riderName, size: 96),
                       ),
                       const SizedBox(height: 22),
                       Text(
-                        'Jenny Wilson',
+                        riderName,
                         textAlign: TextAlign.center,
                         style: Theme.of(context)
                             .textTheme
@@ -4049,7 +4515,7 @@ class CustomerTripCompletedScreen extends StatelessWidget {
                   children: <Widget>[
                     Flexible(
                       child: Text(
-                        'Hyundai Verna',
+                        vehicleLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -4069,7 +4535,7 @@ class CustomerTripCompletedScreen extends StatelessWidget {
                     ),
                     Flexible(
                       child: Text(
-                        'OR 678-UVWX',
+                        plateNumber,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -4082,7 +4548,7 @@ class CustomerTripCompletedScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '$amount cash payment recorded for this trip.',
+                  '$amount is due for this trip.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: JosiColors.softMuted,
@@ -4091,7 +4557,7 @@ class CustomerTripCompletedScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 34),
                 Text(
-                  'How was your trip with\nJenny Wilson',
+                  'How was your trip with\n$riderName',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: JosiColors.black,
@@ -4112,7 +4578,10 @@ class CustomerTripCompletedScreen extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 24),
-                const _RateDriverStars(),
+                _RateDriverStars(
+                  rating: _rating,
+                  onChanged: (int value) => setState(() => _rating = value),
+                ),
                 const SizedBox(height: 28),
                 const Divider(color: JosiColors.line),
                 const SizedBox(height: 24),
@@ -4125,7 +4594,7 @@ class CustomerTripCompletedScreen extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 12),
-                const _RateDriverReviewField(),
+                _RateDriverReviewField(controller: _reviewController),
                 const SizedBox(height: 120),
               ],
             ),
@@ -4142,11 +4611,42 @@ class CustomerTripCompletedScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
               child: _RidePrimaryButton(
                 key: const ValueKey<String>('submit-trip-rating-button'),
-                label: 'Submit',
-                onPressed: () => context.go(AppRoutes.customerHome),
+                label: _isSubmitting ? 'Submitting...' : 'Submit',
+                isLoading: _isSubmitting,
+                onPressed: () => _submitReview(trip),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TripRatingUnavailableScreen extends StatelessWidget {
+  const _TripRatingUnavailableScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey<String>('customer-trip-completed-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: AppScreenBody(
+          children: <Widget>[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _FloatingBackButton(
+                onTap: () => context.go(AppRoutes.customerHome),
+              ),
+            ),
+            const SizedBox(height: 120),
+            const EmptyState(
+              title: 'Trip unavailable',
+              message: 'Trip details could not load for review.',
+            ),
+          ],
         ),
       ),
     );
@@ -4200,7 +4700,13 @@ class _RateDriverHeader extends StatelessWidget {
 }
 
 class _RateDriverStars extends StatelessWidget {
-  const _RateDriverStars();
+  const _RateDriverStars({
+    required this.rating,
+    required this.onChanged,
+  });
+
+  final int rating;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -4208,10 +4714,14 @@ class _RateDriverStars extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
         for (int index = 0; index < 5; index += 1)
-          const Icon(
-            Icons.star_rounded,
-            color: JosiColors.red,
-            size: 48,
+          IconButton(
+            key: ValueKey<String>('trip-rating-star-${index + 1}'),
+            onPressed: () => onChanged(index + 1),
+            icon: Icon(
+              Icons.star_rounded,
+              color: index < rating ? JosiColors.red : JosiColors.line,
+              size: 48,
+            ),
           ),
       ],
     );
@@ -4219,12 +4729,15 @@ class _RateDriverStars extends StatelessWidget {
 }
 
 class _RateDriverReviewField extends StatelessWidget {
-  const _RateDriverReviewField();
+  const _RateDriverReviewField({required this.controller});
+
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       key: const ValueKey<String>('trip-rating-review-field'),
+      controller: controller,
       minLines: 5,
       maxLines: 5,
       textInputAction: TextInputAction.newline,
@@ -6893,88 +7406,6 @@ class _CustomerProfileMenuItem extends StatelessWidget {
                 color: JosiColors.red, size: 28),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _Timeline extends StatelessWidget {
-  const _Timeline({required this.labels});
-
-  final List<String> labels;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: labels.map((String label) {
-        final int index = labels.indexOf(label);
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Column(
-              children: <Widget>[
-                Icon(
-                  index == labels.length - 1
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.check_circle_rounded,
-                  color: index == labels.length - 1
-                      ? JosiColors.red
-                      : JosiColors.success,
-                  size: 22,
-                ),
-                if (index != labels.length - 1)
-                  const SizedBox(
-                      height: 26,
-                      child: VerticalDivider(
-                          color: JosiColors.line, thickness: 1.2)),
-              ],
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 1),
-                child:
-                    Text(label, style: Theme.of(context).textTheme.bodyMedium),
-              ),
-            ),
-          ],
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Text(label,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: JosiColors.muted)),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.titleSmall,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }
