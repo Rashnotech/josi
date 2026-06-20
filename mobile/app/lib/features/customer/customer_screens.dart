@@ -4778,33 +4778,27 @@ class _BookingActivityItem {
     required this.id,
     required this.driverName,
     required this.vehicle,
-    required this.seats,
-    required this.rating,
     required this.distance,
     required this.duration,
-    required this.rate,
+    required this.fare,
     required this.dateTime,
     required this.pickup,
     required this.destination,
-    required this.carNumber,
+    required this.plateNumber,
     this.statusLabel,
-    this.expanded = false,
   });
 
   final String id;
   final String? statusLabel;
   final String driverName;
   final String vehicle;
-  final String seats;
-  final String rating;
   final String distance;
   final String duration;
-  final String rate;
+  final String fare;
   final String dateTime;
   final String pickup;
   final String destination;
-  final String carNumber;
-  final bool expanded;
+  final String plateNumber;
 }
 
 class CustomerTripsScreen extends ConsumerStatefulWidget {
@@ -4874,7 +4868,6 @@ class _CustomerTripsScreenState extends ConsumerState<CustomerTripsScreen> {
                           final _BookingActivityItem item = items[index];
                           return _BookingActivityCard(
                             item: item,
-                            tab: _selectedTab,
                             onTap: () =>
                                 context.push(AppRoutes.customerDriverDetails),
                           );
@@ -4930,21 +4923,66 @@ class _CustomerTripsScreenState extends ConsumerState<CustomerTripsScreen> {
             driverName: trip.riderName.trim().isEmpty
                 ? 'Rider pending'
                 : trip.riderName,
-            vehicle: 'Assigned vehicle',
-            seats: 'Capacity pending',
-            rating: '-',
-            distance: trip.distance,
-            duration: trip.duration,
-            rate: trip.fare,
-            dateTime: trip.dateLabel,
+            vehicle: trip.vehicleLabel.trim().isEmpty
+                ? 'Vehicle pending'
+                : trip.vehicleLabel,
+            distance: _bookingTextOrPending(trip.distance, 'Distance pending'),
+            duration: _bookingTextOrPending(trip.duration, 'Duration pending'),
+            fare: _bookingTextOrPending(trip.fare, 'Fare pending'),
+            dateTime: _readableBookingDate(trip.dateLabel),
             pickup: trip.pickup,
             destination: trip.destination,
-            carNumber: 'Pending',
-            expanded: tab == _BookingActivityTab.active,
+            plateNumber: _bookingTextOrPending(
+              trip.plateNumber,
+              'Plate pending',
+            ),
           ),
         )
         .toList();
   }
+}
+
+String _bookingTextOrPending(String value, String fallback) {
+  final String trimmed = value.trim();
+  return trimmed.isEmpty ? fallback : trimmed;
+}
+
+String _readableBookingDate(String value) {
+  final String raw = value.trim();
+  if (raw.isEmpty) {
+    return 'Date pending';
+  }
+
+  final DateTime? parsed = DateTime.tryParse(raw);
+  if (parsed == null) {
+    return raw;
+  }
+
+  final DateTime local = parsed.toLocal();
+  final int hour = local.hour;
+  final int hour12 = hour % 12 == 0 ? 12 : hour % 12;
+  final String minute = local.minute.toString().padLeft(2, '0');
+  final String suffix = hour >= 12 ? 'PM' : 'AM';
+  return '${_bookingMonthName(local.month)} ${local.day}, ${local.year}, '
+      '$hour12:$minute $suffix';
+}
+
+String _bookingMonthName(int month) {
+  return switch (month) {
+    1 => 'Jan',
+    2 => 'Feb',
+    3 => 'Mar',
+    4 => 'Apr',
+    5 => 'May',
+    6 => 'Jun',
+    7 => 'Jul',
+    8 => 'Aug',
+    9 => 'Sep',
+    10 => 'Oct',
+    11 => 'Nov',
+    12 => 'Dec',
+    _ => '',
+  };
 }
 
 class CustomerWalletScreen extends ConsumerWidget {
@@ -5232,12 +5270,10 @@ class _BookingTabButton extends StatelessWidget {
 class _BookingActivityCard extends StatelessWidget {
   const _BookingActivityCard({
     required this.item,
-    required this.tab,
     required this.onTap,
   });
 
   final _BookingActivityItem item;
-  final _BookingActivityTab tab;
   final VoidCallback onTap;
 
   @override
@@ -5281,21 +5317,7 @@ class _BookingActivityCard extends StatelessWidget {
                 destination: item.destination,
               ),
               const _BookingDivider(height: 22),
-              _BookingCarNumberRow(carNumber: item.carNumber),
-              if (item.expanded) ...<Widget>[
-                const SizedBox(height: 14),
-                const _BookingMiniMap(),
-                const SizedBox(height: 18),
-                const _BookingContactRow(),
-                const SizedBox(height: 14),
-                const _BookingActionRow(),
-              ] else
-                Icon(
-                  Icons.keyboard_arrow_up_rounded,
-                  color: JosiColors.ink,
-                  size: 28,
-                  semanticLabel: '${tab.label} booking collapsed control',
-                ),
+              _BookingCarNumberRow(carNumber: item.plateNumber),
             ],
           ),
         ),
@@ -5338,7 +5360,7 @@ class _BookingDriverRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${item.vehicle} ( ${item.seats})',
+                        item.vehicle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -5353,83 +5375,7 @@ class _BookingDriverRow extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Icon(Icons.star_rounded, color: JosiColors.red, size: 26),
-            const SizedBox(width: 6),
-            Text(
-              item.rating,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: JosiColors.ink,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ],
-        ),
       ],
-    );
-  }
-}
-
-class _BookingContactRow extends StatelessWidget {
-  const _BookingContactRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: <Widget>[
-        _BookingContactButton(
-          key: ValueKey<String>('booking-sms-button'),
-          asset: AppAssets.sms,
-          label: 'SMS',
-        ),
-        SizedBox(width: 12),
-        _BookingContactButton(
-          key: ValueKey<String>('booking-call-button'),
-          asset: AppAssets.call,
-          label: 'Call',
-        ),
-      ],
-    );
-  }
-}
-
-class _BookingContactButton extends StatelessWidget {
-  const _BookingContactButton({
-    required this.asset,
-    required this.label,
-    super.key,
-  });
-
-  final String asset;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: SizedBox(
-        height: 44,
-        child: OutlinedButton.icon(
-          onPressed: () {},
-          style: OutlinedButton.styleFrom(
-            backgroundColor: JosiColors.surface,
-            foregroundColor: JosiColors.red,
-            side: const BorderSide(color: JosiColors.line),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(999),
-            ),
-            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          icon: _AssetIcon(asset: asset, color: JosiColors.red, size: 18),
-          label: Text(label),
-        ),
-      ),
     );
   }
 }
@@ -5499,8 +5445,7 @@ class _BookingStatsRow extends StatelessWidget {
         Expanded(
           child: _BookingStat(
             icon: Icons.work_outline_rounded,
-            value: item.rate,
-            suffix: '/mile',
+            value: item.fare,
           ),
         ),
       ],
@@ -5512,12 +5457,10 @@ class _BookingStat extends StatelessWidget {
   const _BookingStat({
     required this.icon,
     required this.value,
-    this.suffix,
   });
 
   final IconData icon;
   final String value;
-  final String? suffix;
 
   @override
   Widget build(BuildContext context) {
@@ -5527,27 +5470,15 @@ class _BookingStat extends StatelessWidget {
         Icon(icon, color: JosiColors.red, size: 24),
         const SizedBox(width: 8),
         Flexible(
-          child: RichText(
+          child: Text(
+            value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            text: TextSpan(
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: JosiColors.ink,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-              children: <InlineSpan>[
-                TextSpan(text: value),
-                if (suffix != null)
-                  TextSpan(
-                    text: ' $suffix',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: JosiColors.muted,
-                          fontSize: 11,
-                        ),
-                  ),
-              ],
-            ),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: JosiColors.ink,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ),
       ],
@@ -5687,7 +5618,7 @@ class _BookingCarNumberRow extends StatelessWidget {
     return Row(
       children: <Widget>[
         Text(
-          'Car Number',
+          'Bike Number',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: JosiColors.muted,
                 fontSize: 14,
@@ -5703,154 +5634,6 @@ class _BookingCarNumberRow extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BookingMiniMap extends StatelessWidget {
-  const _BookingMiniMap();
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: const SizedBox(
-        height: 126,
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: CustomPaint(painter: _BookingMiniMapPainter()),
-            ),
-            Positioned(
-              left: 118,
-              bottom: 24,
-              child: _BookingMapPin(compact: true),
-            ),
-            Positioned(
-              right: 52,
-              bottom: 20,
-              child: _BookingMapPin(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BookingMapPin extends StatelessWidget {
-  const _BookingMapPin({this.compact = false});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: compact ? 30 : 46,
-      height: compact ? 30 : 46,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: compact ? JosiColors.white : JosiColors.redSoft,
-      ),
-      child: Icon(
-        compact ? Icons.location_on_rounded : Icons.radio_button_checked,
-        color: JosiColors.red,
-        size: compact ? 26 : 34,
-      ),
-    );
-  }
-}
-
-class _BookingMiniMapPainter extends CustomPainter {
-  const _BookingMiniMapPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint background = Paint()..color = const Color(0xFFF3F4F5);
-    final Paint road = Paint()
-      ..color = JosiColors.white
-      ..strokeWidth = 9
-      ..strokeCap = StrokeCap.round;
-    final Paint lane = Paint()
-      ..color = const Color(0xFFDADDE1)
-      ..strokeWidth = 1.4
-      ..strokeCap = StrokeCap.round;
-    final Paint route = Paint()
-      ..color = JosiColors.ink
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawRect(Offset.zero & size, background);
-
-    for (double x = -40; x < size.width + 40; x += 72) {
-      canvas.drawLine(Offset(x, 0), Offset(x + 120, size.height), road);
-      canvas.drawLine(Offset(x + 14, 0), Offset(x + 134, size.height), lane);
-    }
-    for (double y = 16; y < size.height; y += 34) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y + 18), road);
-      canvas.drawLine(Offset(0, y + 10), Offset(size.width, y + 28), lane);
-    }
-
-    final Path path = Path()
-      ..moveTo(size.width * 0.34, size.height * 0.70)
-      ..lineTo(size.width * 0.52, size.height * 0.28)
-      ..lineTo(size.width * 0.78, size.height * 0.60);
-    canvas.drawPath(path, route);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BookingMiniMapPainter oldDelegate) => false;
-}
-
-class _BookingActionRow extends StatelessWidget {
-  const _BookingActionRow();
-
-  @override
-  Widget build(BuildContext context) {
-    final TextStyle? labelStyle = Theme.of(context)
-        .textTheme
-        .labelLarge
-        ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700);
-
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: SizedBox(
-            height: 52,
-            child: OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                backgroundColor: const Color(0xFFF2F2F2),
-                foregroundColor: JosiColors.red,
-                side: BorderSide.none,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999)),
-                textStyle: labelStyle,
-              ),
-              child: const Text('Cancel'),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: JosiColors.red,
-                foregroundColor: JosiColors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999)),
-                textStyle: labelStyle,
-              ),
-              child: const Text('Reschedule'),
-            ),
           ),
         ),
       ],

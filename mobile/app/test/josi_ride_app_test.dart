@@ -988,6 +988,22 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('customer-home-screen')),
         findsOneWidget);
+
+    await tester.tap(find.text('Activity').last);
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('activity-tab-completed')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('booking-activity-list')),
+        findsOneWidget);
+    expect(find.text('Ayo Balogun'), findsOneWidget);
+    expect(find.text('Red Bajaj Boxer'), findsOneWidget);
+    expect(find.text('JOS-123AB'), findsOneWidget);
+    expect(find.textContaining('Jun 18, 2026'), findsOneWidget);
+    expect(find.text('Reschedule'), findsNothing);
+    expect(
+        find.byKey(const ValueKey<String>('booking-sms-button')), findsNothing);
   });
 
   testWidgets('customer ride search can show a not found state',
@@ -1521,7 +1537,7 @@ class _FakeCustomerRepository extends CustomerRepository {
       fare: 'NGN 3500',
       status: TripStatus.searching,
       paymentMethod: PaymentMethod.cash,
-      dateLabel: 'Now',
+      dateLabel: '2026-06-18T08:30:00Z',
       riderName: '',
       customerName: _profile.displayName,
       distance: '',
@@ -1605,7 +1621,12 @@ class _FakeCustomerRepository extends CustomerRepository {
       orElse: () =>
           throw const ApiException('Trip was not returned by the API.'),
     );
-    _replaceTrip(_copyTrip(trip, reviewRating: rating, reviewText: review));
+    _replaceTrip(_copyTrip(
+      trip,
+      status: TripStatus.completed,
+      reviewRating: rating,
+      reviewText: review,
+    ));
     return 'Rider review submitted successfully';
   }
 

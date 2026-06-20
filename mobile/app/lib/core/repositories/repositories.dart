@@ -694,7 +694,7 @@ class CustomerRepository {
       fare: _fareLabel(payload['amount']),
       status: _tripStatus(payload['trip_status']),
       paymentMethod: _paymentMethod(payload['payment_method']),
-      dateLabel: _string(payload['requested_at']) ?? '',
+      dateLabel: _readableDateLabel(payload['requested_at']),
       riderName:
           _string(payload['rider_name']) ?? _string(rider?['name']) ?? '',
       customerName: _string(payload['customer_name']) ?? '',
@@ -741,6 +741,44 @@ class CustomerRepository {
     }
 
     return 'NGN ${amount.toStringAsFixed(0)}';
+  }
+
+  static String _readableDateLabel(Object? value) {
+    final String? raw = _string(value);
+    if (raw == null) {
+      return '';
+    }
+
+    final DateTime? parsed = DateTime.tryParse(raw);
+    if (parsed == null) {
+      return raw;
+    }
+
+    final DateTime local = parsed.toLocal();
+    final int hour = local.hour;
+    final int hour12 = hour % 12 == 0 ? 12 : hour % 12;
+    final String minute = local.minute.toString().padLeft(2, '0');
+    final String suffix = hour >= 12 ? 'PM' : 'AM';
+    return '${_monthName(local.month)} ${local.day}, ${local.year}, '
+        '$hour12:$minute $suffix';
+  }
+
+  static String _monthName(int month) {
+    return switch (month) {
+      1 => 'Jan',
+      2 => 'Feb',
+      3 => 'Mar',
+      4 => 'Apr',
+      5 => 'May',
+      6 => 'Jun',
+      7 => 'Jul',
+      8 => 'Aug',
+      9 => 'Sep',
+      10 => 'Oct',
+      11 => 'Nov',
+      12 => 'Dec',
+      _ => '',
+    };
   }
 
   static TripStatus _tripStatus(Object? value) {

@@ -232,6 +232,8 @@ void main() {
     expect(body['service_type'], 'courier');
     expect(trip.status, TripStatus.searching);
     expect(trip.fare, 'NGN 3500');
+    expect(trip.dateLabel, contains('Jun 18, 2026'));
+    expect(trip.dateLabel, isNot(contains('T08:30:00Z')));
   });
 
   test('customer rider matching, assignment, arrival, and review use backend',
