@@ -72,6 +72,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/trips/{trip}', [CustomerTripController::class, 'show'])->middleware('permission:view_own_trips');
         Route::get('/trips/{trip}/available-riders', [CustomerTripController::class, 'availableRiders'])->middleware('permission:create_trip');
         Route::post('/trips/{trip}/request-rider', [CustomerTripController::class, 'requestRider'])->middleware('permission:create_trip');
+        Route::post('/trips/{trip}/cancel', [CustomerTripController::class, 'cancel'])->middleware('permission:view_own_trips');
         Route::post('/trips/{trip}/review', [CustomerTripController::class, 'review'])->middleware('permission:view_own_trips');
     });
 

@@ -204,6 +204,47 @@ class CustomerTripController extends Controller
         ]);
     }
 
+    public function cancel(Request $request, Trip $trip, TripService $tripService)
+    {
+        if ((int) $trip->customer_id !== (int) $request->user()->getKey()) {
+            return ApiResponse::error('Trip was not found for this customer.', [], 404);
+        }
+
+        $data = $request->validate([
+            'reason' => ['sometimes', 'nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $trip = $tripService->cancelTrip(
+                $trip,
+                trim((string) ($data['reason'] ?? 'Cancelled by customer')) ?: 'Cancelled by customer',
+                $request->user()
+            );
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), [], 422);
+        }
+
+        $trip->loadMissing('riderProfile');
+        if (
+            $trip->riderProfile
+            && self::enumValue($trip->riderProfile->availability_status) === AvailabilityStatus::Busy->value
+        ) {
+            $trip->riderProfile->forceFill([
+                'availability_status' => AvailabilityStatus::Online,
+            ])->save();
+        }
+
+        return ApiResponse::success('Trip cancelled successfully', [
+            'trip' => self::tripPayload($trip->load([
+                'pickupZone',
+                'destinationZone',
+                'riderProfile.user',
+                'vehicle',
+                'review',
+            ])),
+        ]);
+    }
+
     public function review(Request $request, Trip $trip)
     {
         if ((int) $trip->customer_id !== (int) $request->user()->getKey()) {

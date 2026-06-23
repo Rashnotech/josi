@@ -909,15 +909,16 @@ void main() {
     expect(find.byKey(const ValueKey<String>('customer-driver-details-screen')),
         findsOneWidget);
     expect(find.text('Rider Details'), findsOneWidget);
-    expect(find.text('example@gmail.com'), findsOneWidget);
-    expect(find.text('7,500+'), findsOneWidget);
-    expect(find.text('10+'), findsOneWidget);
-    expect(find.text('4.9+'), findsOneWidget);
-    expect(find.text('4,956'), findsOneWidget);
+    expect(find.text('Ayo Balogun'), findsWidgets);
+    expect(find.text('+2348000000004'), findsWidgets);
+    expect(find.textContaining('Wuse 2'), findsOneWidget);
+    expect(find.text('Rider assigned'), findsWidgets);
     expect(find.text('Rider Contact'), findsOneWidget);
-    expect(find.text('Car Details'), findsOneWidget);
-    expect(find.text('Hyundai Verna'), findsOneWidget);
-    expect(find.text('GR 678-UVWX'), findsOneWidget);
+    expect(find.text('Bike Details'), findsOneWidget);
+    expect(find.text('Red Bajaj Boxer'), findsWidgets);
+    expect(find.text('JOS-123AB'), findsOneWidget);
+    expect(find.text('example@gmail.com'), findsNothing);
+    expect(find.text('Hyundai Verna'), findsNothing);
 
     await tester
         .tap(find.byKey(const ValueKey<String>('driver-details-tab-review')));
@@ -925,8 +926,7 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('driver-details-review-panel')),
         findsOneWidget);
-    expect(find.text('Clean car, fast pickup, and smooth driving.'),
-        findsOneWidget);
+    expect(find.text('No rider reviews yet.'), findsOneWidget);
 
     final BuildContext driverDetailsContext = tester.element(
       find.byKey(const ValueKey<String>('customer-driver-details-screen')),
@@ -1004,6 +1004,21 @@ void main() {
     expect(find.text('Reschedule'), findsNothing);
     expect(
         find.byKey(const ValueKey<String>('booking-sms-button')), findsNothing);
+
+    final Finder pendingCard =
+        find.byKey(const ValueKey<String>('booking-activity-card-1'));
+    await tester.tapAt(tester.getTopLeft(pendingCard) + const Offset(28, 28));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-driver-details-screen')),
+        findsOneWidget);
+    expect(find.text('Ayo Balogun'), findsWidgets);
+    expect(find.text('Red Bajaj Boxer'), findsWidgets);
+    expect(find.text('JOS-123AB'), findsOneWidget);
+    await tester
+        .tap(find.byKey(const ValueKey<String>('driver-details-tab-review')));
+    await tester.pumpAndSettle();
+    expect(find.text('Fast pickup and careful riding.'), findsOneWidget);
   });
 
   testWidgets('customer ride search can show a not found state',
@@ -1066,6 +1081,64 @@ void main() {
     expect(find.text('No trips yet.'), findsOneWidget);
     expect(find.text('Cancelled by Rider'), findsNothing);
     expect(find.text('Cody Fisher'), findsNothing);
+  });
+
+  testWidgets('customer booking card searches pending ride and cancels ride',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Rider').last);
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
+        findsOneWidget);
+
+    final BuildContext rideFoundContext = tester.element(
+      find.byKey(const ValueKey<String>('customer-ride-found-screen')),
+    );
+    rideFoundContext.go(AppRoutes.customerTrips);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('booking-activity-card-1')),
+        findsOneWidget);
+    expect(find.text('Searching for rider'), findsOneWidget);
+    expect(find.text('Cancel Ride'), findsOneWidget);
+
+    final Finder pendingCard =
+        find.byKey(const ValueKey<String>('booking-activity-card-1'));
+    await tester.tapAt(tester.getTopLeft(pendingCard) + const Offset(28, 28));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Searching Ride...', skipOffstage: false), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
+        findsOneWidget);
+
+    final BuildContext searchContext = tester.element(
+      find.byKey(const ValueKey<String>('customer-ride-found-screen')),
+    );
+    searchContext.go(AppRoutes.customerTrips);
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('booking-cancel-button-1')));
+    await tester.pump();
+    expect(find.text('Cancelling...'), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ride cancelled successfully.'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('activity-tab-cancelled')),
+        findsOneWidget);
+    expect(find.text('Cancelled'), findsWidgets);
+    expect(find.byKey(const ValueKey<String>('booking-activity-card-1')),
+        findsOneWidget);
+    expect(find.text('Cancel Ride'), findsNothing);
   });
 
   testWidgets('customer rider navigation opens destination screen',
@@ -1628,6 +1701,25 @@ class _FakeCustomerRepository extends CustomerRepository {
       reviewText: review,
     ));
     return 'Rider review submitted successfully';
+  }
+
+  @override
+  Future<Trip> cancelTrip({
+    required String tripId,
+    String reason = 'Cancelled by customer',
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final Trip trip = _trips.firstWhere(
+      (Trip value) => value.id == tripId,
+      orElse: () =>
+          throw const ApiException('Trip was not returned by the API.'),
+    );
+    final Trip cancelled = _copyTrip(
+      trip,
+      status: TripStatus.cancelled,
+    );
+    _replaceTrip(cancelled);
+    return cancelled;
   }
 
   void _replaceTrip(Trip updated) {

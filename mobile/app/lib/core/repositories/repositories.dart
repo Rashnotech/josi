@@ -625,6 +625,25 @@ class CustomerRepository {
     return tripFromPayload(tripPayload);
   }
 
+  Future<Trip> cancelTrip({
+    required String tripId,
+    String reason = 'Cancelled by customer',
+  }) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope = await _api.post(
+      '/customer/trips/$tripId/cancel',
+      token: token,
+      body: <String, Object?>{'reason': reason.trim()},
+    );
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
+    if (tripPayload == null) {
+      throw const ApiException('Trip was not returned by the API.');
+    }
+
+    return tripFromPayload(tripPayload);
+  }
+
   Future<String> submitRiderReview({
     required String tripId,
     required int rating,

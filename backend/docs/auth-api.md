@@ -176,6 +176,7 @@ All require role `customer`.
 - `GET /api/v1/customer/trips/{trip}`
 - `GET /api/v1/customer/trips/{trip}/available-riders`
 - `POST /api/v1/customer/trips/{trip}/request-rider`
+- `POST /api/v1/customer/trips/{trip}/cancel`
 - `POST /api/v1/customer/trips/{trip}/review`
 
 Trip requests create a zone-priced trip using the configured `ZonePrice.base_price`; the mobile app displays the returned `amount` as the payable fare.
@@ -208,6 +209,16 @@ The endpoint assigns the selected rider, marks them busy, and returns:
 ```
 
 The customer app should show the waiting state until `is_arrived_at_pickup` is `true`. That flag becomes true after the rider calls the driver arrival endpoint.
+
+`POST /customer/trips/{trip}/cancel` optional JSON:
+
+```json
+{
+  "reason": "Cancelled by customer"
+}
+```
+
+The endpoint can cancel requested, assigned, accepted, or ongoing trips owned by the authenticated customer. It returns the updated trip payload with `trip_status: "cancelled"`. Completed or already cancelled trips return a validation error.
 
 `POST /customer/trips/{trip}/review` required JSON:
 

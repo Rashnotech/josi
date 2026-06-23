@@ -2715,6 +2715,7 @@ class _CustomerSearchingRiderScreenState
           riders: _riders,
           isRequesting: _isRequestingRider,
           onRequestRide: _requestRide,
+          onViewRiderDetails: _viewRiderDetails,
         );
       case _RideSearchStage.notFound:
         return _RideNotFoundView(
@@ -2726,6 +2727,35 @@ class _CustomerSearchingRiderScreenState
           },
         );
     }
+  }
+
+  void _viewRiderDetails(AvailableRider rider) {
+    final Trip? trip = _trip ?? ref.read(activeCustomerTripProvider);
+    if (trip == null) {
+      return;
+    }
+
+    ref.read(activeCustomerTripProvider.notifier).state = Trip(
+      id: trip.id,
+      pickup: trip.pickup,
+      destination: trip.destination,
+      fare: trip.fare,
+      status: trip.status,
+      paymentMethod: trip.paymentMethod,
+      dateLabel: trip.dateLabel,
+      riderName: rider.name,
+      customerName: trip.customerName,
+      distance: trip.distance,
+      duration: trip.duration,
+      riderId: rider.id,
+      riderPhone: rider.phone,
+      vehicleLabel: rider.vehicleLabel,
+      plateNumber: rider.plateNumber,
+      isArrivedAtPickup: trip.isArrivedAtPickup,
+      reviewRating: trip.reviewRating,
+      reviewText: trip.reviewText,
+    );
+    context.push(AppRoutes.customerDriverDetails);
   }
 }
 
@@ -2795,12 +2825,14 @@ class _RideFoundView extends StatelessWidget {
     required this.riders,
     required this.isRequesting,
     required this.onRequestRide,
+    required this.onViewRiderDetails,
   });
 
   final VoidCallback onBack;
   final List<AvailableRider> riders;
   final bool isRequesting;
   final ValueChanged<AvailableRider> onRequestRide;
+  final ValueChanged<AvailableRider> onViewRiderDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -2834,6 +2866,7 @@ class _RideFoundView extends StatelessWidget {
                 riders: riders,
                 isRequesting: isRequesting,
                 onRequestRide: onRequestRide,
+                onViewRiderDetails: onViewRiderDetails,
               );
             },
           ),
@@ -2953,12 +2986,14 @@ class _RideFoundSheet extends StatelessWidget {
     required this.riders,
     required this.isRequesting,
     required this.onRequestRide,
+    required this.onViewRiderDetails,
   });
 
   final ScrollController scrollController;
   final List<AvailableRider> riders;
   final bool isRequesting;
   final ValueChanged<AvailableRider> onRequestRide;
+  final ValueChanged<AvailableRider> onViewRiderDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -3028,7 +3063,7 @@ class _RideFoundSheet extends StatelessWidget {
                     key: const ValueKey<String>(
                         'request-ride-driver-details-link'),
                     borderRadius: BorderRadius.circular(8),
-                    onTap: () => context.push(AppRoutes.customerDriverDetails),
+                    onTap: () => onViewRiderDetails(rider),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -4775,6 +4810,7 @@ enum _BookingActivityTab {
 
 class _BookingActivityItem {
   const _BookingActivityItem({
+    required this.trip,
     required this.id,
     required this.driverName,
     required this.vehicle,
@@ -4785,11 +4821,14 @@ class _BookingActivityItem {
     required this.pickup,
     required this.destination,
     required this.plateNumber,
-    this.statusLabel,
+    required this.statusLabel,
+    required this.hasRider,
+    required this.canCancel,
   });
 
+  final Trip trip;
   final String id;
-  final String? statusLabel;
+  final String statusLabel;
   final String driverName;
   final String vehicle;
   final String distance;
@@ -4799,6 +4838,8 @@ class _BookingActivityItem {
   final String pickup;
   final String destination;
   final String plateNumber;
+  final bool hasRider;
+  final bool canCancel;
 }
 
 class CustomerTripsScreen extends ConsumerStatefulWidget {
@@ -4811,11 +4852,68 @@ class CustomerTripsScreen extends ConsumerStatefulWidget {
 
 class _CustomerTripsScreenState extends ConsumerState<CustomerTripsScreen> {
   _BookingActivityTab _selectedTab = _BookingActivityTab.active;
+  String? _cancellingTripId;
 
   void _selectTab(_BookingActivityTab tab) {
     setState(() {
       _selectedTab = tab;
     });
+  }
+
+  void _openBooking(_BookingActivityItem item) {
+    ref.read(activeCustomerTripProvider.notifier).state = item.trip;
+    if (!item.hasRider &&
+        (item.trip.status == TripStatus.searching ||
+            item.trip.status == TripStatus.active)) {
+      context.go(AppRoutes.customerSearchingRider);
+      return;
+    }
+
+    context.push(AppRoutes.customerDriverDetails);
+  }
+
+  Future<void> _cancelBooking(_BookingActivityItem item) async {
+    if (_cancellingTripId != null) {
+      return;
+    }
+
+    setState(() => _cancellingTripId = item.id);
+    try {
+      final Trip cancelled =
+          await ref.read(customerRepositoryProvider).cancelTrip(
+                tripId: item.id,
+                reason: 'Cancelled by customer',
+              );
+      if (!mounted) {
+        return;
+      }
+      ref.read(activeCustomerTripProvider.notifier).state = cancelled;
+      ref.invalidate(customerTripsProvider);
+      setState(() => _selectedTab = _BookingActivityTab.cancelled);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Ride cancelled successfully.')),
+        );
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(_customerErrorMessage(
+              error,
+              'Unable to cancel this ride. Please try again.',
+            )),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _cancellingTripId = null);
+      }
+    }
   }
 
   @override
@@ -4868,8 +4966,11 @@ class _CustomerTripsScreenState extends ConsumerState<CustomerTripsScreen> {
                           final _BookingActivityItem item = items[index];
                           return _BookingActivityCard(
                             item: item,
-                            onTap: () =>
-                                context.push(AppRoutes.customerDriverDetails),
+                            isCancelling: _cancellingTripId == item.id,
+                            onTap: () => _openBooking(item),
+                            onCancel: item.canCancel
+                                ? () => _cancelBooking(item)
+                                : null,
                           );
                         },
                         separatorBuilder: (BuildContext context, int index) =>
@@ -4917,9 +5018,9 @@ class _CustomerTripsScreenState extends ConsumerState<CustomerTripsScreen> {
         })
         .map(
           (Trip trip) => _BookingActivityItem(
+            trip: trip,
             id: trip.id,
-            statusLabel:
-                trip.status == TripStatus.cancelled ? 'Cancelled' : null,
+            statusLabel: _bookingStatusLabel(trip),
             driverName: trip.riderName.trim().isEmpty
                 ? 'Rider pending'
                 : trip.riderName,
@@ -4936,10 +5037,27 @@ class _CustomerTripsScreenState extends ConsumerState<CustomerTripsScreen> {
               trip.plateNumber,
               'Plate pending',
             ),
+            hasRider: _bookingHasRider(trip),
+            canCancel: trip.status == TripStatus.active ||
+                trip.status == TripStatus.searching,
           ),
         )
         .toList();
   }
+}
+
+bool _bookingHasRider(Trip trip) {
+  return trip.riderName.trim().isNotEmpty || trip.riderId.trim().isNotEmpty;
+}
+
+String _bookingStatusLabel(Trip trip) {
+  return switch (trip.status) {
+    TripStatus.completed => 'Completed',
+    TripStatus.cancelled => 'Cancelled',
+    TripStatus.searching =>
+      _bookingHasRider(trip) ? 'Rider assigned' : 'Searching for rider',
+    TripStatus.active => 'Active ride',
+  };
 }
 
 String _bookingTextOrPending(String value, String fallback) {
@@ -5270,15 +5388,20 @@ class _BookingTabButton extends StatelessWidget {
 class _BookingActivityCard extends StatelessWidget {
   const _BookingActivityCard({
     required this.item,
+    required this.isCancelling,
     required this.onTap,
+    this.onCancel,
   });
 
   final _BookingActivityItem item;
+  final bool isCancelling;
   final VoidCallback onTap;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
     return Material(
+      key: ValueKey<String>('booking-activity-card-${item.id}'),
       color: JosiColors.white,
       borderRadius: BorderRadius.circular(8),
       elevation: 3,
@@ -5295,18 +5418,16 @@ class _BookingActivityCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (item.statusLabel != null) ...<Widget>[
-                Text(
-                  item.statusLabel!,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: JosiColors.red,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 14),
-              ],
-              _BookingDriverRow(item: item),
+              Text(
+                item.statusLabel,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: JosiColors.red,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 14),
+              _BookingDriverRow(item: item, onTap: onTap),
               const _BookingDivider(height: 26),
               _BookingStatsRow(item: item),
               const SizedBox(height: 18),
@@ -5318,6 +5439,37 @@ class _BookingActivityCard extends StatelessWidget {
               ),
               const _BookingDivider(height: 22),
               _BookingCarNumberRow(carNumber: item.plateNumber),
+              if (onCancel != null) ...<Widget>[
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    key: ValueKey<String>('booking-cancel-button-${item.id}'),
+                    onPressed: isCancelling ? null : onCancel,
+                    icon: isCancelling
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.close_rounded, size: 18),
+                    label: Text(isCancelling ? 'Cancelling...' : 'Cancel Ride'),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: JosiColors.surface,
+                      foregroundColor: JosiColors.red,
+                      disabledForegroundColor: JosiColors.softMuted,
+                      side: const BorderSide(color: JosiColors.line),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      textStyle:
+                          Theme.of(context).textTheme.labelLarge?.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -5327,9 +5479,13 @@ class _BookingActivityCard extends StatelessWidget {
 }
 
 class _BookingDriverRow extends StatelessWidget {
-  const _BookingDriverRow({required this.item});
+  const _BookingDriverRow({
+    required this.item,
+    required this.onTap,
+  });
 
   final _BookingActivityItem item;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -5339,7 +5495,7 @@ class _BookingDriverRow extends StatelessWidget {
           child: InkWell(
             key: ValueKey<String>('activity-driver-details-link-${item.id}'),
             borderRadius: BorderRadius.circular(8),
-            onTap: () => context.push(AppRoutes.customerDriverDetails),
+            onTap: onTap,
             child: Row(
               children: <Widget>[
                 _BookingDriverAvatar(name: item.driverName),
@@ -6330,16 +6486,16 @@ enum _DriverDetailsTab {
       };
 }
 
-class CustomerDriverDetailsScreen extends StatefulWidget {
+class CustomerDriverDetailsScreen extends ConsumerStatefulWidget {
   const CustomerDriverDetailsScreen({super.key});
 
   @override
-  State<CustomerDriverDetailsScreen> createState() =>
+  ConsumerState<CustomerDriverDetailsScreen> createState() =>
       _CustomerDriverDetailsScreenState();
 }
 
 class _CustomerDriverDetailsScreenState
-    extends State<CustomerDriverDetailsScreen> {
+    extends ConsumerState<CustomerDriverDetailsScreen> {
   _DriverDetailsTab _selectedTab = _DriverDetailsTab.about;
 
   void _selectTab(_DriverDetailsTab tab) {
@@ -6359,6 +6515,9 @@ class _CustomerDriverDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final _DriverDetailsData details =
+        _driverDetailsFromTrip(ref.watch(activeCustomerTripProvider));
+
     return Scaffold(
       key: const ValueKey<String>('customer-driver-details-screen'),
       backgroundColor: JosiColors.white,
@@ -6374,11 +6533,11 @@ class _CustomerDriverDetailsScreenState
                   onBack: () => _goBack(context),
                 ),
                 const SizedBox(height: 30),
-                const _DriverDetailsHeader(),
+                _DriverDetailsHeader(details: details),
                 const SizedBox(height: 28),
                 const Divider(color: JosiColors.line),
                 const SizedBox(height: 22),
-                const _DriverDetailsStats(),
+                _DriverDetailsStats(details: details),
                 const SizedBox(height: 24),
                 _DriverDetailsTabs(
                   selectedTab: _selectedTab,
@@ -6388,11 +6547,15 @@ class _CustomerDriverDetailsScreenState
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 160),
                   child: _selectedTab == _DriverDetailsTab.about
-                      ? const _DriverDetailsAbout(
-                          key: ValueKey<String>('driver-details-about-panel'),
+                      ? _DriverDetailsAbout(
+                          key: const ValueKey<String>(
+                              'driver-details-about-panel'),
+                          details: details,
                         )
-                      : const _DriverDetailsReviews(
-                          key: ValueKey<String>('driver-details-review-panel'),
+                      : _DriverDetailsReviews(
+                          key: const ValueKey<String>(
+                              'driver-details-review-panel'),
+                          details: details,
                         ),
                 ),
               ],
@@ -6404,22 +6567,82 @@ class _CustomerDriverDetailsScreenState
   }
 }
 
+class _DriverDetailsData {
+  const _DriverDetailsData({
+    required this.name,
+    required this.phone,
+    required this.location,
+    required this.vehicle,
+    required this.plateNumber,
+    required this.distance,
+    required this.duration,
+    required this.fare,
+    required this.status,
+    this.reviewRating,
+    this.reviewText,
+  });
+
+  final String name;
+  final String phone;
+  final String location;
+  final String vehicle;
+  final String plateNumber;
+  final String distance;
+  final String duration;
+  final String fare;
+  final String status;
+  final int? reviewRating;
+  final String? reviewText;
+}
+
+_DriverDetailsData _driverDetailsFromTrip(Trip? trip) {
+  if (trip == null) {
+    return const _DriverDetailsData(
+      name: 'Rider unavailable',
+      phone: 'Phone unavailable',
+      location: 'Location unavailable',
+      vehicle: 'Vehicle unavailable',
+      plateNumber: 'Plate unavailable',
+      distance: 'Distance pending',
+      duration: 'Duration pending',
+      fare: 'Fare pending',
+      status: 'Unavailable',
+    );
+  }
+
+  return _DriverDetailsData(
+    name: _bookingTextOrPending(trip.riderName, 'Rider pending'),
+    phone: _bookingTextOrPending(trip.riderPhone, 'Phone unavailable'),
+    location: _bookingTextOrPending(trip.pickup, 'Location unavailable'),
+    vehicle: _bookingTextOrPending(trip.vehicleLabel, 'Vehicle pending'),
+    plateNumber: _bookingTextOrPending(trip.plateNumber, 'Plate pending'),
+    distance: _bookingTextOrPending(trip.distance, 'Distance pending'),
+    duration: _bookingTextOrPending(trip.duration, 'Duration pending'),
+    fare: _bookingTextOrPending(trip.fare, 'Fare pending'),
+    status: _bookingStatusLabel(trip),
+    reviewRating: trip.reviewRating,
+    reviewText: trip.reviewText,
+  );
+}
+
 class _DriverDetailsHeader extends StatelessWidget {
-  const _DriverDetailsHeader();
+  const _DriverDetailsHeader({required this.details});
+
+  final _DriverDetailsData details;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        const _VerifiedDriverAvatar(size: 112),
+        _VerifiedDriverAvatar(name: details.name, size: 112),
         const SizedBox(width: 22),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'Jenny Wilson',
+                details.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -6430,7 +6653,7 @@ class _DriverDetailsHeader extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'example@gmail.com',
+                details.phone,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -6446,7 +6669,7 @@ class _DriverDetailsHeader extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'New York, United Stats',
+                      details.location,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -6466,12 +6689,23 @@ class _DriverDetailsHeader extends StatelessWidget {
 }
 
 class _VerifiedDriverAvatar extends StatelessWidget {
-  const _VerifiedDriverAvatar({required this.size});
+  const _VerifiedDriverAvatar({
+    required this.name,
+    required this.size,
+  });
 
+  final String name;
   final double size;
 
   @override
   Widget build(BuildContext context) {
+    final String initials = name
+        .split(RegExp(r'\s+'))
+        .where((String part) => part.isNotEmpty)
+        .take(2)
+        .map((String part) => part[0].toUpperCase())
+        .join();
+
     return SizedBox(
       width: size,
       height: size,
@@ -6498,7 +6732,7 @@ class _VerifiedDriverAvatar extends StatelessWidget {
               ],
             ),
             child: Text(
-              'JW',
+              initials.isEmpty ? 'R' : initials,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: JosiColors.red,
                     fontSize: 30,
@@ -6529,38 +6763,40 @@ class _VerifiedDriverAvatar extends StatelessWidget {
 }
 
 class _DriverDetailsStats extends StatelessWidget {
-  const _DriverDetailsStats();
+  const _DriverDetailsStats({required this.details});
+
+  final _DriverDetailsData details;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: <Widget>[
         Expanded(
           child: _DriverDetailsStat(
-            icon: Icons.groups_rounded,
-            value: '7,500+',
-            label: 'Customer',
+            icon: Icons.location_on_rounded,
+            value: details.distance,
+            label: 'Distance',
           ),
         ),
         Expanded(
           child: _DriverDetailsStat(
-            icon: Icons.business_center_rounded,
-            value: '10+',
-            label: 'Years Exp.',
+            icon: Icons.access_time_rounded,
+            value: details.duration,
+            label: 'Duration',
           ),
         ),
         Expanded(
           child: _DriverDetailsStat(
-            icon: Icons.star_rounded,
-            value: '4.9+',
-            label: 'Rating',
+            icon: Icons.payments_rounded,
+            value: details.fare,
+            label: 'Fare',
           ),
         ),
         Expanded(
           child: _DriverDetailsStat(
-            icon: Icons.chat_bubble_rounded,
-            value: '4,956',
-            label: 'Review',
+            icon: Icons.local_taxi_rounded,
+            value: details.status,
+            label: 'Status',
           ),
         ),
       ],
@@ -6596,11 +6832,12 @@ class _DriverDetailsStat extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           value,
-          maxLines: 1,
+          textAlign: TextAlign.center,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: JosiColors.red,
-                fontSize: 20,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
         ),
@@ -6681,7 +6918,12 @@ class _DriverDetailsTabs extends StatelessWidget {
 }
 
 class _DriverDetailsAbout extends StatelessWidget {
-  const _DriverDetailsAbout({super.key});
+  const _DriverDetailsAbout({
+    required this.details,
+    super.key,
+  });
+
+  final _DriverDetailsData details;
 
   @override
   Widget build(BuildContext context) {
@@ -6705,17 +6947,15 @@ class _DriverDetailsAbout extends StatelessWidget {
                   height: 1.58,
                 ),
             children: <InlineSpan>[
-              const TextSpan(
+              TextSpan(
                 text:
-                    'Professional Josi rider with verified ride history, clean vehicle records, and a strong customer rating. ',
+                    '${details.name} is assigned to this booking from ${details.location}. ',
               ),
               TextSpan(
-                text: 'Read more',
+                text: details.vehicle,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: JosiColors.red,
                       fontSize: 16,
-                      decoration: TextDecoration.underline,
-                      decorationColor: JosiColors.red,
                     ),
               ),
             ],
@@ -6733,14 +6973,14 @@ class _DriverDetailsAbout extends StatelessWidget {
         const SizedBox(height: 16),
         Row(
           children: <Widget>[
-            const _DriverAvatar(name: 'Jenny Wilson', size: 54),
+            _DriverAvatar(name: details.name, size: 54),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'Jenny Wilson',
+                    details.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -6751,7 +6991,7 @@ class _DriverDetailsAbout extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Rider',
+                    details.phone,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: JosiColors.softMuted,
                           fontSize: 14,
@@ -6767,7 +7007,7 @@ class _DriverDetailsAbout extends StatelessWidget {
         ),
         const SizedBox(height: 30),
         Text(
-          'Car Details',
+          'Bike Details',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: JosiColors.ink,
                 fontSize: 18,
@@ -6775,11 +7015,11 @@ class _DriverDetailsAbout extends StatelessWidget {
               ),
         ),
         const SizedBox(height: 16),
-        const _DriverCarDetailRow(label: 'Car Model', value: 'Hyundai Verna'),
+        _DriverCarDetailRow(label: 'Bike Model', value: details.vehicle),
         const SizedBox(height: 14),
-        const _DriverCarDetailRow(label: 'Car Number', value: 'GR 678-UVWX'),
+        _DriverCarDetailRow(label: 'Bike Number', value: details.plateNumber),
         const SizedBox(height: 14),
-        const _DriverCarDetailRow(label: 'Car Color', value: 'White'),
+        _DriverCarDetailRow(label: 'Trip Status', value: details.status),
       ],
     );
   }
@@ -6827,10 +7067,17 @@ class _DriverCarDetailRow extends StatelessWidget {
 }
 
 class _DriverDetailsReviews extends StatelessWidget {
-  const _DriverDetailsReviews({super.key});
+  const _DriverDetailsReviews({
+    required this.details,
+    super.key,
+  });
+
+  final _DriverDetailsData details;
 
   @override
   Widget build(BuildContext context) {
+    final String reviewBody = details.reviewText?.trim() ?? '';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -6843,15 +7090,18 @@ class _DriverDetailsReviews extends StatelessWidget {
               ),
         ),
         const SizedBox(height: 14),
-        const _DriverReviewCard(
-          name: 'Rik Space',
-          body: 'Clean car, fast pickup, and smooth driving.',
-        ),
-        const SizedBox(height: 12),
-        const _DriverReviewCard(
-          name: 'Fatima Bello',
-          body: 'Jenny was polite and easy to reach during the trip.',
-        ),
+        if (reviewBody.isEmpty)
+          const EmptyState(
+            title: 'No rider reviews yet.',
+            message: 'Completed trip reviews will appear here.',
+            icon: Icons.rate_review_outlined,
+          )
+        else
+          _DriverReviewCard(
+            name: details.name,
+            body: reviewBody,
+            rating: details.reviewRating,
+          ),
       ],
     );
   }
@@ -6861,10 +7111,12 @@ class _DriverReviewCard extends StatelessWidget {
   const _DriverReviewCard({
     required this.name,
     required this.body,
+    this.rating,
   });
 
   final String name;
   final String body;
+  final int? rating;
 
   @override
   Widget build(BuildContext context) {
@@ -6889,14 +7141,16 @@ class _DriverReviewCard extends StatelessWidget {
                       ),
                 ),
               ),
-              const Icon(Icons.star_rounded, color: JosiColors.red, size: 20),
-              const SizedBox(width: 4),
-              Text(
-                '5.0',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: JosiColors.ink,
-                    ),
-              ),
+              if (rating != null) ...<Widget>[
+                const Icon(Icons.star_rounded, color: JosiColors.red, size: 20),
+                const SizedBox(width: 4),
+                Text(
+                  '$rating.0',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: JosiColors.ink,
+                      ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 8),

@@ -332,6 +332,32 @@ void main() {
             );
           }
 
+          if (uri.path.endsWith('/cancel')) {
+            return const ApiHttpResponse(
+              statusCode: 200,
+              body: '''
+{
+  "status": true,
+  "message": "Trip cancelled successfully",
+  "data": {
+    "trip": {
+      "id": 99,
+      "pickup_address": "Wuse 2, Abuja",
+      "destination_address": "Jabi Lake Mall",
+      "amount": 3500,
+      "trip_status": "cancelled",
+      "payment_method": "cash",
+      "rider_name": "Ayo Balogun",
+      "rider_phone": "+2348000000004",
+      "vehicle_label": "Red Bajaj Boxer",
+      "plate_number": "JOS-123AB"
+    }
+  }
+}
+''',
+            );
+          }
+
           return const ApiHttpResponse(
             statusCode: 200,
             body: '''
@@ -374,6 +400,10 @@ void main() {
       rating: 5,
       review: 'Fast pickup.',
     );
+    final Trip cancelled = await repository.cancelTrip(
+      tripId: '99',
+      reason: 'Changed my plans',
+    );
 
     expect(requests[0]['method'], 'GET');
     expect(requests[0]['path'], '/api/v1/customer/trips/99/available-riders');
@@ -401,6 +431,13 @@ void main() {
     expect((requests[3]['body']! as Map<String, Object?>)['review'],
         'Fast pickup.');
     expect(reviewMessage, 'Rider review submitted successfully');
+
+    expect(requests[4]['method'], 'POST');
+    expect(requests[4]['path'], '/api/v1/customer/trips/99/cancel');
+    expect((requests[4]['body']! as Map<String, Object?>)['reason'],
+        'Changed my plans');
+    expect(cancelled.status, TripStatus.cancelled);
+    expect(cancelled.riderName, 'Ayo Balogun');
   });
 }
 
