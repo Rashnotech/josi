@@ -10,9 +10,14 @@ Gate checks for rider auth and account setup:
 - Routes under `/rider/*` require an authenticated rider.
 - `/rider/application-status` greets the authenticated rider as `Welcome, name`.
 - Required account setup sections are shown only while missing: Profile Picture, Bank Account Details, Riding Details.
+- Complete Your Profile onboarding only asks for address, gender, and city you drive in.
+- Profile Picture opens device photo selection from the upload icon and supports taking a camera selfie or choosing from gallery.
+- Profile Picture back navigation returns to `/rider/application-status`.
 - Profile Picture posts `profile_photo` to `/driver/onboarding/profile-picture`.
 - Bank Account Details posts `account_number`, `bank_name`, and `account_name` to `/driver/onboarding/bank-account`.
 - Riding Details posts backend enum `vehicle_type`, vehicle fields, city, and state to `/driver/onboarding/riding-details`.
+- Riding Details normalizes unsupported profile city/state values to `Other` so Flutter dropdowns do not assert.
+- Riding Details back navigation returns to `/rider/application-status`.
 - The application-status Continue action posts to `/driver/onboarding/submit` and shows success or backend validation errors.
 - Rider profile/account setup uses backend data from `/driver/onboarding`, not mock rider profile data.
 - Rider Profile shows backend rider name, phone, and location when available.

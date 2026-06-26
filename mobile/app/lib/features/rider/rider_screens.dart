@@ -17,6 +17,7 @@ import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/services/api_client.dart';
+import '../../core/services/profile_photo_picker.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 import '../../core/widgets/josi_google_map.dart';
@@ -584,7 +585,6 @@ class _RiderProfileSetupScreenState
   final TextEditingController _profilePhotoController = TextEditingController();
   String _gender = 'Select';
   String _city = 'Abuja, FCT';
-  bool _acceptedTerms = true;
   bool _hydrated = false;
   bool _saving = false;
   Map<String, String> _errors = const <String, String>{};
@@ -627,15 +627,16 @@ class _RiderProfileSetupScreenState
 
     final String fullName = _nameController.text.trim();
     final String phone = _phoneController.text.trim();
+    final JosiUser? user = ref.read(authControllerProvider).user;
+    final String submittedFullName =
+        fullName.isNotEmpty ? fullName : user?.displayName ?? 'Rider';
+    final String submittedPhone = phone.isNotEmpty ? phone : user?.phone ?? '';
     final Map<String, String> errors = <String, String>{};
-    if (fullName.isEmpty) {
+    if (widget.isUpdate && fullName.isEmpty) {
       errors['name'] = 'Name is required.';
     }
-    if (phone.isEmpty) {
+    if (widget.isUpdate && phone.isEmpty) {
       errors['phone'] = 'Phone number is required.';
-    }
-    if (!_acceptedTerms && !widget.isUpdate) {
-      errors['terms'] = 'Accept the terms to continue.';
     }
 
     setState(() {
@@ -649,8 +650,8 @@ class _RiderProfileSetupScreenState
     setState(() => _saving = true);
     try {
       await ref.read(riderRepositoryProvider).updateProfile(
-            fullName: fullName,
-            phone: phone,
+            fullName: submittedFullName,
+            phone: submittedPhone,
             gender: _gender,
             address: _addressController.text.trim(),
             city: _cityNameFromLabel(_city),
@@ -716,30 +717,32 @@ class _RiderProfileSetupScreenState
                 ),
                 const SizedBox(height: 16),
               ],
-              _RiderFormField(
-                label: 'Name',
-                hintText: 'Jenny Wilson',
-                controller: _nameController,
-                textInputAction: TextInputAction.next,
-                errorText: _errors['name'] ?? _errors['first_name'],
-              ),
-              const SizedBox(height: 14),
-              _RiderFormField(
-                label: 'Email',
-                hintText: 'example@gmail.com',
-                controller: _emailController,
-                readOnly: true,
-              ),
-              const SizedBox(height: 14),
-              _RiderFormField(
-                label: 'Phone Number',
-                hintText: '+234 802 345 6789',
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                errorText: _errors['phone'],
-              ),
-              const SizedBox(height: 14),
+              if (isUpdate) ...<Widget>[
+                _RiderFormField(
+                  label: 'Name',
+                  hintText: 'Jenny Wilson',
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  errorText: _errors['name'] ?? _errors['first_name'],
+                ),
+                const SizedBox(height: 14),
+                _RiderFormField(
+                  label: 'Email',
+                  hintText: 'example@gmail.com',
+                  controller: _emailController,
+                  readOnly: true,
+                ),
+                const SizedBox(height: 14),
+                _RiderFormField(
+                  label: 'Phone Number',
+                  hintText: '+234 802 345 6789',
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  errorText: _errors['phone'],
+                ),
+                const SizedBox(height: 14),
+              ],
               _RiderFormField(
                 label: 'Address',
                 hintText: '22 Adetokunbo Ademola Crescent',
@@ -776,74 +779,6 @@ class _RiderProfileSetupScreenState
                   controller: _profilePhotoController,
                   errorText: _errors['profile_photo'],
                 ),
-              ] else ...<Widget>[
-                const SizedBox(height: 22),
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: _acceptedTerms
-                              ? JosiColors.red
-                              : JosiColors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: _acceptedTerms
-                                  ? JosiColors.red
-                                  : JosiColors.line),
-                        ),
-                        child: _acceptedTerms
-                            ? const Icon(Icons.check_rounded,
-                                color: JosiColors.white, size: 24)
-                            : null,
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            text: 'By Accept, you agree to Company ',
-                            children: <InlineSpan>[
-                              TextSpan(
-                                text: 'Terms & Condition',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.copyWith(
-                                      color: JosiColors.red,
-                                      decoration: TextDecoration.underline,
-                                      decorationColor: JosiColors.red,
-                                    ),
-                              ),
-                            ],
-                          ),
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: JosiColors.ink,
-                                    fontSize: 17,
-                                    height: 1.35,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_errors['terms'] != null) ...<Widget>[
-                  const SizedBox(height: 8),
-                  Text(
-                    _errors['terms']!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: JosiColors.redDark,
-                          fontSize: 12,
-                          height: 1.2,
-                        ),
-                  ),
-                ],
               ],
             ],
           );
@@ -895,6 +830,98 @@ class _RiderProfilePictureScreenState
     _hydrated = true;
   }
 
+  void _showPhotoSourceSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: JosiColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+      ),
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: JosiColors.line,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Profile Photo',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                _PhotoSourceTile(
+                  key: const ValueKey<String>('rider-profile-photo-camera'),
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Take a selfie',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickProfilePhoto(ProfilePhotoSource.camera);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _PhotoSourceTile(
+                  key: const ValueKey<String>('rider-profile-photo-gallery'),
+                  icon: Icons.photo_library_outlined,
+                  label: 'Choose from gallery',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _pickProfilePhoto(ProfilePhotoSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickProfilePhoto(ProfilePhotoSource source) async {
+    if (_saving) {
+      return;
+    }
+
+    setState(() {
+      _errorText = null;
+      _message = null;
+    });
+
+    try {
+      final String? profilePhoto =
+          await ref.read(profilePhotoPickerProvider).pick(source);
+      if (!mounted || profilePhoto == null || profilePhoto.trim().isEmpty) {
+        return;
+      }
+
+      setState(() => _profilePhotoController.text = profilePhoto.trim());
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _message = source == ProfilePhotoSource.camera
+            ? 'Unable to open the camera. Please try again.'
+            : 'Unable to open the photo gallery. Please try again.';
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (_saving) {
       return;
@@ -902,7 +929,7 @@ class _RiderProfilePictureScreenState
 
     final String profilePhoto = _profilePhotoController.text.trim();
     if (profilePhoto.isEmpty) {
-      setState(() => _errorText = 'Add a profile photo file path or URL.');
+      setState(() => _errorText = 'Take a selfie or choose a photo.');
       return;
     }
 
@@ -941,7 +968,8 @@ class _RiderProfilePictureScreenState
 
     return _RiderFlowScaffold(
       key: const ValueKey<String>('rider-profile-picture-screen'),
-      fallbackRoute: AppRoutes.riderProfileSetup,
+      fallbackRoute: AppRoutes.riderApplicationStatus,
+      backUsesFallback: true,
       appBarTitle: 'Profile Picture',
       bottomLabel: 'Continue',
       bottomLoading: _saving,
@@ -963,6 +991,8 @@ class _RiderProfilePictureScreenState
               ],
               _RiderProfilePictureFields(
                 controller: _profilePhotoController,
+                selectedPhoto: _profilePhotoController.text.trim(),
+                onOpenPicker: _showPhotoSourceSheet,
                 errorText: _errorText,
               ),
             ],
@@ -987,10 +1017,14 @@ class _RiderProfilePictureScreenState
 class _RiderProfilePictureFields extends StatelessWidget {
   const _RiderProfilePictureFields({
     this.controller,
+    this.selectedPhoto,
+    this.onOpenPicker,
     this.errorText,
   });
 
   final TextEditingController? controller;
+  final String? selectedPhoto;
+  final VoidCallback? onOpenPicker;
   final String? errorText;
 
   @override
@@ -1003,7 +1037,7 @@ class _RiderProfilePictureFields extends StatelessWidget {
         const _UploadRequirement(
             'The selfie should have the applicant face alone'),
         const SizedBox(height: 16),
-        const _UploadRequirement('Upload PDF / JPEG / PNG'),
+        const _UploadRequirement('Use a JPEG or PNG photo'),
         const SizedBox(height: 26),
         const Divider(color: JosiColors.line),
         const SizedBox(height: 28),
@@ -1016,9 +1050,18 @@ class _RiderProfilePictureFields extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const _DashedUploadBox(),
+        if (onOpenPicker != null)
+          _ProfilePhotoUploadBox(
+            selectedPhoto: selectedPhoto ?? controller?.text.trim() ?? '',
+            errorText: errorText,
+            onTap: onOpenPicker!,
+          )
+        else
+          const _DashedUploadBox(),
         const SizedBox(height: 18),
-        if (controller == null)
+        if (onOpenPicker != null)
+          const SizedBox.shrink()
+        else if (controller == null)
           const _AttachedFilePreview(
             title: 'Profile',
             meta: 'JPG',
@@ -1267,12 +1310,7 @@ class _RiderVehicleSetupScreenState
     }
 
     final RiderProfile? profile = onboarding.profile;
-    if ((profile?.city.trim().isNotEmpty ?? false) ||
-        (profile?.state.trim().isNotEmpty ?? false)) {
-      _city = <String>[profile?.city ?? '', profile?.state ?? '']
-          .where((String value) => value.trim().isNotEmpty)
-          .join(', ');
-    }
+    _city = _cityLabel(profile?.city, profile?.state);
     _hydrated = true;
   }
 
@@ -1358,6 +1396,7 @@ class _RiderVehicleSetupScreenState
       key: const ValueKey<String>('rider-vehicle-setup-screen'),
       fallbackRoute:
           isUpdate ? AppRoutes.riderProfile : AppRoutes.riderApplicationStatus,
+      backUsesFallback: !isUpdate,
       appBarTitle: isUpdate ? 'Riding Details' : null,
       headline: isUpdate ? null : 'Complete Your Riding Details',
       subtitle: isUpdate
@@ -1442,6 +1481,7 @@ class _RiderVehicleSetupScreenState
                   'Abuja, FCT',
                   'Lagos, Lagos',
                   'Port Harcourt, Rivers',
+                  'Other',
                 ],
                 onChanged: (String? value) =>
                     setState(() => _city = value ?? _city),
@@ -4150,6 +4190,7 @@ class _RiderFlowScaffold extends StatelessWidget {
     this.bottomLabel,
     this.onBottomPressed,
     this.bottomLoading = false,
+    this.backUsesFallback = false,
   });
 
   final String fallbackRoute;
@@ -4159,6 +4200,7 @@ class _RiderFlowScaffold extends StatelessWidget {
   final String? bottomLabel;
   final VoidCallback? onBottomPressed;
   final bool bottomLoading;
+  final bool backUsesFallback;
   final Widget child;
 
   @override
@@ -4175,7 +4217,10 @@ class _RiderFlowScaffold extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
                   child: Row(
                     children: <Widget>[
-                      _RiderCircleBackButton(fallbackRoute: fallbackRoute),
+                      _RiderCircleBackButton(
+                        fallbackRoute: fallbackRoute,
+                        backUsesFallback: backUsesFallback,
+                      ),
                       Expanded(
                         child: Text(
                           appBarTitle ?? '',
@@ -4250,9 +4295,11 @@ class _RiderFlowScaffold extends StatelessWidget {
 class _RiderCircleBackButton extends StatelessWidget {
   const _RiderCircleBackButton({
     required this.fallbackRoute,
+    this.backUsesFallback = false,
   });
 
   final String fallbackRoute;
+  final bool backUsesFallback;
 
   @override
   Widget build(BuildContext context) {
@@ -4262,8 +4309,14 @@ class _RiderCircleBackButton extends StatelessWidget {
       elevation: 2.5,
       shadowColor: const Color(0x18000000),
       child: InkWell(
+        key: const ValueKey<String>('rider-flow-back-button'),
         customBorder: const CircleBorder(),
         onTap: () {
+          if (backUsesFallback) {
+            context.go(fallbackRoute);
+            return;
+          }
+
           final GoRouter router = GoRouter.of(context);
           if (router.canPop()) {
             context.pop();
@@ -4445,6 +4498,8 @@ class _RiderSelectField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String selectedValue = items.contains(value) ? value : items.first;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -4458,7 +4513,7 @@ class _RiderSelectField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          initialValue: value,
+          initialValue: selectedValue,
           isExpanded: true,
           items: items
               .map((String item) =>
@@ -4559,6 +4614,154 @@ class _DashedUploadBox extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfilePhotoUploadBox extends StatelessWidget {
+  const _ProfilePhotoUploadBox({
+    required this.selectedPhoto,
+    required this.errorText,
+    required this.onTap,
+  });
+
+  final String selectedPhoto;
+  final String? errorText;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasPhoto = selectedPhoto.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(
+          height: 158,
+          child: CustomPaint(
+            painter: _DashedBorderPainter(),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                key: const ValueKey<String>('rider-profile-photo-picker'),
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(8),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            color: hasPhoto
+                                ? JosiColors.red
+                                : const Color(0xFF6A6A6A),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            hasPhoto
+                                ? Icons.check_rounded
+                                : Icons.add_a_photo_outlined,
+                            color: JosiColors.white,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          hasPhoto
+                              ? _fileNameFromPath(selectedPhoto)
+                              : 'Add Profile Photo',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: JosiColors.ink,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          hasPhoto
+                              ? 'Tap to change photo'
+                              : 'Camera or gallery',
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: JosiColors.softMuted,
+                                    fontSize: 14,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (errorText != null) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            errorText!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: JosiColors.redDark,
+                  fontSize: 12,
+                  height: 1.2,
+                ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _PhotoSourceTile extends StatelessWidget {
+  const _PhotoSourceTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: JosiColors.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: <Widget>[
+              Icon(icon, color: JosiColors.red, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: JosiColors.ink,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: JosiColors.softMuted),
             ],
           ),
         ),
@@ -5618,4 +5821,10 @@ String? _stateFromLabel(String label) {
 
   final String state = parts.skip(1).join(',').trim();
   return state.isEmpty ? null : state;
+}
+
+String _fileNameFromPath(String path) {
+  final List<String> parts = path.split(RegExp(r'[\\/]'));
+  final String fileName = parts.isEmpty ? path : parts.last;
+  return fileName.trim().isEmpty ? 'Selected photo' : fileName.trim();
 }

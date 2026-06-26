@@ -6,6 +6,7 @@ import '../mock/josi_models.dart';
 import '../repositories/repositories.dart';
 import '../services/api_client.dart';
 import '../services/phone_call_service.dart';
+import '../services/profile_photo_picker.dart';
 
 class AuthSession {
   const AuthSession({
@@ -231,6 +232,11 @@ final Provider<RiderRepository> riderRepositoryProvider =
 final Provider<PhoneCallService> phoneCallServiceProvider =
     Provider<PhoneCallService>((Ref ref) {
   return const PhoneCallService();
+});
+
+final Provider<ProfilePhotoPicker> profilePhotoPickerProvider =
+    Provider<ProfilePhotoPicker>((Ref ref) {
+  return DeviceProfilePhotoPicker();
 });
 
 final Provider<TripRepository> tripRepositoryProvider =

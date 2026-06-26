@@ -12,6 +12,7 @@ import 'package:josi_ride/core/mock/josi_models.dart';
 import 'package:josi_ride/core/providers/app_providers.dart';
 import 'package:josi_ride/core/repositories/repositories.dart';
 import 'package:josi_ride/core/services/api_client.dart';
+import 'package:josi_ride/core/services/profile_photo_picker.dart';
 import 'package:josi_ride/core/theme/josi_colors.dart';
 import 'package:josi_ride/core/theme/josi_theme.dart';
 import 'package:josi_ride/core/widgets/josi_google_map.dart';
@@ -238,7 +239,11 @@ void main() {
 
   testWidgets('rider account completion flow includes bank details',
       (WidgetTester tester) async {
-    await _loginAsRider(tester);
+    final _FakeProfilePhotoPicker profilePhotoPicker = _FakeProfilePhotoPicker(
+      cameraPath: 'camera-selfie.jpg',
+      galleryPath: 'gallery-selfie.png',
+    );
+    await _loginAsRider(tester, profilePhotoPicker: profilePhotoPicker);
 
     expect(
         find.byKey(const ValueKey<String>('rider-application-status-screen')),
@@ -250,9 +255,47 @@ void main() {
         findsOneWidget);
     expect(find.text('Profile Picture'), findsWidgets);
     expect(find.text('Please Upload a Clear Selfie'), findsOneWidget);
-    expect(find.text('Upload Documents'), findsOneWidget);
+    expect(find.text('Add Profile Photo'), findsOneWidget);
+    expect(find.text('Upload Documents'), findsNothing);
 
-    await tester.enterText(find.byType(TextField).last, 'selfie.jpg');
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-flow-back-button')).last);
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsOneWidget);
+
+    await tester.tap(find.text('Profile Picture'));
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-profile-photo-picker')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Take a selfie'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-profile-photo-gallery')));
+    await tester.pumpAndSettle();
+
+    expect(profilePhotoPicker.pickedSources,
+        <ProfilePhotoSource>[ProfilePhotoSource.gallery]);
+    expect(find.text('gallery-selfie.png'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-profile-photo-picker')));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-profile-photo-camera')));
+    await tester.pumpAndSettle();
+
+    expect(profilePhotoPicker.pickedSources, <ProfilePhotoSource>[
+      ProfilePhotoSource.gallery,
+      ProfilePhotoSource.camera,
+    ]);
+    expect(find.text('camera-selfie.jpg'), findsOneWidget);
     await tester.tap(
         find.byKey(const ValueKey<String>('rider-bottom-action-continue')));
     await tester.pumpAndSettle();
@@ -283,9 +326,38 @@ void main() {
     expect(find.text('Documents'), findsNothing);
   });
 
-  testWidgets('rider riding details uses uploaded form structure',
+  testWidgets(
+      'rider onboarding profile setup only asks for address gender city',
       (WidgetTester tester) async {
     await _loginAsRider(tester);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderProfileSetup);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-profile-setup-screen')),
+        findsOneWidget);
+    expect(find.text('Complete Your Profile'), findsOneWidget);
+    expect(find.text('Address'), findsOneWidget);
+    expect(find.text('Gender'), findsOneWidget);
+    expect(find.text('City You Drive In'), findsOneWidget);
+    expect(find.text('Name'), findsNothing);
+    expect(find.text('Email'), findsNothing);
+    expect(find.text('Phone Number'), findsNothing);
+    expect(find.text('Terms & Condition'), findsNothing);
+    expect(find.text('Profile Picture'), findsNothing);
+  });
+
+  testWidgets('rider riding details uses uploaded form structure',
+      (WidgetTester tester) async {
+    final _FakeRiderRepository riderRepository = _FakeRiderRepository(
+      onboarding: RiderOnboarding(
+        profile: _testRiderProfile(city: 'Ibadan', state: 'Oyo'),
+      ),
+    );
+    await _loginAsRider(tester, riderRepository: riderRepository);
 
     expect(find.text('Riding Details'), findsOneWidget);
     expect(find.text('Driving Details'), findsNothing);
@@ -309,10 +381,26 @@ void main() {
     expect(find.text('Plate Number'), findsOneWidget);
     expect(find.text('Registration Number'), findsOneWidget);
     expect(find.text('City You Ride In'), findsOneWidget);
+    expect(find.text('Other'), findsOneWidget);
     expect(find.text('Vehicle setup'), findsNothing);
     expect(find.text('Vehicle documents'), findsNothing);
     expect(find.text('Vehicle registration'), findsNothing);
     expect(find.text('Save vehicle'), findsNothing);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-flow-back-button')).last);
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsOneWidget);
+
+    await tester.tap(find.text('Riding Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-vehicle-setup-screen')),
+        findsOneWidget);
+    expect(find.text('Complete Your Riding Details'), findsOneWidget);
 
     final Finder continueButton =
         find.byKey(const ValueKey<String>('rider-bottom-action-continue')).last;
@@ -1395,6 +1483,8 @@ void main() {
 Future<void> _pumpApp(
   WidgetTester tester, {
   AuthRepository authRepository = const _FakeAuthRepository(),
+  RiderRepository? riderRepository,
+  ProfilePhotoPicker? profilePhotoPicker,
 }) async {
   JosiGoogleMap.debugUseStaticMap = true;
   tester.view.physicalSize = const Size(430, 932);
@@ -1409,7 +1499,11 @@ Future<void> _pumpApp(
       overrides: [
         authRepositoryProvider.overrideWithValue(authRepository),
         customerRepositoryProvider.overrideWithValue(_FakeCustomerRepository()),
-        riderRepositoryProvider.overrideWithValue(_FakeRiderRepository()),
+        riderRepositoryProvider
+            .overrideWithValue(riderRepository ?? _FakeRiderRepository()),
+        profilePhotoPickerProvider.overrideWithValue(
+          profilePhotoPicker ?? _FakeProfilePhotoPicker(),
+        ),
         locationServiceProvider.overrideWithValue(
           _FakeLocationService(onCall: () => _mockLocationCall?.call()),
         ),
@@ -1519,6 +1613,23 @@ class _RestoreTimeoutAuthRepository extends _FakeAuthRepository {
   @override
   Future<JosiUser?> restoreSession() async {
     throw const ApiException('The request timed out. Please try again.');
+  }
+}
+
+class _FakeProfilePhotoPicker implements ProfilePhotoPicker {
+  _FakeProfilePhotoPicker({
+    this.cameraPath = 'camera-selfie.jpg',
+    this.galleryPath = 'gallery-selfie.png',
+  });
+
+  final String? cameraPath;
+  final String? galleryPath;
+  final List<ProfilePhotoSource> pickedSources = <ProfilePhotoSource>[];
+
+  @override
+  Future<String?> pick(ProfilePhotoSource source) async {
+    pickedSources.add(source);
+    return source == ProfilePhotoSource.camera ? cameraPath : galleryPath;
   }
 }
 
@@ -1775,12 +1886,39 @@ Trip _copyTrip(
   );
 }
 
-class _FakeRiderRepository extends RiderRepository {
-  _FakeRiderRepository();
-
-  RiderOnboarding _onboarding = const RiderOnboarding(
-    profile: JosiMockData.riderProfile,
+RiderProfile _testRiderProfile({
+  String? city,
+  String? state,
+}) {
+  const RiderProfile base = JosiMockData.riderProfile;
+  return RiderProfile(
+    fullName: base.fullName,
+    phone: base.phone,
+    gender: base.gender,
+    dateOfBirth: base.dateOfBirth,
+    address: base.address,
+    city: city ?? base.city,
+    state: state ?? base.state,
+    rating: base.rating,
+    completedTrips: base.completedTrips,
+    profilePhoto: base.profilePhoto,
+    licenseNumber: base.licenseNumber,
+    applicationStatus: base.applicationStatus,
+    bankName: base.bankName,
+    bankAccountName: base.bankAccountName,
+    bankAccountNumber: base.bankAccountNumber,
   );
+}
+
+class _FakeRiderRepository extends RiderRepository {
+  _FakeRiderRepository({
+    RiderOnboarding? onboarding,
+  }) : _onboarding = onboarding ??
+            const RiderOnboarding(
+              profile: JosiMockData.riderProfile,
+            );
+
+  RiderOnboarding _onboarding;
   final List<Trip> _trips = <Trip>[
     const Trip(
       id: 'TRP-2408',
@@ -2038,8 +2176,16 @@ Future<void> _finishSplash(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpToRoleSelection(WidgetTester tester) async {
-  await _pumpApp(tester);
+Future<void> _pumpToRoleSelection(
+  WidgetTester tester, {
+  RiderRepository? riderRepository,
+  ProfilePhotoPicker? profilePhotoPicker,
+}) async {
+  await _pumpApp(
+    tester,
+    riderRepository: riderRepository,
+    profilePhotoPicker: profilePhotoPicker,
+  );
   await _finishSplash(tester);
 }
 
@@ -2058,8 +2204,16 @@ Future<void> _loginAsCustomer(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _loginAsRider(WidgetTester tester) async {
-  await _pumpToRoleSelection(tester);
+Future<void> _loginAsRider(
+  WidgetTester tester, {
+  RiderRepository? riderRepository,
+  ProfilePhotoPicker? profilePhotoPicker,
+}) async {
+  await _pumpToRoleSelection(
+    tester,
+    riderRepository: riderRepository,
+    profilePhotoPicker: profilePhotoPicker,
+  );
   _expectVisibleInViewport(tester, find.text('Drive with Us'));
   await tester.tap(find.text('Drive with Us'));
   await tester.pumpAndSettle();
@@ -2079,7 +2233,12 @@ Future<void> _completeRiderOnboarding(WidgetTester tester) async {
 
   await tester.tap(find.text('Profile Picture'));
   await tester.pumpAndSettle();
-  await tester.enterText(find.byType(TextField).last, 'selfie.jpg');
+  await tester
+      .tap(find.byKey(const ValueKey<String>('rider-profile-photo-picker')));
+  await tester.pumpAndSettle();
+  await tester
+      .tap(find.byKey(const ValueKey<String>('rider-profile-photo-camera')));
+  await tester.pumpAndSettle();
   await tester
       .tap(find.byKey(const ValueKey<String>('rider-bottom-action-continue')));
   await tester.pumpAndSettle();
