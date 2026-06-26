@@ -355,6 +355,56 @@ enum _RiderJobSearchStatus {
   notFound,
 }
 
+class RiderEntryScreen extends ConsumerStatefulWidget {
+  const RiderEntryScreen({super.key});
+
+  @override
+  ConsumerState<RiderEntryScreen> createState() => _RiderEntryScreenState();
+}
+
+class _RiderEntryScreenState extends ConsumerState<RiderEntryScreen> {
+  bool _redirectScheduled = false;
+
+  void _scheduleRedirect(String route) {
+    if (_redirectScheduled) {
+      return;
+    }
+    _redirectScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (mounted) {
+        context.go(route);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final JosiUser? user = ref.watch(authControllerProvider).user;
+    if (user?.applicationStatus == RiderApplicationStatus.approved) {
+      _scheduleRedirect(AppRoutes.riderHome);
+    } else {
+      ref.watch(riderOnboardingProvider).when(
+            data: (RiderOnboarding onboarding) => _scheduleRedirect(
+              onboarding.isSubmitted
+                  ? AppRoutes.riderHome
+                  : AppRoutes.riderApplicationStatus,
+            ),
+            error: (Object error, StackTrace stackTrace) =>
+                _scheduleRedirect(AppRoutes.riderApplicationStatus),
+            loading: () {},
+          );
+    }
+
+    return const Scaffold(
+      key: ValueKey<String>('rider-entry-screen'),
+      backgroundColor: JosiColors.white,
+      body: SafeArea(
+        child: LoadingState(label: 'Loading rider account'),
+      ),
+    );
+  }
+}
+
 class RiderLocationAccessScreen extends ConsumerStatefulWidget {
   const RiderLocationAccessScreen({super.key});
 

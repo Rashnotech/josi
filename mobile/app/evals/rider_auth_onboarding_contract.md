@@ -24,7 +24,9 @@ Gate checks for rider auth and account setup:
 - Ride Request uses real trip customer, pickup, destination, fare, and a 30 second countdown.
 - Ride Request Accept posts `/driver/trips/{trip}/accept`; Decline posts `/driver/trips/{trip}/decline`.
 - Rider Bookings filters actual `/driver/trips` data into Active, Completed, and Cancelled tabs.
-- Approved/onboarded rider login and session restore open `/rider/location-access`, not the application-status welcome screen; allowing location opens `/rider/home`.
+- Approved riders and riders with previously submitted onboarding open `/rider/home` directly, without repeating the application-status or location-access screens.
+- Riders with incomplete, unsubmitted onboarding still open `/rider/application-status` to finish the required sections.
+- First-time onboarding submission still opens `/rider/location-access`; allowing location opens `/rider/home`.
 - Rider home account/profile icon opens `/rider/profile`.
 - Rider Wallet summary and transactions read `/driver/wallet`, not `JosiMockData.riderWallet` or static mock transactions.
 - The application-status Continue action posts to `/driver/onboarding/submit` and shows success or backend validation errors.

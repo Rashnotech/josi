@@ -60,7 +60,7 @@ void main() {
     expect(find.text('Welcome to Josi Ride'), findsOneWidget);
   });
 
-  testWidgets('approved rider session restore opens location access',
+  testWidgets('approved rider session restore opens dashboard directly',
       (WidgetTester tester) async {
     await _pumpApp(
       tester,
@@ -69,20 +69,12 @@ void main() {
 
     await _finishSplash(tester);
 
-    expect(find.byKey(const ValueKey<String>('rider-location-access-screen')),
-        findsOneWidget);
-    expect(
-        find.byKey(const ValueKey<String>('rider-application-status-screen')),
-        findsNothing);
-
-    await tester
-        .tap(find.byKey(const ValueKey<String>('rider-flow-back-button')));
-    await tester.pumpAndSettle();
-
     expect(find.byKey(const ValueKey<String>('rider-home-screen')),
         findsOneWidget);
     expect(
         find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsNothing);
+    expect(find.byKey(const ValueKey<String>('rider-location-access-screen')),
         findsNothing);
   });
 
@@ -263,15 +255,8 @@ void main() {
         16);
   });
 
-  testWidgets('approved rider login opens location access before dashboard',
+  testWidgets('approved rider login opens dashboard directly',
       (WidgetTester tester) async {
-    int locationCalls = 0;
-    _mockDeviceLocation(
-      tester,
-      onCall: () {
-        locationCalls++;
-      },
-    );
     await _pumpApp(
       tester,
       authRepository: const _ApprovedRiderLoginAuthRepository(),
@@ -288,19 +273,52 @@ void main() {
     await tester.pump(const Duration(milliseconds: 650));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey<String>('rider-location-access-screen')),
+    expect(find.byKey(const ValueKey<String>('rider-home-screen')),
         findsOneWidget);
     expect(
         find.byKey(const ValueKey<String>('rider-application-status-screen')),
         findsNothing);
+    expect(find.byKey(const ValueKey<String>('rider-location-access-screen')),
+        findsNothing);
+  });
 
-    await tester
-        .tap(find.byKey(const ValueKey<String>('rider-location-allow-button')));
+  testWidgets('submitted onboarding skips welcome screen before approval',
+      (WidgetTester tester) async {
+    await _pumpApp(
+      tester,
+      authRepository: const _SubmittedRiderLoginAuthRepository(),
+      riderRepository: _FakeRiderRepository(
+        onboarding: const RiderOnboarding(
+          profile: JosiMockData.riderProfile,
+          bankAccount: RiderBankAccount(
+            bankName: 'Josi Bank',
+            accountName: 'Amina Yusuf',
+            accountNumber: '0123456789',
+          ),
+          ridingDetails: JosiMockData.vehicle,
+          profilePictureComplete: true,
+          bankAccountComplete: true,
+          ridingDetailsComplete: true,
+          isSubmitted: true,
+        ),
+      ),
+    );
+
+    await _finishSplash(tester);
+    await tester.tap(find.text('Drive with Us'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'rider@josi.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Password123!');
+    await tester.tap(find.byKey(const ValueKey<String>('login-button')));
     await tester.pumpAndSettle();
 
-    expect(locationCalls, greaterThanOrEqualTo(1));
     expect(find.byKey(const ValueKey<String>('rider-home-screen')),
         findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsNothing);
+    expect(find.byKey(const ValueKey<String>('rider-location-access-screen')),
+        findsNothing);
   });
 
   testWidgets('rider account completion flow includes bank details',
@@ -1611,20 +1629,50 @@ void main() {
     expect(find.text('Is safe to use App?'), findsOneWidget);
     expect(find.text('Contact support'), findsNothing);
 
+    final Text helpTitle = tester.widget<Text>(find.text('Help Center'));
+    expect(helpTitle.style?.fontSize, 18);
     final Text faqTab = tester.widget<Text>(find.text('FAQ'));
-    expect(faqTab.style?.fontSize, 17);
+    expect(faqTab.style?.fontSize, 15);
+    final Text faqCategory = tester.widget<Text>(find.text('All'));
+    expect(faqCategory.style?.fontSize, 14);
+    final Text faqQuestion =
+        tester.widget<Text>(find.text('What if I need to cancel a booking?'));
+    expect(faqQuestion.style?.fontSize, 14);
 
     await tester.tap(find.byKey(const ValueKey<String>('help-tab-contact-us')));
     await tester.pumpAndSettle();
 
     expect(find.text('Customer Service'), findsOneWidget);
     expect(find.text('WhatsApp'), findsOneWidget);
-    expect(find.text('(480) 555-0103'), findsOneWidget);
+    expect(find.text('+234 9162599418'), findsOneWidget);
+    expect(find.text('(480) 555-0103'), findsNothing);
     expect(find.text('Website'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
     expect(find.text('Facebook'), findsOneWidget);
     expect(find.text('Twitter'), findsOneWidget);
     expect(find.text('Instagram'), findsOneWidget);
     expect(find.text('What if I need to cancel a booking?'), findsNothing);
+
+    final Text contactLabel = tester.widget<Text>(find.text('WhatsApp'));
+    expect(contactLabel.style?.fontSize, 16);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('help-contact-website')));
+    await tester.pumpAndSettle();
+    expect(find.text('jositransport.com'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('help-contact-email')));
+    await tester.pumpAndSettle();
+    expect(find.text('support@jositransport.com'), findsOneWidget);
+
+    for (final String social in <String>['facebook', 'twitter', 'instagram']) {
+      final Finder socialRow =
+          find.byKey(ValueKey<String>('help-contact-$social'));
+      await tester.ensureVisible(socialRow);
+      await tester.tap(socialRow);
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Josi Ride'), findsNWidgets(3));
   });
 
   test('theme follows the Josi light redline', () {
@@ -1817,6 +1865,34 @@ class _ApprovedRiderLoginAuthRepository extends _ApprovedRiderAuthRepository {
 
   @override
   Future<JosiUser?> restoreSession() async => null;
+}
+
+class _SubmittedRiderLoginAuthRepository extends _FakeAuthRepository {
+  const _SubmittedRiderLoginAuthRepository();
+
+  static const JosiUser _submittedRider = JosiUser(
+    id: 'drv_submitted',
+    name: 'Amina Yusuf',
+    email: 'amina@josi.ng',
+    phone: '+234 802 345 6789',
+    role: AppRole.rider,
+    applicationStatus: RiderApplicationStatus.underReview,
+  );
+
+  @override
+  Future<JosiUser?> restoreSession() async => null;
+
+  @override
+  Future<AuthResult> signIn({
+    required String identity,
+    required String password,
+    String role = 'customer',
+  }) async {
+    return const AuthResult.authenticated(
+      _submittedRider,
+      message: 'Login successful',
+    );
+  }
 }
 
 class _FakeWalletRepository extends WalletRepository {

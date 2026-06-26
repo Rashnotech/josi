@@ -34,6 +34,7 @@ class AppRoutes {
   static const String customerSettings = '/customer/settings';
 
   static const String riderHome = '/rider/home';
+  static const String riderEntry = '/rider/entry';
   static const String riderLocationAccess = '/rider/location-access';
   static const String riderApplicationStatus = '/rider/application-status';
   static const String riderProfileSetup = '/rider/profile-setup';

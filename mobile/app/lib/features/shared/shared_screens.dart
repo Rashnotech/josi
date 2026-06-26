@@ -209,17 +209,42 @@ const List<_HelpFaqItem> _helpFaqItems = <_HelpFaqItem>[
 ];
 
 const List<_HelpContactItem> _helpContactItems = <_HelpContactItem>[
-  _HelpContactItem(label: 'Customer Service', icon: Icons.headset_mic_rounded),
+  _HelpContactItem(
+    label: 'Customer Service',
+    icon: Icons.headset_mic_rounded,
+    detail: '+234 9162599418',
+  ),
   _HelpContactItem(
     label: 'WhatsApp',
     icon: Icons.chat_bubble_outline_rounded,
-    detail: '(480) 555-0103',
+    detail: '+234 9162599418',
     expanded: true,
   ),
-  _HelpContactItem(label: 'Website', icon: Icons.language_rounded),
-  _HelpContactItem(label: 'Facebook', icon: Icons.facebook_rounded),
-  _HelpContactItem(label: 'Twitter', icon: Icons.alternate_email_rounded),
-  _HelpContactItem(label: 'Instagram', icon: Icons.camera_alt_rounded),
+  _HelpContactItem(
+    label: 'Website',
+    icon: Icons.language_rounded,
+    detail: 'jositransport.com',
+  ),
+  _HelpContactItem(
+    label: 'Email',
+    icon: Icons.email_outlined,
+    detail: 'support@jositransport.com',
+  ),
+  _HelpContactItem(
+    label: 'Facebook',
+    icon: Icons.facebook_rounded,
+    detail: 'Josi Ride',
+  ),
+  _HelpContactItem(
+    label: 'Twitter',
+    icon: Icons.alternate_email_rounded,
+    detail: 'Josi Ride',
+  ),
+  _HelpContactItem(
+    label: 'Instagram',
+    icon: Icons.camera_alt_rounded,
+    detail: 'Josi Ride',
+  ),
 ];
 
 String _profileRouteForRole(AppNavRole role) => role == AppNavRole.customer
@@ -269,6 +294,7 @@ class _SupportScreenState extends State<SupportScreen> {
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
                   child: _ReferenceHeader(
                     title: 'Help Center',
+                    titleFontSize: 18,
                     backKey: 'help-center-back-button',
                     onBack: () => context.go(_profileRouteForRole(widget.role)),
                   ),
@@ -1244,11 +1270,13 @@ class _ReferenceHeader extends StatelessWidget {
     required this.title,
     required this.backKey,
     required this.onBack,
+    this.titleFontSize = 20,
   });
 
   final String title;
   final String backKey;
   final VoidCallback onBack;
+  final double titleFontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1283,7 +1311,7 @@ class _ReferenceHeader extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: JosiColors.ink,
-                  fontSize: 20,
+                  fontSize: titleFontSize,
                   fontWeight: FontWeight.w600,
                 ),
           ),
@@ -1356,7 +1384,7 @@ class _HelpSearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 58,
+      height: 52,
       child: TextField(
         key: const ValueKey<String>('help-search-field'),
         textInputAction: TextInputAction.search,
@@ -1364,16 +1392,16 @@ class _HelpSearchField extends StatelessWidget {
           hintText: 'Search',
           hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: JosiColors.softMuted,
-                fontSize: 18,
+                fontSize: 15,
               ),
           prefixIcon:
-              const Icon(Icons.search_rounded, color: JosiColors.red, size: 30),
+              const Icon(Icons.search_rounded, color: JosiColors.red, size: 24),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         ),
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: JosiColors.ink,
-              fontSize: 18,
+              fontSize: 15,
             ),
       ),
     );
@@ -1428,7 +1456,7 @@ class _HelpTabButton extends StatelessWidget {
       key: ValueKey<String>(tab.key),
       onTap: onTap,
       child: SizedBox(
-        height: 60,
+        height: 52,
         child: Stack(
           alignment: Alignment.bottomCenter,
           children: <Widget>[
@@ -1437,7 +1465,7 @@ class _HelpTabButton extends StatelessWidget {
                 tab.label,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: selected ? JosiColors.red : JosiColors.muted,
-                      fontSize: 17,
+                      fontSize: 15,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                     ),
               ),
@@ -1540,15 +1568,15 @@ class _HelpCategoryChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         child: Container(
-          height: 52,
-          constraints: const BoxConstraints(minWidth: 90),
+          height: 44,
+          constraints: const BoxConstraints(minWidth: 80),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 26),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
           child: Text(
             category.label,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: selected ? JosiColors.white : JosiColors.softMuted,
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
           ),
@@ -1574,7 +1602,7 @@ class _HelpFaqCard extends StatelessWidget {
       child: Column(
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+            padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
             child: Row(
               children: <Widget>[
                 Expanded(
@@ -1584,7 +1612,7 @@ class _HelpFaqCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: JosiColors.black,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -1594,7 +1622,7 @@ class _HelpFaqCard extends StatelessWidget {
                       ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_down_rounded,
                   color: JosiColors.red,
-                  size: 30,
+                  size: 26,
                 ),
               ],
             ),
@@ -1602,12 +1630,13 @@ class _HelpFaqCard extends StatelessWidget {
           if (item.expanded) ...<Widget>[
             const Divider(height: 1, color: JosiColors.line),
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 17),
               child: Text(
                 item.answer,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: JosiColors.softMuted,
-                      fontSize: 16,
+                      fontSize: 14,
+                      height: 1.35,
                     ),
               ),
             ),
@@ -1618,8 +1647,29 @@ class _HelpFaqCard extends StatelessWidget {
   }
 }
 
-class _HelpContactList extends StatelessWidget {
+class _HelpContactList extends StatefulWidget {
   const _HelpContactList({super.key});
+
+  @override
+  State<_HelpContactList> createState() => _HelpContactListState();
+}
+
+class _HelpContactListState extends State<_HelpContactList> {
+  final Set<String> _expandedItems = _helpContactItems
+      .where((_HelpContactItem item) => item.expanded)
+      .map((_HelpContactItem item) => item.label)
+      .toSet();
+
+  void _toggle(_HelpContactItem item) {
+    if (item.detail == null) {
+      return;
+    }
+    setState(() {
+      if (!_expandedItems.remove(item.label)) {
+        _expandedItems.add(item.label);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1629,7 +1679,11 @@ class _HelpContactList extends StatelessWidget {
         for (final _HelpContactItem item in _helpContactItems)
           Padding(
             padding: const EdgeInsets.only(bottom: 14),
-            child: _HelpContactCard(item: item),
+            child: _HelpContactCard(
+              item: item,
+              expanded: _expandedItems.contains(item.label),
+              onTap: () => _toggle(item),
+            ),
           ),
       ],
     );
@@ -1637,9 +1691,15 @@ class _HelpContactList extends StatelessWidget {
 }
 
 class _HelpContactCard extends StatelessWidget {
-  const _HelpContactCard({required this.item});
+  const _HelpContactCard({
+    required this.item,
+    required this.expanded,
+    required this.onTap,
+  });
 
   final _HelpContactItem item;
+  final bool expanded;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1650,66 +1710,70 @@ class _HelpContactCard extends StatelessWidget {
         border: Border.all(color: JosiColors.line),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
-            child: Row(
-              children: <Widget>[
-                Icon(item.icon, color: JosiColors.red, size: 34),
-                const SizedBox(width: 22),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: JosiColors.ink,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-                Icon(
-                  item.expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  color: JosiColors.ink,
-                  size: 30,
-                ),
-              ],
-            ),
-          ),
-          if (item.expanded && item.detail != null) ...<Widget>[
-            const Padding(
-              padding: EdgeInsets.only(left: 86, right: 22),
-              child: Divider(height: 1, color: JosiColors.line),
-            ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Column(
+          children: <Widget>[
             Padding(
-              padding: const EdgeInsets.fromLTRB(86, 14, 22, 22),
+              padding: const EdgeInsets.fromLTRB(18, 15, 18, 15),
               child: Row(
                 children: <Widget>[
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: JosiColors.red,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
+                  Icon(item.icon, color: JosiColors.red, size: 28),
+                  const SizedBox(width: 18),
                   Expanded(
                     child: Text(
-                      item.detail!,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: JosiColors.softMuted,
+                      item.label,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: JosiColors.ink,
                             fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                     ),
+                  ),
+                  Icon(
+                    expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: JosiColors.ink,
+                    size: 26,
                   ),
                 ],
               ),
             ),
+            if (expanded && item.detail != null) ...<Widget>[
+              const Padding(
+                padding: EdgeInsets.only(left: 64, right: 18),
+                child: Divider(height: 1, color: JosiColors.line),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(64, 12, 18, 18),
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: JosiColors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.detail!,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: JosiColors.softMuted,
+                              fontSize: 14,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

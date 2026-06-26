@@ -231,6 +231,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
             const RiderHomeScreen(),
       ),
       GoRoute(
+        path: AppRoutes.riderEntry,
+        builder: (BuildContext context, GoRouterState state) =>
+            const RiderEntryScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.riderLocationAccess,
         builder: (BuildContext context, GoRouterState state) =>
             const RiderLocationAccessScreen(),
@@ -343,8 +348,8 @@ String _homeForRole(JosiUser user) {
   return switch (user.role) {
     AppRole.customer => AppRoutes.customerHome,
     AppRole.rider => user.applicationStatus == RiderApplicationStatus.approved
-        ? AppRoutes.riderLocationAccess
-        : AppRoutes.riderApplicationStatus,
+        ? AppRoutes.riderHome
+        : AppRoutes.riderEntry,
     AppRole.fleetOwner => AppRoutes.fleetDashboard,
   };
 }
