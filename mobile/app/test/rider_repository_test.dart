@@ -174,6 +174,60 @@ void main() {
       return request['authorization'] == 'Bearer rider-token';
     }), isTrue);
   });
+
+  test('rider wallet repository reads backend driver wallet data', () async {
+    final List<Map<String, Object?>> requests = <Map<String, Object?>>[];
+    final _MemoryTokenStorage storage = _MemoryTokenStorage();
+    await storage.saveToken('rider-token', userRole: 'rider');
+
+    final WalletRepository repository = WalletRepository(
+      tokenStorage: storage,
+      apiClient: ApiClient(
+        baseUrl: 'https://api.josi.test/api/v1',
+        httpRequest: (
+          Uri uri, {
+          required String method,
+          required Map<String, String> headers,
+          Object? body,
+        }) async {
+          requests.add(<String, Object?>{
+            'method': method,
+            'path': uri.path,
+            'authorization': headers['Authorization'],
+          });
+
+          return ApiHttpResponse(
+            statusCode: 200,
+            body: _walletEnvelope(),
+          );
+        },
+      ),
+    );
+
+    final WalletSummary summary = await repository.summary(AppRole.rider);
+    final List<WalletTransaction> transactions =
+        await repository.transactions(AppRole.rider);
+
+    expect(summary.availableBalance, 'NGN 7,700');
+    expect(summary.totalEarnings, 'NGN 11,000');
+    expect(summary.pendingRemittance, 'NGN 900');
+    expect(summary.todayEarnings, 'NGN 4,200');
+    expect(transactions, hasLength(2));
+    expect(transactions.first.title, 'Trip earning');
+    expect(transactions.first.subtitle, 'CRN : #TRP-2409');
+    expect(transactions.first.amount, 'NGN 4,200');
+    expect(transactions.first.isCredit, isTrue);
+    expect(
+      requests.map((Map<String, Object?> request) => request['path']),
+      <String>[
+        '/api/v1/driver/wallet',
+        '/api/v1/driver/wallet',
+      ],
+    );
+    expect(requests.every((Map<String, Object?> request) {
+      return request['authorization'] == 'Bearer rider-token';
+    }), isTrue);
+  });
 }
 
 String _tripsEnvelope() {
@@ -208,6 +262,38 @@ String _tripEnvelope({required String status}) {
     'message': 'OK',
     'data': <String, Object?>{
       'trip': _tripPayload(status: status),
+    },
+  });
+}
+
+String _walletEnvelope() {
+  return jsonEncode(<String, Object?>{
+    'status': true,
+    'message': 'Driver wallet fetched successfully',
+    'data': <String, Object?>{
+      'summary': <String, Object?>{
+        'balance': 7700,
+        'available_balance': 7700,
+        'total_earnings': 11000,
+        'pending_remittance': 900,
+        'today_earnings': 4200,
+      },
+      'transactions': <Object?>[
+        <String, Object?>{
+          'title': 'Trip earning',
+          'subtitle': 'CRN : #TRP-2409',
+          'amount': 4200,
+          'is_credit': true,
+          'status': 'Completed',
+        },
+        <String, Object?>{
+          'title': 'Trip earning',
+          'subtitle': 'CRN : #TRP-2411',
+          'amount': 6800,
+          'is_credit': true,
+          'status': 'Completed',
+        },
+      ],
     },
   });
 }

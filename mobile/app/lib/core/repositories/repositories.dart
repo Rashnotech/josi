@@ -1351,19 +1351,168 @@ class TripRepository {
 }
 
 class WalletRepository {
-  const WalletRepository();
+  const WalletRepository({
+    ApiClient? apiClient,
+    TokenStorage? tokenStorage,
+  })  : _apiClient = apiClient,
+        _tokenStorage = tokenStorage;
+
+  final ApiClient? _apiClient;
+  final TokenStorage? _tokenStorage;
+
+  ApiClient get _api => _apiClient ?? ApiClient();
+
+  TokenStorage get _tokens => _tokenStorage ?? const SecureTokenStorage();
 
   Future<WalletSummary> summary(AppRole role) async {
     if (role == AppRole.rider) {
-      return JosiMockData.riderWallet;
+      return (await _riderWallet()).summary;
     }
     return JosiMockData.customerWallet;
   }
 
-  Future<List<WalletTransaction>> transactions() async =>
-      JosiMockData.transactions;
+  Future<List<WalletTransaction>> transactions(AppRole role) async {
+    if (role == AppRole.rider) {
+      return (await _riderWallet()).transactions;
+    }
+    return JosiMockData.transactions;
+  }
 
   Future<List<CashLedgerEntry>> cashLedger() async => JosiMockData.cashLedger;
+
+  Future<_WalletPayload> _riderWallet() async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.get('/driver/wallet', token: token);
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?> payload = _mapFrom(data['wallet']) ?? data;
+    final Map<String, Object?> summaryPayload =
+        _mapFrom(payload['summary']) ?? payload;
+    final Object? transactionsPayload = payload['transactions'];
+
+    return _WalletPayload(
+      summary: _summaryFromPayload(summaryPayload),
+      transactions: transactionsPayload is List
+          ? transactionsPayload
+              .whereType<Map>()
+              .map((Map<Object?, Object?> value) =>
+                  _transactionFromPayload(value))
+              .toList()
+          : const <WalletTransaction>[],
+    );
+  }
+
+  Future<String> _requireToken() async {
+    if (!_api.isConfigured) {
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
+    }
+
+    final String? token = await _tokens.readToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Please sign in again to continue.');
+    }
+
+    return token;
+  }
+
+  static WalletSummary _summaryFromPayload(Map<String, Object?> payload) {
+    return WalletSummary(
+      balance: _money(payload['balance'] ?? payload['available_balance']),
+      totalEarnings: _money(payload['total_earnings']),
+      availableBalance:
+          _money(payload['available_balance'] ?? payload['balance']),
+      pendingRemittance: _money(payload['pending_remittance']),
+      todayEarnings: _money(payload['today_earnings']),
+    );
+  }
+
+  static WalletTransaction _transactionFromPayload(
+    Map<Object?, Object?> value,
+  ) {
+    final Map<String, Object?> payload = value.map(
+      (Object? key, Object? fieldValue) =>
+          MapEntry<String, Object?>('$key', fieldValue),
+    );
+    return WalletTransaction(
+      title: _string(payload['title']) ?? 'Trip earning',
+      subtitle: _string(payload['subtitle']) ?? '',
+      amount: _money(payload['amount']),
+      isCredit: _bool(payload['is_credit']) ?? true,
+      status: _string(payload['status']) ?? 'Completed',
+    );
+  }
+
+  static Map<String, Object?>? _mapFrom(Object? value) {
+    if (value is Map) {
+      return value.map(
+        (Object? key, Object? fieldValue) =>
+            MapEntry<String, Object?>('$key', fieldValue),
+      );
+    }
+
+    return null;
+  }
+
+  static String _money(Object? value) {
+    final String? stringValue = _string(value);
+    if (stringValue != null && stringValue.toUpperCase().startsWith('NGN')) {
+      return stringValue;
+    }
+
+    final double? amount = value is num
+        ? value.toDouble()
+        : double.tryParse(stringValue?.replaceAll(',', '') ?? '');
+    if (amount == null) {
+      return 'NGN 0';
+    }
+
+    final bool isNegative = amount < 0;
+    final String whole = amount.abs().round().toString();
+    final StringBuffer buffer = StringBuffer();
+    for (int index = 0; index < whole.length; index++) {
+      final int remaining = whole.length - index;
+      buffer.write(whole[index]);
+      if (remaining > 1 && remaining % 3 == 1) {
+        buffer.write(',');
+      }
+    }
+    return '${isNegative ? '-' : ''}NGN $buffer';
+  }
+
+  static bool? _bool(Object? value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    final String? stringValue = _string(value)?.toLowerCase();
+    return switch (stringValue) {
+      'true' || '1' || 'yes' => true,
+      'false' || '0' || 'no' => false,
+      _ => null,
+    };
+  }
+
+  static String? _string(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final String stringValue = '$value'.trim();
+    return stringValue.isEmpty ? null : stringValue;
+  }
+}
+
+class _WalletPayload {
+  const _WalletPayload({
+    required this.summary,
+    required this.transactions,
+  });
+
+  final WalletSummary summary;
+  final List<WalletTransaction> transactions;
 }
 
 class NotificationRepository {

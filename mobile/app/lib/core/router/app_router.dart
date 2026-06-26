@@ -343,7 +343,7 @@ String _homeForRole(JosiUser user) {
   return switch (user.role) {
     AppRole.customer => AppRoutes.customerHome,
     AppRole.rider => user.applicationStatus == RiderApplicationStatus.approved
-        ? AppRoutes.riderHome
+        ? AppRoutes.riderLocationAccess
         : AppRoutes.riderApplicationStatus,
     AppRole.fleetOwner => AppRoutes.fleetDashboard,
   };

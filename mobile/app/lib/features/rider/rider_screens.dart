@@ -267,6 +267,7 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
             child: _RiderDashboardHeader(
               isOnline: _isOnline,
               onToggle: () => setState(() => _isOnline = !_isOnline),
+              onProfileTap: () => context.go(AppRoutes.riderProfile),
             ),
           ),
           if (_jobSearchState != _RiderJobSearchState.request)
@@ -399,6 +400,13 @@ class _RiderLocationAccessScreenState
 
   @override
   Widget build(BuildContext context) {
+    final RiderApplicationStatus? applicationStatus =
+        ref.watch(authControllerProvider).user?.applicationStatus;
+    final String fallbackRoute =
+        applicationStatus == RiderApplicationStatus.approved
+            ? AppRoutes.riderHome
+            : AppRoutes.riderApplicationStatus;
+
     return Scaffold(
       key: const ValueKey<String>('rider-location-access-screen'),
       backgroundColor: JosiColors.white,
@@ -410,10 +418,10 @@ class _RiderLocationAccessScreenState
               padding: const EdgeInsets.fromLTRB(30, 18, 30, 26),
               child: Column(
                 children: <Widget>[
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: _RiderCircleBackButton(
-                      fallbackRoute: AppRoutes.riderApplicationStatus,
+                      fallbackRoute: fallbackRoute,
                     ),
                   ),
                   const Spacer(flex: 2),
@@ -2566,7 +2574,7 @@ class RiderWalletScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<WalletSummary> summary = ref.watch(riderWalletProvider);
     final AsyncValue<List<WalletTransaction>> transactions =
-        ref.watch(walletTransactionsProvider);
+        ref.watch(riderWalletTransactionsProvider);
 
     return AppScaffold(
       title: 'Wallet',
@@ -3704,10 +3712,12 @@ class _RiderDashboardHeader extends StatelessWidget {
   const _RiderDashboardHeader({
     required this.isOnline,
     required this.onToggle,
+    required this.onProfileTap,
   });
 
   final bool isOnline;
   final VoidCallback onToggle;
+  final VoidCallback onProfileTap;
 
   @override
   Widget build(BuildContext context) {
@@ -3728,7 +3738,16 @@ class _RiderDashboardHeader extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.person_rounded, color: JosiColors.red, size: 28),
+          IconButton(
+            key: const ValueKey<String>('rider-dashboard-profile-button'),
+            tooltip: 'Profile',
+            onPressed: onProfileTap,
+            icon: const Icon(
+              Icons.person_rounded,
+              color: JosiColors.red,
+              size: 28,
+            ),
+          ),
           const Spacer(),
           InkWell(
             borderRadius: BorderRadius.circular(999),

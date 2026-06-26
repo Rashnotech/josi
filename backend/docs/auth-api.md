@@ -261,6 +261,7 @@ All require role `rider`, `courier`, or `driver`.
 - `POST /api/v1/driver/trips/{trip}/accept`
 - `POST /api/v1/driver/trips/{trip}/decline`
 - `POST /api/v1/driver/trips/{trip}/arrived`
+- `GET /api/v1/driver/wallet`
 - `POST /api/v1/driver/documents`
 - `GET /api/v1/driver/documents`
 
@@ -272,6 +273,7 @@ Driver trip flow:
 - `POST /driver/trips/{trip}/accept` moves an assigned trip to `accepted`.
 - `POST /driver/trips/{trip}/decline` releases an assigned trip back to `requested` and returns the rider to `online`.
 - `POST /driver/trips/{trip}/arrived` records `started_at`, moves the trip to `ongoing`, and makes the customer payload return `is_arrived_at_pickup: true`.
+- `GET /driver/wallet` returns summary totals and transaction rows from completed trips and rider cash-ledger remittance data.
 
 Rider onboarding payloads:
 

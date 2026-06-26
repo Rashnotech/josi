@@ -49,7 +49,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         context.go(AppRoutes.customerHome);
       case AppRole.rider:
         context.go(user.applicationStatus == RiderApplicationStatus.approved
-            ? AppRoutes.riderHome
+            ? AppRoutes.riderLocationAccess
             : AppRoutes.riderApplicationStatus);
       case AppRole.fleetOwner:
         context.go(AppRoutes.fleetDashboard);

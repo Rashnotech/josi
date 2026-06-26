@@ -163,7 +163,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     if (session.user?.role == AppRole.rider || _isWorker) {
-      context.go(AppRoutes.riderApplicationStatus);
+      context.go(
+          session.user?.applicationStatus == RiderApplicationStatus.approved
+              ? AppRoutes.riderLocationAccess
+              : AppRoutes.riderApplicationStatus);
       return;
     }
     context.go(AppRoutes.customerHome);

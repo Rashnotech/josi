@@ -246,7 +246,10 @@ final Provider<TripRepository> tripRepositoryProvider =
 
 final Provider<WalletRepository> walletRepositoryProvider =
     Provider<WalletRepository>((Ref ref) {
-  return const WalletRepository();
+  return WalletRepository(
+    apiClient: ref.watch(apiClientProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
+  );
 });
 
 final Provider<NotificationRepository> notificationRepositoryProvider =
@@ -331,7 +334,12 @@ final FutureProvider<WalletSummary> riderWalletProvider =
 
 final FutureProvider<List<WalletTransaction>> walletTransactionsProvider =
     FutureProvider<List<WalletTransaction>>((Ref ref) {
-  return ref.watch(walletRepositoryProvider).transactions();
+  return ref.watch(walletRepositoryProvider).transactions(AppRole.customer);
+});
+
+final FutureProvider<List<WalletTransaction>> riderWalletTransactionsProvider =
+    FutureProvider<List<WalletTransaction>>((Ref ref) {
+  return ref.watch(walletRepositoryProvider).transactions(AppRole.rider);
 });
 
 final FutureProvider<List<CashLedgerEntry>> cashLedgerProvider =

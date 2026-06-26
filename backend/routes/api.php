@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\CustomerRegistrationController;
 use App\Http\Controllers\Api\V1\CustomerTripController;
 use App\Http\Controllers\Api\V1\DriverProfileController;
 use App\Http\Controllers\Api\V1\DriverTripController;
+use App\Http\Controllers\Api\V1\DriverWalletController;
 use App\Http\Controllers\Api\V1\DriverRegistrationController;
 use App\Http\Controllers\Api\V1\FleetProfileController;
 use App\Http\Controllers\Api\V1\FleetRegistrationController;
@@ -44,6 +45,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/trips/{trip}/accept', [DriverTripController::class, 'accept'])->middleware('permission:view_assigned_trips');
         Route::post('/trips/{trip}/decline', [DriverTripController::class, 'decline'])->middleware('permission:view_assigned_trips');
         Route::post('/trips/{trip}/arrived', [DriverTripController::class, 'arrived'])->middleware('permission:view_assigned_trips');
+        Route::get('/wallet', DriverWalletController::class)->middleware('permission:view_cash_ledger');
         Route::get('/onboarding', [DriverProfileController::class, 'onboarding'])->middleware('permission:view_application_status');
         Route::post('/onboarding/profile-picture', [DriverProfileController::class, 'saveProfilePicture'])->middleware('permission:update_profile');
         Route::post('/onboarding/bank-account', [DriverProfileController::class, 'saveBankAccount'])->middleware('permission:update_profile');

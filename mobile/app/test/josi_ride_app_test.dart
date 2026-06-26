@@ -60,6 +60,32 @@ void main() {
     expect(find.text('Welcome to Josi Ride'), findsOneWidget);
   });
 
+  testWidgets('approved rider session restore opens location access',
+      (WidgetTester tester) async {
+    await _pumpApp(
+      tester,
+      authRepository: const _ApprovedRiderAuthRepository(),
+    );
+
+    await _finishSplash(tester);
+
+    expect(find.byKey(const ValueKey<String>('rider-location-access-screen')),
+        findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsNothing);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-flow-back-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-home-screen')),
+        findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsNothing);
+  });
+
   testWidgets('guest customer dashboard access redirects to customer login',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
@@ -235,6 +261,46 @@ void main() {
         tester.widget<ElevatedButton>(continueButton);
     expect(continueAction.style?.textStyle?.resolve(<WidgetState>{})?.fontSize,
         16);
+  });
+
+  testWidgets('approved rider login opens location access before dashboard',
+      (WidgetTester tester) async {
+    int locationCalls = 0;
+    _mockDeviceLocation(
+      tester,
+      onCall: () {
+        locationCalls++;
+      },
+    );
+    await _pumpApp(
+      tester,
+      authRepository: const _ApprovedRiderLoginAuthRepository(),
+    );
+
+    await _finishSplash(tester);
+
+    await tester.tap(find.text('Drive with Us'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'rider@josi.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Password123!');
+    await tester.tap(find.byKey(const ValueKey<String>('login-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('rider-location-access-screen')),
+        findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('rider-application-status-screen')),
+        findsNothing);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-location-allow-button')));
+    await tester.pumpAndSettle();
+
+    expect(locationCalls, greaterThanOrEqualTo(1));
+    expect(find.byKey(const ValueKey<String>('rider-home-screen')),
+        findsOneWidget);
   });
 
   testWidgets('rider account completion flow includes bank details',
@@ -504,6 +570,13 @@ void main() {
     expect(find.text('Bookings'), findsOneWidget);
     expect(find.text('Wallet'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-dashboard-profile-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rider account'), findsOneWidget);
+    expect(find.text('Your profile'), findsOneWidget);
   });
 
   testWidgets('rider dashboard can accept an incoming ride request',
@@ -755,6 +828,27 @@ void main() {
     expect(find.text('Ada Okoro'), findsOneWidget);
     expect(find.text('CRN : #TRP-2410'), findsOneWidget);
     expect(find.text('Track Rider'), findsNothing);
+  });
+
+  testWidgets('rider wallet displays backend wallet values',
+      (WidgetTester tester) async {
+    await _loginAsRider(tester);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderWallet);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wallet'), findsWidgets);
+    expect(find.text('Earnings and settlement'), findsOneWidget);
+    expect(find.text('NGN 7,700'), findsWidgets);
+    expect(find.text('Total earnings NGN 11,000'), findsOneWidget);
+    expect(find.text('NGN 900'), findsOneWidget);
+    expect(find.text('NGN 4,200'), findsWidgets);
+    expect(find.text('Trip earning'), findsWidgets);
+    expect(find.text('CRN : #TRP-2409'), findsOneWidget);
+    expect(find.text('NGN 42,600'), findsNothing);
   });
 
   testWidgets(
@@ -1552,6 +1646,7 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   AuthRepository authRepository = const _FakeAuthRepository(),
   RiderRepository? riderRepository,
+  WalletRepository? walletRepository,
   ProfilePhotoPicker? profilePhotoPicker,
 }) async {
   JosiGoogleMap.debugUseStaticMap = true;
@@ -1569,6 +1664,8 @@ Future<void> _pumpApp(
         customerRepositoryProvider.overrideWithValue(_FakeCustomerRepository()),
         riderRepositoryProvider
             .overrideWithValue(riderRepository ?? _FakeRiderRepository()),
+        walletRepositoryProvider.overrideWithValue(
+            walletRepository ?? const _FakeWalletRepository()),
         profilePhotoPickerProvider.overrideWithValue(
           profilePhotoPicker ?? _FakeProfilePhotoPicker(),
         ),
@@ -1681,6 +1778,87 @@ class _RestoreTimeoutAuthRepository extends _FakeAuthRepository {
   @override
   Future<JosiUser?> restoreSession() async {
     throw const ApiException('The request timed out. Please try again.');
+  }
+}
+
+class _ApprovedRiderAuthRepository extends _FakeAuthRepository {
+  const _ApprovedRiderAuthRepository();
+
+  static const JosiUser _approvedRider = JosiUser(
+    id: 'drv_approved',
+    name: 'Amina Yusuf',
+    email: 'amina@josi.ng',
+    phone: '+234 802 345 6789',
+    role: AppRole.rider,
+    applicationStatus: RiderApplicationStatus.approved,
+  );
+
+  @override
+  Future<JosiUser?> restoreSession() async => _approvedRider;
+
+  @override
+  Future<AuthResult> signIn({
+    required String identity,
+    required String password,
+    String role = 'customer',
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return AuthResult.authenticated(
+      role == 'rider' || role == 'courier'
+          ? _approvedRider
+          : JosiMockData.customer,
+      message: 'Login successful',
+    );
+  }
+}
+
+class _ApprovedRiderLoginAuthRepository extends _ApprovedRiderAuthRepository {
+  const _ApprovedRiderLoginAuthRepository();
+
+  @override
+  Future<JosiUser?> restoreSession() async => null;
+}
+
+class _FakeWalletRepository extends WalletRepository {
+  const _FakeWalletRepository();
+
+  @override
+  Future<WalletSummary> summary(AppRole role) async {
+    if (role != AppRole.rider) {
+      return JosiMockData.customerWallet;
+    }
+
+    return const WalletSummary(
+      balance: 'NGN 7,700',
+      totalEarnings: 'NGN 11,000',
+      availableBalance: 'NGN 7,700',
+      pendingRemittance: 'NGN 900',
+      todayEarnings: 'NGN 4,200',
+    );
+  }
+
+  @override
+  Future<List<WalletTransaction>> transactions(AppRole role) async {
+    if (role != AppRole.rider) {
+      return JosiMockData.transactions;
+    }
+
+    return const <WalletTransaction>[
+      WalletTransaction(
+        title: 'Trip earning',
+        subtitle: 'CRN : #TRP-2409',
+        amount: 'NGN 4,200',
+        isCredit: true,
+        status: 'Completed',
+      ),
+      WalletTransaction(
+        title: 'Trip earning',
+        subtitle: 'CRN : #TRP-2411',
+        amount: 'NGN 6,800',
+        isCredit: true,
+        status: 'Completed',
+      ),
+    ];
   }
 }
 
@@ -2310,11 +2488,13 @@ Future<void> _finishSplash(WidgetTester tester) async {
 Future<void> _pumpToRoleSelection(
   WidgetTester tester, {
   RiderRepository? riderRepository,
+  WalletRepository? walletRepository,
   ProfilePhotoPicker? profilePhotoPicker,
 }) async {
   await _pumpApp(
     tester,
     riderRepository: riderRepository,
+    walletRepository: walletRepository,
     profilePhotoPicker: profilePhotoPicker,
   );
   await _finishSplash(tester);
@@ -2338,11 +2518,13 @@ Future<void> _loginAsCustomer(WidgetTester tester) async {
 Future<void> _loginAsRider(
   WidgetTester tester, {
   RiderRepository? riderRepository,
+  WalletRepository? walletRepository,
   ProfilePhotoPicker? profilePhotoPicker,
 }) async {
   await _pumpToRoleSelection(
     tester,
     riderRepository: riderRepository,
+    walletRepository: walletRepository,
     profilePhotoPicker: profilePhotoPicker,
   );
   _expectVisibleInViewport(tester, find.text('Drive with Us'));
