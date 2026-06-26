@@ -27,9 +27,11 @@ class DriverTripController extends Controller
                 TripStatus::Assigned->value,
                 TripStatus::Accepted->value,
                 TripStatus::Ongoing->value,
+                TripStatus::Completed->value,
+                TripStatus::Cancelled->value,
             ])
             ->latest('requested_at')
-            ->limit(30)
+            ->limit(100)
             ->get()
             ->map(fn (Trip $trip): array => CustomerTripController::tripPayload($trip))
             ->all();
@@ -80,6 +82,33 @@ class DriverTripController extends Controller
                 'customer',
                 'riderProfile.user',
                 'vehicle',
+                'pickupZone',
+                'destinationZone',
+                'review',
+            ])),
+        ]);
+    }
+
+    public function decline(Request $request, Trip $trip, TripService $tripService)
+    {
+        $profile = $request->user()->riderProfile;
+        if (! $profile) {
+            return ApiResponse::error('Rider profile was not found for this account.', [], 404);
+        }
+
+        try {
+            $trip = $tripService->declineTrip($trip, $profile);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), [], 422);
+        }
+
+        $profile->forceFill([
+            'availability_status' => AvailabilityStatus::Online,
+        ])->save();
+
+        return ApiResponse::success('Trip declined successfully', [
+            'trip' => CustomerTripController::tripPayload($trip->load([
+                'customer',
                 'pickupZone',
                 'destinationZone',
                 'review',

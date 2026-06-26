@@ -259,6 +259,7 @@ All require role `rider`, `courier`, or `driver`.
 - `GET /api/v1/driver/trips`
 - `GET /api/v1/driver/trips/{trip}`
 - `POST /api/v1/driver/trips/{trip}/accept`
+- `POST /api/v1/driver/trips/{trip}/decline`
 - `POST /api/v1/driver/trips/{trip}/arrived`
 - `POST /api/v1/driver/documents`
 - `GET /api/v1/driver/documents`
@@ -267,8 +268,9 @@ Rider profile update accepts partial JSON fields: `first_name`, `last_name`, `ph
 
 Driver trip flow:
 
-- `GET /driver/trips` returns assigned, accepted, and ongoing trips for the authenticated rider.
+- `GET /driver/trips` returns assigned, accepted, ongoing, completed, and cancelled trips for the authenticated rider. Trip payloads include customer name/phone, fare amount, status, route addresses, requested/completed/cancelled timestamps, and vehicle labels.
 - `POST /driver/trips/{trip}/accept` moves an assigned trip to `accepted`.
+- `POST /driver/trips/{trip}/decline` releases an assigned trip back to `requested` and returns the rider to `online`.
 - `POST /driver/trips/{trip}/arrived` records `started_at`, moves the trip to `ongoing`, and makes the customer payload return `is_arrived_at_pickup: true`.
 
 Rider onboarding payloads:

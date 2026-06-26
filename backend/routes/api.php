@@ -42,6 +42,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/trips', [DriverTripController::class, 'index'])->middleware('permission:view_assigned_trips');
         Route::get('/trips/{trip}', [DriverTripController::class, 'show'])->middleware('permission:view_assigned_trips');
         Route::post('/trips/{trip}/accept', [DriverTripController::class, 'accept'])->middleware('permission:view_assigned_trips');
+        Route::post('/trips/{trip}/decline', [DriverTripController::class, 'decline'])->middleware('permission:view_assigned_trips');
         Route::post('/trips/{trip}/arrived', [DriverTripController::class, 'arrived'])->middleware('permission:view_assigned_trips');
         Route::get('/onboarding', [DriverProfileController::class, 'onboarding'])->middleware('permission:view_application_status');
         Route::post('/onboarding/profile-picture', [DriverProfileController::class, 'saveProfilePicture'])->middleware('permission:update_profile');

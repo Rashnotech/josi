@@ -179,6 +179,10 @@ class Trip {
     required this.customerName,
     required this.distance,
     required this.duration,
+    this.amount,
+    this.requestedAt,
+    this.completedAt,
+    this.cancelledAt,
     this.riderId = '',
     this.riderPhone = '',
     this.vehicleLabel = '',
@@ -199,6 +203,10 @@ class Trip {
   final String customerName;
   final String distance;
   final String duration;
+  final double? amount;
+  final DateTime? requestedAt;
+  final DateTime? completedAt;
+  final DateTime? cancelledAt;
   final String riderId;
   final String riderPhone;
   final String vehicleLabel;

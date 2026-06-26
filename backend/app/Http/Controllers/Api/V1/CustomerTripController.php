@@ -345,6 +345,8 @@ class CustomerTripController extends Controller
             'payment_status' => self::enumValue($trip->payment_status),
             'trip_status' => self::enumValue($trip->trip_status),
             'is_arrived_at_pickup' => $trip->started_at !== null || self::enumValue($trip->trip_status) === TripStatus::Ongoing->value,
+            'customer_name' => $trip->customer?->name,
+            'customer_phone' => $trip->customer?->phone,
             'pickup_zone' => $trip->pickupZone?->name,
             'destination_zone' => $trip->destinationZone?->name,
             'rider' => $trip->riderProfile ? self::riderPayload($trip->riderProfile, $trip->vehicle) : null,

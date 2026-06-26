@@ -117,6 +117,125 @@ void main() {
       'car',
     );
   });
+
+  test('rider trip repository reads history and declines assigned trips',
+      () async {
+    final List<Map<String, Object?>> requests = <Map<String, Object?>>[];
+    final _MemoryTokenStorage storage = _MemoryTokenStorage();
+    await storage.saveToken('rider-token', userRole: 'rider');
+
+    final RiderRepository repository = RiderRepository(
+      tokenStorage: storage,
+      apiClient: ApiClient(
+        baseUrl: 'https://api.josi.test/api/v1',
+        httpRequest: (
+          Uri uri, {
+          required String method,
+          required Map<String, String> headers,
+          Object? body,
+        }) async {
+          requests.add(<String, Object?>{
+            'method': method,
+            'path': uri.path,
+            'authorization': headers['Authorization'],
+            'body': body == null ? null : jsonDecode(body as String),
+          });
+
+          return ApiHttpResponse(
+            statusCode: 200,
+            body: uri.path.endsWith('/decline')
+                ? _tripEnvelope(status: 'requested')
+                : _tripsEnvelope(),
+          );
+        },
+      ),
+    );
+
+    final List<Trip> trips = await repository.availableTrips();
+    final Trip declined = await repository.declineTrip('TRP-2408');
+
+    expect(trips, hasLength(3));
+    expect(trips.first.customerName, 'Esther Howard');
+    expect(trips.first.status, TripStatus.searching);
+    expect(trips.first.amount, 3500);
+    expect(trips.first.requestedAt, DateTime.parse('2026-06-26T09:00:00Z'));
+    expect(trips[1].status, TripStatus.completed);
+    expect(trips[1].completedAt, DateTime.parse('2026-06-26T10:30:00Z'));
+    expect(trips[2].status, TripStatus.cancelled);
+    expect(declined.status, TripStatus.searching);
+    expect(
+      requests.map((Map<String, Object?> request) => request['path']),
+      <String>[
+        '/api/v1/driver/trips',
+        '/api/v1/driver/trips/TRP-2408/decline',
+      ],
+    );
+    expect(requests.every((Map<String, Object?> request) {
+      return request['authorization'] == 'Bearer rider-token';
+    }), isTrue);
+  });
+}
+
+String _tripsEnvelope() {
+  return jsonEncode(<String, Object?>{
+    'status': true,
+    'message': 'OK',
+    'data': <String, Object?>{
+      'trips': <Object?>[
+        _tripPayload(id: 'TRP-2408', status: 'assigned'),
+        _tripPayload(
+          id: 'TRP-2409',
+          customerName: 'Musa Danjuma',
+          status: 'completed',
+          amount: 4200,
+          completedAt: '2026-06-26T10:30:00Z',
+        ),
+        _tripPayload(
+          id: 'TRP-2410',
+          customerName: 'Ada Okoro',
+          status: 'cancelled',
+          amount: 2100,
+          cancelledAt: '2026-06-25T15:20:00Z',
+        ),
+      ],
+    },
+  });
+}
+
+String _tripEnvelope({required String status}) {
+  return jsonEncode(<String, Object?>{
+    'status': true,
+    'message': 'OK',
+    'data': <String, Object?>{
+      'trip': _tripPayload(status: status),
+    },
+  });
+}
+
+Map<String, Object?> _tripPayload({
+  String id = 'TRP-2408',
+  String customerName = 'Esther Howard',
+  String status = 'assigned',
+  int amount = 3500,
+  String? completedAt,
+  String? cancelledAt,
+}) {
+  return <String, Object?>{
+    'id': id,
+    'pickup_address': 'Wuse Market',
+    'destination_address': 'Jabi Lake Mall',
+    'amount': amount,
+    'payment_method': 'cash',
+    'trip_status': status,
+    'customer_name': customerName,
+    'distance': '7.6 km',
+    'duration': '18 mins',
+    'requested_at': '2026-06-26T09:00:00Z',
+    'completed_at': completedAt,
+    'cancelled_at': cancelledAt,
+    'vehicle_label': 'Red Bajaj Boxer',
+    'plate_number': 'JOS-123AB',
+  };
 }
 
 String _onboardingBody({

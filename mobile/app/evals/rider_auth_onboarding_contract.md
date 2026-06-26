@@ -18,6 +18,12 @@ Gate checks for rider auth and account setup:
 - Riding Details posts backend enum `vehicle_type`, vehicle fields, city, and state to `/driver/onboarding/riding-details`.
 - Riding Details normalizes unsupported profile city/state values to `Other` so Flutter dropdowns do not assert.
 - Riding Details back navigation returns to `/rider/application-status`.
+- Rider home metrics derive Pre-Booked and Today Earned from `/driver/trips`, not mock values.
+- Rider home shows the Finding jobs progress only after tapping the floating search action.
+- Rider home shows No ride found when `/driver/trips` has no assigned trip and opens the Ride Request panel automatically when one exists.
+- Ride Request uses real trip customer, pickup, destination, fare, and a 30 second countdown.
+- Ride Request Accept posts `/driver/trips/{trip}/accept`; Decline posts `/driver/trips/{trip}/decline`.
+- Rider Bookings filters actual `/driver/trips` data into Active, Completed, and Cancelled tabs.
 - The application-status Continue action posts to `/driver/onboarding/submit` and shows success or backend validation errors.
 - Rider profile/account setup uses backend data from `/driver/onboarding`, not mock rider profile data.
 - Rider Profile shows backend rider name, phone, and location when available.

@@ -122,6 +122,41 @@ class TripService
         return $trip->refresh();
     }
 
+    public function declineTrip(Trip $trip, RiderProfile $riderProfile): Trip
+    {
+        if ($trip->trip_status !== TripStatus::Assigned) {
+            throw new InvalidArgumentException('Only assigned trips can be declined.');
+        }
+
+        if ((int) $trip->driver_profile_id !== (int) $riderProfile->getKey()) {
+            throw new InvalidArgumentException('Only the assigned rider can decline this trip.');
+        }
+
+        return DB::transaction(function () use ($trip, $riderProfile) {
+            $oldValues = $trip->only([
+                'driver_profile_id',
+                'vehicle_id',
+                'trip_status',
+            ]);
+
+            $trip->forceFill([
+                'driver_profile_id' => null,
+                'vehicle_id' => null,
+                'trip_status' => TripStatus::Requested,
+            ])->save();
+
+            $this->auditLogService->log(
+                'trip.declined',
+                $riderProfile->user,
+                $trip,
+                $oldValues,
+                $trip->only(array_keys($oldValues))
+            );
+
+            return $trip->refresh();
+        });
+    }
+
     public function startTrip(Trip $trip, RiderProfile $riderProfile): Trip
     {
         if ($trip->trip_status !== TripStatus::Accepted) {

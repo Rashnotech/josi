@@ -706,6 +706,9 @@ class CustomerRepository {
     final String vehicleLabel = _string(payload['vehicle_label']) ??
         _string(vehicle?['label']) ??
         _vehicleLabel(vehicle);
+    final DateTime? requestedAt = _dateTime(payload['requested_at']);
+    final DateTime? completedAt = _dateTime(payload['completed_at']);
+    final DateTime? cancelledAt = _dateTime(payload['cancelled_at']);
     return Trip(
       id: _string(payload['id']) ?? '',
       pickup: _string(payload['pickup_address']) ?? 'Pickup',
@@ -713,12 +716,16 @@ class CustomerRepository {
       fare: _fareLabel(payload['amount']),
       status: _tripStatus(payload['trip_status']),
       paymentMethod: _paymentMethod(payload['payment_method']),
-      dateLabel: _readableDateLabel(payload['requested_at']),
+      dateLabel: _readableDateLabel(requestedAt ?? payload['requested_at']),
       riderName:
           _string(payload['rider_name']) ?? _string(rider?['name']) ?? '',
       customerName: _string(payload['customer_name']) ?? '',
       distance: _string(payload['distance']) ?? '',
       duration: _string(payload['duration']) ?? '',
+      amount: _amount(payload['amount']),
+      requestedAt: requestedAt,
+      completedAt: completedAt,
+      cancelledAt: cancelledAt,
       riderId: _string(rider?['id']) ?? '',
       riderPhone:
           _string(payload['rider_phone']) ?? _string(rider?['phone']) ?? '',
@@ -753,8 +760,7 @@ class CustomerRepository {
   }
 
   static String _fareLabel(Object? value) {
-    final double? amount =
-        value is num ? value.toDouble() : double.tryParse(_string(value) ?? '');
+    final double? amount = _amount(value);
     if (amount == null) {
       return 'To be calculated';
     }
@@ -762,15 +768,17 @@ class CustomerRepository {
     return 'NGN ${amount.toStringAsFixed(0)}';
   }
 
-  static String _readableDateLabel(Object? value) {
-    final String? raw = _string(value);
-    if (raw == null) {
-      return '';
-    }
+  static double? _amount(Object? value) {
+    return value is num
+        ? value.toDouble()
+        : double.tryParse(_string(value) ?? '');
+  }
 
-    final DateTime? parsed = DateTime.tryParse(raw);
+  static String _readableDateLabel(Object? value) {
+    final DateTime? parsed =
+        value is DateTime ? value : DateTime.tryParse(_string(value) ?? '');
     if (parsed == null) {
-      return raw;
+      return '';
     }
 
     final DateTime local = parsed.toLocal();
@@ -780,6 +788,14 @@ class CustomerRepository {
     final String suffix = hour >= 12 ? 'PM' : 'AM';
     return '${_monthName(local.month)} ${local.day}, ${local.year}, '
         '$hour12:$minute $suffix';
+  }
+
+  static DateTime? _dateTime(Object? value) {
+    if (value is DateTime) {
+      return value;
+    }
+    final String? raw = _string(value);
+    return raw == null ? null : DateTime.tryParse(raw);
   }
 
   static String _monthName(int month) {
@@ -998,6 +1014,19 @@ class RiderRepository {
     final String token = await _requireToken();
     final Map<String, Object?> envelope =
         await _api.post('/driver/trips/$id/accept', token: token);
+    final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
+    final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
+    if (tripPayload == null) {
+      throw const ApiException('Trip was not returned by the API.');
+    }
+
+    return CustomerRepository.tripFromPayload(tripPayload);
+  }
+
+  Future<Trip> declineTrip(String id) async {
+    final String token = await _requireToken();
+    final Map<String, Object?> envelope =
+        await _api.post('/driver/trips/$id/decline', token: token);
     final Map<String, Object?> data = ApiClient.dataFromEnvelope(envelope);
     final Map<String, Object?>? tripPayload = _mapFrom(data['trip']);
     if (tripPayload == null) {

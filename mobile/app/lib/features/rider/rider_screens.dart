@@ -13,7 +13,6 @@ import '../../core/location/location_providers.dart';
 import '../../core/location/location_service.dart';
 import '../../core/map/route_providers.dart';
 import '../../core/map/route_service.dart';
-import '../../core/mock/josi_mock_data.dart';
 import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/services/api_client.dart';
@@ -30,16 +29,223 @@ class RiderHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
+  static const int _requestTimeoutSeconds = 30;
+  static const Duration _jobSearchTick = Duration(milliseconds: 100);
+  static const Duration _jobSearchDuration = Duration(milliseconds: 1800);
+  static const Duration _notFoundDuration = Duration(milliseconds: 1600);
+
   bool _isOnline = true;
-  bool _showRideRequest = false;
+  _RiderJobSearchState _jobSearchState = _RiderJobSearchState.idle;
+  double _jobSearchProgress = 0;
+  int _requestSecondsRemaining = _requestTimeoutSeconds;
+  Trip? _requestTrip;
+  Timer? _jobSearchTimer;
+  Timer? _requestTimer;
+  Timer? _notFoundTimer;
+  bool _isAcceptingRequest = false;
+  bool _isDecliningRequest = false;
+
+  @override
+  void dispose() {
+    _jobSearchTimer?.cancel();
+    _requestTimer?.cancel();
+    _notFoundTimer?.cancel();
+    super.dispose();
+  }
 
   void _prepareRiderLocationSync(LatLng location) {
     // TODO: send to POST /api/v1/rider/location when the API client is ready.
   }
 
+  void _startJobSearch() {
+    if (_jobSearchState == _RiderJobSearchState.searching ||
+        _jobSearchState == _RiderJobSearchState.request) {
+      return;
+    }
+
+    _jobSearchTimer?.cancel();
+    _notFoundTimer?.cancel();
+    ref.invalidate(tripsProvider);
+    setState(() {
+      _jobSearchState = _RiderJobSearchState.searching;
+      _jobSearchProgress = 0;
+      _requestTrip = null;
+    });
+
+    _jobSearchTimer = Timer.periodic(_jobSearchTick, (Timer timer) {
+      final double progress = (_jobSearchProgress +
+              (_jobSearchTick.inMilliseconds /
+                  _jobSearchDuration.inMilliseconds))
+          .clamp(0, 1);
+      if (mounted) {
+        setState(() => _jobSearchProgress = progress);
+      }
+      if (progress >= 1) {
+        timer.cancel();
+        _finishJobSearch();
+      }
+    });
+  }
+
+  void _finishJobSearch() {
+    final AsyncValue<List<Trip>> trips = ref.read(tripsProvider);
+    if (trips.isLoading && !trips.hasValue) {
+      _jobSearchTimer?.cancel();
+      _jobSearchTimer = Timer(
+        const Duration(milliseconds: 350),
+        _finishJobSearch,
+      );
+      return;
+    }
+
+    final Trip? requestTrip = _nextRideRequest(trips.value ?? const []);
+    if (requestTrip != null) {
+      _showRideRequest(requestTrip);
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _jobSearchState = _RiderJobSearchState.notFound;
+      _jobSearchProgress = 1;
+      _requestTrip = null;
+    });
+    _notFoundTimer?.cancel();
+    _notFoundTimer = Timer(_notFoundDuration, () {
+      if (!mounted || _jobSearchState != _RiderJobSearchState.notFound) {
+        return;
+      }
+      setState(() {
+        _jobSearchState = _RiderJobSearchState.idle;
+        _jobSearchProgress = 0;
+      });
+    });
+  }
+
+  void _showRideRequest(Trip trip) {
+    _jobSearchTimer?.cancel();
+    _notFoundTimer?.cancel();
+    _requestTimer?.cancel();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _jobSearchState = _RiderJobSearchState.request;
+      _requestTrip = trip;
+      _requestSecondsRemaining = _requestTimeoutSeconds;
+      _isAcceptingRequest = false;
+      _isDecliningRequest = false;
+    });
+    _requestTimer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+      if (!mounted || _jobSearchState != _RiderJobSearchState.request) {
+        timer.cancel();
+        return;
+      }
+      if (_requestSecondsRemaining <= 1) {
+        timer.cancel();
+        _declineRideRequest(timedOut: true);
+        return;
+      }
+      setState(() => _requestSecondsRemaining--);
+    });
+  }
+
+  Future<void> _acceptRideRequest() async {
+    final Trip? trip = _requestTrip;
+    if (trip == null || _isAcceptingRequest || _isDecliningRequest) {
+      return;
+    }
+
+    setState(() => _isAcceptingRequest = true);
+    try {
+      final Trip accepted =
+          await ref.read(riderRepositoryProvider).acceptTrip(trip.id);
+      ref.invalidate(tripsProvider);
+      ref.invalidate(riderTripProvider(trip.id));
+      if (!mounted) {
+        return;
+      }
+      _requestTimer?.cancel();
+      context.go(AppRoutes.riderActiveTripPath(
+        accepted.id.isEmpty ? trip.id : accepted.id,
+      ));
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _isAcceptingRequest = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        setState(() => _isAcceptingRequest = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Trip could not be accepted.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _declineRideRequest({bool timedOut = false}) async {
+    final Trip? trip = _requestTrip;
+    if (trip == null || _isDecliningRequest || _isAcceptingRequest) {
+      return;
+    }
+
+    setState(() => _isDecliningRequest = true);
+    try {
+      await ref.read(riderRepositoryProvider).declineTrip(trip.id);
+      ref.invalidate(tripsProvider);
+      ref.invalidate(riderTripProvider(trip.id));
+      if (!mounted) {
+        return;
+      }
+      _requestTimer?.cancel();
+      setState(() {
+        _jobSearchState = _RiderJobSearchState.notFound;
+        _jobSearchProgress = 1;
+        _requestTrip = null;
+        _isDecliningRequest = false;
+      });
+      if (!timedOut) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ride request declined.')),
+        );
+      }
+      _notFoundTimer?.cancel();
+      _notFoundTimer = Timer(_notFoundDuration, () {
+        if (!mounted || _jobSearchState != _RiderJobSearchState.notFound) {
+          return;
+        }
+        setState(() {
+          _jobSearchState = _RiderJobSearchState.idle;
+          _jobSearchProgress = 0;
+        });
+      });
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _isDecliningRequest = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        setState(() => _isDecliningRequest = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ride request could not be declined.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Trip requestTrip = JosiMockData.trips.first;
+    final AsyncValue<List<Trip>> trips = ref.watch(tripsProvider);
+    final List<Trip> tripValues = trips.value ?? const <Trip>[];
+    final Trip? requestTrip = _requestTrip;
 
     return Scaffold(
       key: const ValueKey<String>('rider-home-screen'),
@@ -48,7 +254,9 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
         children: <Widget>[
           Positioned.fill(
             child: _RiderDashboardMapBackdrop(
-              activeTrip: _showRideRequest ? requestTrip : null,
+              activeTrip: _jobSearchState == _RiderJobSearchState.request
+                  ? requestTrip
+                  : null,
               onRiderLocationReady: _prepareRiderLocationSync,
             ),
           ),
@@ -61,40 +269,89 @@ class _RiderHomeScreenState extends ConsumerState<RiderHomeScreen> {
               onToggle: () => setState(() => _isOnline = !_isOnline),
             ),
           ),
-          if (!_showRideRequest)
+          if (_jobSearchState != _RiderJobSearchState.request)
             Positioned(
               left: 20,
               right: 20,
               top: MediaQuery.paddingOf(context).top + 122,
-              child: const _RiderDashboardMetrics(),
+              child: _RiderDashboardMetrics(
+                trips: tripValues,
+                isLoading: trips.isLoading && !trips.hasValue,
+              ),
             ),
-          if (_showRideRequest)
+          if (_jobSearchState == _RiderJobSearchState.request)
             Positioned(
               left: 0,
               right: 0,
               top: MediaQuery.paddingOf(context).top + 260,
-              child: const _RideRequestTimer(),
+              child: _RideRequestTimer(
+                secondsRemaining: _requestSecondsRemaining,
+              ),
+            ),
+          if (trips.hasError && _jobSearchState != _RiderJobSearchState.request)
+            Positioned(
+              left: 20,
+              right: 20,
+              top: MediaQuery.paddingOf(context).top + 218,
+              child: _RiderInlineMessage(
+                message: _riderErrorMessage(
+                  trips.error!,
+                  'Trips could not load.',
+                ),
+                icon: Icons.error_outline_rounded,
+                color: JosiColors.redDark,
+                backgroundColor: const Color(0xFFFFF1F2),
+              ),
             ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: _showRideRequest
-                ? _RideRequestSheet(
-                    trip: requestTrip,
-                    onDecline: () => setState(() => _showRideRequest = false),
-                    onAccept: () => context
-                        .go(AppRoutes.riderActiveTripPath(requestTrip.id)),
-                  )
-                : _FindingJobsPanel(
-                    onFindingJobs: () =>
-                        setState(() => _showRideRequest = true),
-                  ),
+            child: switch (_jobSearchState) {
+              _RiderJobSearchState.searching => _FindingJobsPanel(
+                  progress: _jobSearchProgress,
+                  status: _RiderJobSearchStatus.searching,
+                ),
+              _RiderJobSearchState.notFound => const _FindingJobsPanel(
+                  progress: 1,
+                  status: _RiderJobSearchStatus.notFound,
+                ),
+              _RiderJobSearchState.request when requestTrip != null =>
+                _RideRequestSheet(
+                  trip: requestTrip,
+                  isAccepting: _isAcceptingRequest,
+                  isDeclining: _isDecliningRequest,
+                  onDecline: () => _declineRideRequest(),
+                  onAccept: _acceptRideRequest,
+                ),
+              _ => const SizedBox.shrink(),
+            },
           ),
         ],
       ),
+      floatingActionButton: _jobSearchState == _RiderJobSearchState.idle
+          ? FloatingActionButton(
+              key: const ValueKey<String>('rider-search-jobs-fab'),
+              onPressed: _startJobSearch,
+              backgroundColor: JosiColors.red,
+              foregroundColor: JosiColors.white,
+              child: const Icon(Icons.search_rounded),
+            )
+          : null,
       bottomNavigationBar:
           const AppBottomNav(role: AppNavRole.rider, selectedTab: 'home'),
     );
   }
+}
+
+enum _RiderJobSearchState {
+  idle,
+  searching,
+  notFound,
+  request,
+}
+
+enum _RiderJobSearchStatus {
+  searching,
+  notFound,
 }
 
 class RiderLocationAccessScreen extends ConsumerStatefulWidget {
@@ -1931,6 +2188,7 @@ enum _RiderBookingStatus {
 
 class _RiderBookingItem {
   const _RiderBookingItem({
+    required this.tripId,
     required this.driverName,
     required this.crn,
     required this.distance,
@@ -1943,6 +2201,26 @@ class _RiderBookingItem {
     this.statusLabel,
   });
 
+  factory _RiderBookingItem.fromTrip(Trip trip) {
+    return _RiderBookingItem(
+      tripId: trip.id,
+      driverName:
+          trip.customerName.trim().isEmpty ? 'Customer' : trip.customerName,
+      crn: '#${trip.id}',
+      distance: trip.distance.trim().isEmpty ? 'Pending' : trip.distance,
+      duration: trip.duration.trim().isEmpty ? 'Pending' : trip.duration,
+      rate: trip.fare,
+      dateTime: trip.dateLabel.trim().isEmpty ? 'Pending' : trip.dateLabel,
+      pickup: trip.pickup,
+      destination: trip.destination,
+      carType: trip.vehicleLabel.trim().isEmpty
+          ? 'Vehicle pending'
+          : trip.vehicleLabel,
+      statusLabel: trip.status == TripStatus.cancelled ? 'Cancelled' : null,
+    );
+  }
+
+  final String tripId;
   final String driverName;
   final String crn;
   final String distance;
@@ -1955,87 +2233,24 @@ class _RiderBookingItem {
   final String? statusLabel;
 }
 
-const Map<_RiderBookingStatus, List<_RiderBookingItem>> _riderBookings =
-    <_RiderBookingStatus, List<_RiderBookingItem>>{
-  _RiderBookingStatus.active: <_RiderBookingItem>[
-    _RiderBookingItem(
-      driverName: 'Jenny Wilson',
-      crn: '#4854HO23',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25 /mile',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6391 Elgin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carType: 'Sedan',
-    ),
-  ],
-  _RiderBookingStatus.completed: <_RiderBookingItem>[
-    _RiderBookingItem(
-      driverName: 'Byron Barlow',
-      crn: '#654HG23',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25 /mile',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6301 Digin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carType: 'Sedan',
-    ),
-    _RiderBookingItem(
-      driverName: 'Robert Fox',
-      crn: '#654HG23',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25 /mile',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6301 Digin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carType: 'Sedan',
-    ),
-  ],
-  _RiderBookingStatus.cancelled: <_RiderBookingItem>[
-    _RiderBookingItem(
-      statusLabel: 'Cancelled by You',
-      driverName: 'Cody Fisher',
-      crn: '#854H0323',
-      distance: '4.5 Mile',
-      duration: '4 mins',
-      rate: r'$1.25 /mile',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6391 Elgin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carType: 'Sedan',
-    ),
-    _RiderBookingItem(
-      statusLabel: 'Cancelled by Rider',
-      driverName: 'Ralph Edwards',
-      crn: '#854H0323',
-      distance: '4.5 km',
-      duration: '4 mins',
-      rate: r'$1.25 /mile',
-      dateTime: 'Oct 18, 2023 | 08:00 AM',
-      pickup: '6391 Elgin St. Celina, Delawa...',
-      destination: '1901 Thornridge Cir. Sh...',
-      carType: 'Sedan',
-    ),
-  ],
-};
-
-class RiderTripsScreen extends StatefulWidget {
+class RiderTripsScreen extends ConsumerStatefulWidget {
   const RiderTripsScreen({super.key});
 
   @override
-  State<RiderTripsScreen> createState() => _RiderTripsScreenState();
+  ConsumerState<RiderTripsScreen> createState() => _RiderTripsScreenState();
 }
 
-class _RiderTripsScreenState extends State<RiderTripsScreen> {
+class _RiderTripsScreenState extends ConsumerState<RiderTripsScreen> {
   _RiderBookingStatus _selectedTab = _RiderBookingStatus.active;
 
   @override
   Widget build(BuildContext context) {
-    final List<_RiderBookingItem> bookings =
-        _riderBookings[_selectedTab] ?? <_RiderBookingItem>[];
+    final AsyncValue<List<Trip>> trips = ref.watch(tripsProvider);
+    final List<_RiderBookingItem> bookings = trips.value
+            ?.where((Trip trip) => _matchesRiderBookingTab(trip, _selectedTab))
+            .map(_RiderBookingItem.fromTrip)
+            .toList() ??
+        <_RiderBookingItem>[];
 
     return Scaffold(
       key: const ValueKey<String>('rider-bookings-screen'),
@@ -2076,20 +2291,56 @@ class _RiderTripsScreenState extends State<RiderTripsScreen> {
                       setState(() => _selectedTab = tab),
                 ),
                 Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    itemBuilder: (BuildContext context, int index) {
-                      return _RiderBookingCard(
-                        item: bookings[index],
-                        tab: _selectedTab,
-                        onCancel: () => context.go(AppRoutes.riderCancelRide),
-                        onTrack: () => context
-                            .go(AppRoutes.riderActiveTripPath('TRP-2408')),
+                  child: trips.when(
+                    data: (_) {
+                      if (bookings.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 30),
+                            child: EmptyState(
+                              title:
+                                  'No ${_selectedTab.label.toLowerCase()} bookings',
+                              message:
+                                  'Trips from the backend will appear here.',
+                            ),
+                          ),
+                        );
+                      }
+
+                      return ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        itemBuilder: (BuildContext context, int index) {
+                          final _RiderBookingItem item = bookings[index];
+                          return _RiderBookingCard(
+                            item: item,
+                            tab: _selectedTab,
+                            onCancel: () =>
+                                context.go(AppRoutes.riderCancelRide),
+                            onTrack: () => context
+                                .go(AppRoutes.riderActiveTripPath(item.tripId)),
+                          );
+                        },
+                        separatorBuilder: (BuildContext context, int index) =>
+                            const SizedBox(height: 14),
+                        itemCount: bookings.length,
                       );
                     },
-                    separatorBuilder: (BuildContext context, int index) =>
-                        const SizedBox(height: 14),
-                    itemCount: bookings.length,
+                    error: (Object error, StackTrace stackTrace) => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 30),
+                        child: ErrorState(
+                          title: 'Bookings unavailable',
+                          message: _riderErrorMessage(
+                            error,
+                            'Rider bookings could not load.',
+                          ),
+                        ),
+                      ),
+                    ),
+                    loading: () => const SizedBox(
+                      height: 220,
+                      child: LoadingState(label: 'Loading bookings'),
+                    ),
                   ),
                 ),
               ],
@@ -3273,7 +3524,10 @@ class _RiderCollectCashCard extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 24),
-                const _RideRequestRouteSummary(),
+                const _RiderBookingRouteSummary(
+                  pickup: 'Wuse Market',
+                  destination: 'Jabi Lake Mall',
+                ),
                 const SizedBox(height: 22),
                 const Divider(color: JosiColors.line),
                 const SizedBox(height: 18),
@@ -3519,26 +3773,46 @@ class _RiderDashboardHeader extends StatelessWidget {
 }
 
 class _RiderDashboardMetrics extends StatelessWidget {
-  const _RiderDashboardMetrics();
+  const _RiderDashboardMetrics({
+    required this.trips,
+    required this.isLoading,
+  });
+
+  final List<Trip> trips;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final int prebookedCount = trips
+        .where((Trip trip) =>
+            trip.status == TripStatus.searching ||
+            trip.status == TripStatus.active)
+        .length;
+    final double todayEarned = trips
+        .where((Trip trip) =>
+            trip.status == TripStatus.completed &&
+            _isToday(trip.completedAt ?? trip.requestedAt))
+        .fold<double>(
+          0,
+          (double total, Trip trip) => total + (trip.amount ?? 0),
+        );
+
+    return Row(
       children: <Widget>[
         Expanded(
           child: _RiderDashboardMetricCard(
-            key: ValueKey<String>('rider-metric-prebooked-card'),
+            key: const ValueKey<String>('rider-metric-prebooked-card'),
             label: 'Pre - Booked',
-            value: '10',
+            value: isLoading ? '...' : '$prebookedCount',
             icon: Icons.calendar_month_rounded,
           ),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Expanded(
           child: _RiderDashboardMetricCard(
-            key: ValueKey<String>('rider-metric-today-earned-card'),
+            key: const ValueKey<String>('rider-metric-today-earned-card'),
             label: 'Today Earned',
-            value: '\$754.00',
+            value: isLoading ? '...' : _moneyLabel(todayEarned),
             icon: Icons.attach_money_rounded,
           ),
         ),
@@ -3622,15 +3896,22 @@ class _RiderDashboardMetricCard extends StatelessWidget {
 }
 
 class _FindingJobsPanel extends StatelessWidget {
-  const _FindingJobsPanel({required this.onFindingJobs});
+  const _FindingJobsPanel({
+    required this.progress,
+    required this.status,
+  });
 
-  final VoidCallback onFindingJobs;
+  final double progress;
+  final _RiderJobSearchStatus status;
 
   @override
   Widget build(BuildContext context) {
+    final bool notFound = status == _RiderJobSearchStatus.notFound;
+
     return Container(
+      key: const ValueKey<String>('rider-finding-jobs-panel'),
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
       decoration: const BoxDecoration(
         color: JosiColors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
@@ -3646,37 +3927,49 @@ class _FindingJobsPanel extends StatelessWidget {
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Container(
-              width: 58,
-              height: 4,
-              decoration: const BoxDecoration(
+            Row(
+              children: <Widget>[
+                Icon(
+                  notFound ? Icons.search_off_rounded : Icons.radar_rounded,
+                  color: JosiColors.red,
+                  size: 24,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    notFound ? 'No ride found' : 'Finding jobs',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: JosiColors.ink,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                key: const ValueKey<String>('rider-finding-jobs-progress'),
+                value: progress.clamp(0, 1),
+                minHeight: 8,
+                backgroundColor: JosiColors.redSoft,
                 color: JosiColors.red,
-                borderRadius: BorderRadius.all(Radius.circular(999)),
               ),
             ),
             const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                key: const ValueKey<String>('rider-finding-jobs-button'),
-                onPressed: onFindingJobs,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: JosiColors.red,
-                  foregroundColor: JosiColors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
+            Text(
+              notFound
+                  ? 'No assigned ride is waiting right now.'
+                  : 'Checking assigned customer requests near you.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: JosiColors.softMuted,
+                    fontSize: 14,
+                    height: 1.35,
                   ),
-                  textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: JosiColors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                child: const Text('Finding Jobs'),
-              ),
             ),
           ],
         ),
@@ -3686,10 +3979,14 @@ class _FindingJobsPanel extends StatelessWidget {
 }
 
 class _RideRequestTimer extends StatelessWidget {
-  const _RideRequestTimer();
+  const _RideRequestTimer({required this.secondsRemaining});
+
+  final int secondsRemaining;
 
   @override
   Widget build(BuildContext context) {
+    final double progress = secondsRemaining / 30;
+
     return Center(
       child: Stack(
         alignment: Alignment.center,
@@ -3697,7 +3994,7 @@ class _RideRequestTimer extends StatelessWidget {
           SizedBox.square(
             dimension: 150,
             child: CircularProgressIndicator(
-              value: 0.78,
+              value: progress.clamp(0, 1),
               strokeWidth: 6,
               strokeCap: StrokeCap.round,
               backgroundColor: JosiColors.white.withValues(alpha: 0.75),
@@ -3724,7 +4021,8 @@ class _RideRequestTimer extends StatelessWidget {
                 const Icon(Icons.hourglass_bottom_rounded,
                     color: JosiColors.red, size: 32),
                 Text(
-                  '30',
+                  '$secondsRemaining',
+                  key: const ValueKey<String>('rider-ride-request-countdown'),
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         color: JosiColors.red,
                         fontSize: 24,
@@ -3752,14 +4050,23 @@ class _RideRequestSheet extends StatelessWidget {
     required this.trip,
     required this.onDecline,
     required this.onAccept,
+    required this.isAccepting,
+    required this.isDeclining,
   });
 
   final Trip trip;
   final VoidCallback onDecline;
   final VoidCallback onAccept;
+  final bool isAccepting;
+  final bool isDeclining;
 
   @override
   Widget build(BuildContext context) {
+    final String customerName =
+        trip.customerName.trim().isEmpty ? 'Customer' : trip.customerName;
+    final String distanceLabel =
+        trip.duration.trim().isNotEmpty ? trip.duration : trip.distance;
+
     return Container(
       key: const ValueKey<String>('rider-ride-request-sheet'),
       width: double.infinity,
@@ -3805,7 +4112,7 @@ class _RideRequestSheet extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '5 mins away',
+                  distanceLabel.trim().isEmpty ? trip.fare : distanceLabel,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: JosiColors.softMuted,
                         fontSize: 14,
@@ -3818,14 +4125,14 @@ class _RideRequestSheet extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: <Widget>[
-                const ProfileAvatar(name: 'Esther Howard', size: 56),
+                ProfileAvatar(name: customerName, size: 56),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        'Esther Howard',
+                        customerName,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               color: JosiColors.ink,
                               fontSize: 18,
@@ -3843,10 +4150,18 @@ class _RideRequestSheet extends StatelessWidget {
                     ],
                   ),
                 ),
+                Text(
+                  trip.fare,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: JosiColors.red,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
               ],
             ),
             const SizedBox(height: 18),
-            const _RideRequestRouteSummary(),
+            _RideRequestRouteSummary(trip: trip),
             const SizedBox(height: 20),
             Row(
               children: <Widget>[
@@ -3855,7 +4170,7 @@ class _RideRequestSheet extends StatelessWidget {
                     height: 52,
                     child: ElevatedButton(
                       key: const ValueKey<String>('rider-ride-request-decline'),
-                      onPressed: onDecline,
+                      onPressed: isAccepting || isDeclining ? null : onDecline,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: JosiColors.surface,
                         foregroundColor: JosiColors.red,
@@ -3870,7 +4185,15 @@ class _RideRequestSheet extends StatelessWidget {
                                   fontWeight: FontWeight.w800,
                                 ),
                       ),
-                      child: const Text('Decline'),
+                      child: isDeclining
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: JosiColors.red,
+                              ),
+                            )
+                          : const Text('Decline'),
                     ),
                   ),
                 ),
@@ -3880,7 +4203,7 @@ class _RideRequestSheet extends StatelessWidget {
                     height: 52,
                     child: ElevatedButton(
                       key: const ValueKey<String>('rider-ride-request-accept'),
-                      onPressed: onAccept,
+                      onPressed: isAccepting || isDeclining ? null : onAccept,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: JosiColors.red,
                         foregroundColor: JosiColors.white,
@@ -3894,7 +4217,15 @@ class _RideRequestSheet extends StatelessWidget {
                                   fontWeight: FontWeight.w800,
                                 ),
                       ),
-                      child: const Text('Accept'),
+                      child: isAccepting
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: JosiColors.white,
+                              ),
+                            )
+                          : const Text('Accept'),
                     ),
                   ),
                 ),
@@ -3908,7 +4239,9 @@ class _RideRequestSheet extends StatelessWidget {
 }
 
 class _RideRequestRouteSummary extends StatelessWidget {
-  const _RideRequestRouteSummary();
+  const _RideRequestRouteSummary({required this.trip});
+
+  final Trip trip;
 
   @override
   Widget build(BuildContext context) {
@@ -3951,7 +4284,7 @@ class _RideRequestRouteSummary extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  '6391 Elgin St. Celina, Dejawa...',
+                  trip.pickup,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -3970,7 +4303,11 @@ class _RideRequestRouteSummary extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      '10 mins up',
+                      trip.duration.trim().isEmpty
+                          ? (trip.distance.trim().isEmpty
+                              ? trip.fare
+                              : trip.distance)
+                          : trip.duration,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: JosiColors.softMuted,
                             fontSize: 13,
@@ -3979,7 +4316,7 @@ class _RideRequestRouteSummary extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '1901 Thorrridge Cir. Sh...',
+                  trip.destination,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -5827,4 +6164,38 @@ String _fileNameFromPath(String path) {
   final List<String> parts = path.split(RegExp(r'[\\/]'));
   final String fileName = parts.isEmpty ? path : parts.last;
   return fileName.trim().isEmpty ? 'Selected photo' : fileName.trim();
+}
+
+Trip? _nextRideRequest(List<Trip> trips) {
+  for (final Trip trip in trips) {
+    if (trip.status == TripStatus.searching) {
+      return trip;
+    }
+  }
+  return null;
+}
+
+bool _matchesRiderBookingTab(Trip trip, _RiderBookingStatus tab) {
+  return switch (tab) {
+    _RiderBookingStatus.active =>
+      trip.status == TripStatus.searching || trip.status == TripStatus.active,
+    _RiderBookingStatus.completed => trip.status == TripStatus.completed,
+    _RiderBookingStatus.cancelled => trip.status == TripStatus.cancelled,
+  };
+}
+
+bool _isToday(DateTime? value) {
+  if (value == null) {
+    return false;
+  }
+
+  final DateTime local = value.toLocal();
+  final DateTime now = DateTime.now();
+  return local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day;
+}
+
+String _moneyLabel(double amount) {
+  return 'NGN ${amount.toStringAsFixed(0)}';
 }

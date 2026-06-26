@@ -481,7 +481,13 @@ void main() {
     expect(find.text('Online'), findsOneWidget);
     expect(find.text('Pre - Booked'), findsOneWidget);
     expect(find.text('Today Earned'), findsOneWidget);
-    expect(find.text('Finding Jobs'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('NGN 4200'), findsOneWidget);
+    expect(find.text('Finding jobs'), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('rider-search-jobs-fab')),
+      findsOneWidget,
+    );
     expect(
         tester
             .getSize(find
@@ -494,12 +500,6 @@ void main() {
                 const ValueKey<String>('rider-metric-today-earned-card')))
             .height,
         82);
-    expect(
-        tester
-            .getSize(
-                find.byKey(const ValueKey<String>('rider-finding-jobs-button')))
-            .height,
-        52);
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Bookings'), findsOneWidget);
     expect(find.text('Wallet'), findsOneWidget);
@@ -517,14 +517,30 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester
-        .tap(find.byKey(const ValueKey<String>('rider-finding-jobs-button')));
-    await tester.pumpAndSettle();
+        .tap(find.byKey(const ValueKey<String>('rider-search-jobs-fab')));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey<String>('rider-finding-jobs-panel')),
+        findsOneWidget);
+    expect(find.text('Finding jobs'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('rider-finding-jobs-progress')),
+        findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
 
     expect(find.byKey(const ValueKey<String>('rider-ride-request-sheet')),
         findsOneWidget);
     expect(find.text('Ride Request'), findsOneWidget);
     expect(tester.widget<Text>(find.text('Ride Request')).style?.fontSize, 18);
     expect(find.text('Esther Howard'), findsOneWidget);
+    expect(find.text('Wuse Market'), findsOneWidget);
+    expect(find.text('Jabi Lake Mall'), findsOneWidget);
+    expect(find.text('30'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('29'), findsOneWidget);
     expect(find.text('Accept'), findsOneWidget);
     expect(find.text('Decline'), findsOneWidget);
 
@@ -535,6 +551,57 @@ void main() {
     expect(find.byKey(const ValueKey<String>('rider-active-trip-screen')),
         findsOneWidget);
     expect(find.text('Customer Location'), findsWidgets);
+  });
+
+  testWidgets('rider dashboard declines request and shows not found',
+      (WidgetTester tester) async {
+    await _loginAsRider(tester);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderHome);
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-search-jobs-fab')));
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey<String>('rider-ride-request-sheet')),
+        findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-ride-request-decline')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(find.text('No ride found'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('rider-ride-request-sheet')),
+        findsNothing);
+  });
+
+  testWidgets('rider dashboard search shows not found when no actual trips',
+      (WidgetTester tester) async {
+    await _loginAsRider(
+      tester,
+      riderRepository: _FakeRiderRepository(trips: const <Trip>[]),
+    );
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderHome);
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-search-jobs-fab')));
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+
+    expect(find.text('No ride found'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('rider-ride-request-sheet')),
+        findsNothing);
   });
 
   testWidgets('rider active trip opens customer location interface',
@@ -628,7 +695,8 @@ void main() {
       findsOneWidget,
     );
     expect(tester.widget<Text>(find.text('Active')).style?.fontSize, 17);
-    expect(find.text('Jenny Wilson'), findsOneWidget);
+    expect(find.text('Esther Howard'), findsOneWidget);
+    expect(find.text('CRN : #TRP-2408'), findsOneWidget);
     expect(find.text('Track Rider'), findsOneWidget);
 
     await tester
@@ -672,20 +740,20 @@ void main() {
 
     expect(find.text('Completed'), findsOneWidget);
     expect(tester.widget<Text>(find.text('Completed')).style?.fontSize, 17);
-    expect(find.text('Byron Barlow'), findsOneWidget);
-    expect(find.text('Robert Fox'), findsOneWidget);
+    expect(find.text('Musa Danjuma'), findsOneWidget);
+    expect(find.text('CRN : #TRP-2409'), findsOneWidget);
     expect(find.text('Track Rider'), findsNothing);
 
     await tester.tap(
         find.byKey(const ValueKey<String>('rider-bookings-tab-cancelled')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Cancelled'), findsOneWidget);
-    expect(tester.widget<Text>(find.text('Cancelled')).style?.fontSize, 17);
-    expect(find.text('Cancelled by You'), findsOneWidget);
-    expect(find.text('Cancelled by Rider'), findsOneWidget);
-    expect(find.text('Cody Fisher'), findsOneWidget);
-    expect(find.text('Ralph Edwards'), findsOneWidget);
+    expect(find.text('Cancelled'), findsWidgets);
+    expect(
+        tester.widget<Text>(find.text('Cancelled').first).style?.fontSize, 17);
+    expect(find.text('Cancelled'), findsWidgets);
+    expect(find.text('Ada Okoro'), findsOneWidget);
+    expect(find.text('CRN : #TRP-2410'), findsOneWidget);
     expect(find.text('Track Rider'), findsNothing);
   });
 
@@ -1861,6 +1929,10 @@ Trip _copyTrip(
   String? vehicleLabel,
   String? plateNumber,
   bool? isArrivedAtPickup,
+  double? amount,
+  DateTime? requestedAt,
+  DateTime? completedAt,
+  DateTime? cancelledAt,
   int? reviewRating,
   String? reviewText,
 }) {
@@ -1876,6 +1948,10 @@ Trip _copyTrip(
     customerName: customerName ?? trip.customerName,
     distance: distance ?? trip.distance,
     duration: duration ?? trip.duration,
+    amount: amount ?? trip.amount,
+    requestedAt: requestedAt ?? trip.requestedAt,
+    completedAt: completedAt ?? trip.completedAt,
+    cancelledAt: cancelledAt ?? trip.cancelledAt,
     riderId: riderId ?? trip.riderId,
     riderPhone: riderPhone ?? trip.riderPhone,
     vehicleLabel: vehicleLabel ?? trip.vehicleLabel,
@@ -1913,14 +1989,19 @@ RiderProfile _testRiderProfile({
 class _FakeRiderRepository extends RiderRepository {
   _FakeRiderRepository({
     RiderOnboarding? onboarding,
+    List<Trip>? trips,
   }) : _onboarding = onboarding ??
             const RiderOnboarding(
               profile: JosiMockData.riderProfile,
-            );
+            ) {
+    _trips.addAll(trips ?? _defaultRiderTrips);
+  }
 
   RiderOnboarding _onboarding;
-  final List<Trip> _trips = <Trip>[
-    const Trip(
+  final List<Trip> _trips = <Trip>[];
+
+  static final List<Trip> _defaultRiderTrips = <Trip>[
+    Trip(
       id: 'TRP-2408',
       pickup: 'Wuse Market',
       destination: 'Jabi Lake Mall',
@@ -1932,6 +2013,48 @@ class _FakeRiderRepository extends RiderRepository {
       customerName: 'Esther Howard',
       distance: '7.6 km',
       duration: '18 mins',
+      amount: 3500,
+      requestedAt: DateTime.now(),
+      riderId: '44',
+      riderPhone: '+2348000000004',
+      vehicleLabel: 'Red Bajaj Boxer',
+      plateNumber: 'JOS-123AB',
+    ),
+    Trip(
+      id: 'TRP-2409',
+      pickup: 'Garki Area 11',
+      destination: 'Central Business District',
+      fare: 'NGN 4200',
+      status: TripStatus.completed,
+      paymentMethod: PaymentMethod.cash,
+      dateLabel: 'Jun 26, 2026, 10:30 AM',
+      riderName: 'Amina Yusuf',
+      customerName: 'Musa Danjuma',
+      distance: '5.2 km',
+      duration: '14 mins',
+      amount: 4200,
+      requestedAt: DateTime.now(),
+      completedAt: DateTime.now(),
+      riderId: '44',
+      riderPhone: '+2348000000004',
+      vehicleLabel: 'Red Bajaj Boxer',
+      plateNumber: 'JOS-123AB',
+    ),
+    Trip(
+      id: 'TRP-2410',
+      pickup: 'Utako Market',
+      destination: 'Wuye District',
+      fare: 'NGN 2100',
+      status: TripStatus.cancelled,
+      paymentMethod: PaymentMethod.cash,
+      dateLabel: 'Jun 25, 2026, 03:20 PM',
+      riderName: 'Amina Yusuf',
+      customerName: 'Ada Okoro',
+      distance: '3.1 km',
+      duration: '11 mins',
+      amount: 2100,
+      requestedAt: DateTime.now().subtract(const Duration(days: 1)),
+      cancelledAt: DateTime.now().subtract(const Duration(days: 1)),
       riderId: '44',
       riderPhone: '+2348000000004',
       vehicleLabel: 'Red Bajaj Boxer',
@@ -1976,6 +2099,14 @@ class _FakeRiderRepository extends RiderRepository {
     final Trip accepted = _copyTrip(trip, status: TripStatus.active);
     _replaceTrip(accepted);
     return accepted;
+  }
+
+  @override
+  Future<Trip> declineTrip(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final Trip trip = await this.trip(id);
+    _trips.removeWhere((Trip value) => value.id == id);
+    return _copyTrip(trip, status: TripStatus.cancelled);
   }
 
   @override

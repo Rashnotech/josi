@@ -39,10 +39,16 @@ Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' 'Verifi
 Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' "whereNotIn('availability_status'" 'Busy riders are excluded'
 Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' 'assignToRider' 'Customer request assigns selected rider'
 Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' 'AvailabilityStatus::Busy' 'Requested rider becomes busy'
+Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' "'customer_name' =>" 'Trip payload includes customer name'
 Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' "'rating' => ['required', 'integer', 'min:1', 'max:5']" 'Review rating validation'
 Assert-Contains 'app/Http/Controllers/Api/V1/DriverTripController.php' 'startTrip' 'Driver arrival starts trip'
+Assert-Contains 'app/Http/Controllers/Api/V1/DriverTripController.php' 'declineTrip' 'Driver decline releases assigned trip'
+Assert-Contains 'app/Http/Controllers/Api/V1/DriverTripController.php' 'TripStatus::Completed' 'Driver trip history includes completed trips'
+Assert-Contains 'app/Http/Controllers/Api/V1/DriverTripController.php' 'TripStatus::Cancelled' 'Driver trip history includes cancelled trips'
 Assert-Contains 'app/Services/TripService.php' 'TripStatus::Ongoing' 'Arrival moves trip to ongoing'
 Assert-Contains 'app/Services/TripService.php' 'started_at' 'Arrival records timestamp'
+Assert-Contains 'app/Services/TripService.php' 'Only assigned trips can be declined.' 'Only assigned trips are declined'
+Assert-Contains 'app/Services/TripService.php' 'trip.declined' 'Decline action is audited'
 Assert-NotContains 'app/Http/Controllers/Api/V1/CustomerTripController.php' 'JosiMockData' 'Backend must not use mobile mock data'
 
 if ($failures.Count -gt 0) {
