@@ -5439,6 +5439,8 @@ class _BookingActivityCard extends StatelessWidget {
               ),
               const _BookingDivider(height: 22),
               _BookingCarNumberRow(carNumber: item.plateNumber),
+              const SizedBox(height: 16),
+              const _BookingMiniMap(),
               if (onCancel != null) ...<Widget>[
                 const SizedBox(height: 16),
                 SizedBox(
@@ -5795,6 +5797,131 @@ class _BookingCarNumberRow extends StatelessWidget {
       ],
     );
   }
+}
+
+class _BookingMiniMap extends StatelessWidget {
+  const _BookingMiniMap();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        height: 132,
+        child: CustomPaint(
+          painter: const _BookingMiniMapPainter(),
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingMiniMapPainter extends CustomPainter {
+  const _BookingMiniMapPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xFFF2F4F6),
+    );
+
+    final Paint mainRoad = Paint()
+      ..color = JosiColors.white
+      ..strokeWidth = 13
+      ..strokeCap = StrokeCap.round;
+    final Paint sideRoad = Paint()
+      ..color = const Color(0xFFDDE2E7)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    for (final double x in <double>[0.10, 0.36, 0.64, 0.88]) {
+      canvas.drawLine(
+        Offset(size.width * x, -size.height * 0.10),
+        Offset(size.width * (x - 0.16), size.height * 1.10),
+        mainRoad,
+      );
+    }
+    for (final double y in <double>[0.18, 0.48, 0.78]) {
+      canvas.drawLine(
+        Offset(-size.width * 0.08, size.height * y),
+        Offset(size.width * 1.08, size.height * (y + 0.18)),
+        mainRoad,
+      );
+    }
+    for (final double y in <double>[0.32, 0.62]) {
+      canvas.drawLine(
+        Offset(0, size.height * y),
+        Offset(size.width, size.height * (y - 0.15)),
+        sideRoad,
+      );
+    }
+
+    final Path route = Path()
+      ..moveTo(size.width * 0.22, size.height * 0.30)
+      ..lineTo(size.width * 0.48, size.height * 0.52)
+      ..lineTo(size.width * 0.78, size.height * 0.42);
+    canvas.drawPath(
+      route,
+      Paint()
+        ..color = JosiColors.ink
+        ..strokeWidth = 3
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    _drawPickup(canvas, size, const Offset(0.22, 0.30));
+    _drawDestination(canvas, size, const Offset(0.78, 0.42));
+
+    final Rect fade = Offset.zero & size;
+    canvas.drawRect(
+      fade,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0x10FFFFFF),
+            Color(0x00FFFFFF),
+            Color(0x40FFFFFF),
+          ],
+        ).createShader(fade),
+    );
+  }
+
+  void _drawPickup(Canvas canvas, Size size, Offset point) {
+    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
+    canvas.drawCircle(center, 15, Paint()..color = JosiColors.white);
+    canvas.drawCircle(
+      center,
+      11,
+      Paint()
+        ..color = JosiColors.red
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
+  }
+
+  void _drawDestination(Canvas canvas, Size size, Offset point) {
+    final Offset center = Offset(size.width * point.dx, size.height * point.dy);
+    canvas.drawCircle(
+      center,
+      28,
+      Paint()..color = JosiColors.red.withValues(alpha: 0.18),
+    );
+    canvas.drawCircle(center, 20, Paint()..color = JosiColors.red);
+    final Path arrow = Path()
+      ..moveTo(center.dx - 7, center.dy - 9)
+      ..lineTo(center.dx + 10, center.dy)
+      ..lineTo(center.dx - 7, center.dy + 9)
+      ..close();
+    canvas.drawPath(arrow, Paint()..color = JosiColors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _BookingDivider extends StatelessWidget {
