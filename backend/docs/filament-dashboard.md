@@ -5,6 +5,12 @@ Josi uses two Filament panels:
 - Admin panel: `/admin`
 - Pack owner dashboard: `/dashboard`
 
+Both panel providers must remain registered for every request. Filament and
+Livewire use shared routes outside the panel URL prefixes, so conditionally
+registering providers only for `/admin` or `/dashboard` requests can leave the
+panel registry empty. The admin panel is marked with `->default()` and the
+fleet panel is selected by its `/dashboard` path.
+
 The admin panel is for `super_admin` and `admin`. The pack owner dashboard is for fleet business users only. The canonical owner role is `pack_owner`; `fleet_owner` is still accepted as a legacy alias because existing data and redirects already reference it.
 
 ## Access Model

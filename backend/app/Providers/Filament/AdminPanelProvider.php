@@ -30,15 +30,6 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
-    public function register(): void
-    {
-        if (! $this->shouldRegisterPanel()) {
-            return;
-        }
-
-        parent::register();
-    }
-
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -107,26 +98,5 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
-    }
-
-    private function shouldRegisterPanel(): bool
-    {
-        if ($this->app->runningInConsole()) {
-            return $this->isFilamentConsoleCommand();
-        }
-
-        if (! $this->app->bound('request')) {
-            return false;
-        }
-
-        return $this->app['request']->is('admin') || $this->app['request']->is('admin/*');
-    }
-
-    private function isFilamentConsoleCommand(): bool
-    {
-        $command = $_SERVER['argv'][1] ?? '';
-
-        return str_starts_with($command, 'filament:')
-            || str_starts_with($command, 'make:filament');
     }
 }

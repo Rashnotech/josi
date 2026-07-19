@@ -20,6 +20,19 @@ function Assert-Contains([string] $relativePath, [string] $needle, [string] $lab
     }
 }
 
+function Assert-NotContains([string] $relativePath, [string] $needle, [string] $label) {
+    $path = Resolve-RepoPath $relativePath
+    if (-not (Test-Path -LiteralPath $path)) {
+        $failures.Add("Cannot inspect missing file: $relativePath")
+        return
+    }
+
+    $content = Get-Content -LiteralPath $path -Raw
+    if ($content.Contains($needle)) {
+        $failures.Add("$label found forbidden text in $relativePath")
+    }
+}
+
 Assert-Contains 'docs/filament-dashboard.md' 'The canonical owner role is `pack_owner`' 'Pack owner canonical role documented'
 Assert-Contains 'app/Enums/UserRole.php' "case PackOwner = 'pack_owner'" 'Pack owner enum exists'
 Assert-Contains 'app/Enums/UserRole.php' "case FleetOwner = 'fleet_owner'" 'Fleet owner legacy alias exists'
@@ -27,6 +40,9 @@ Assert-Contains 'app/Support/Filament/DashboardAccess.php' 'UserRole::PackOwner-
 Assert-Contains 'app/Support/Filament/DashboardAccess.php' 'UserRole::FleetOwner->value' 'Fleet owner legacy dashboard access'
 Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "->brandLogo(asset('images/josi-logo.png'))" 'Admin dashboard uses company logo'
 Assert-Contains 'app/Providers/Filament/FleetPanelProvider.php' "->brandLogo(asset('images/josi-logo.png'))" 'Fleet dashboard uses company logo'
+Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' '->default()' 'Admin dashboard is the default Filament panel'
+Assert-NotContains 'app/Providers/Filament/AdminPanelProvider.php' 'shouldRegisterPanel' 'Admin panel conditional registration'
+Assert-NotContains 'app/Providers/Filament/FleetPanelProvider.php' 'shouldRegisterPanel' 'Fleet panel conditional registration'
 Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "->favicon(asset('images/josi-logo.png'))" 'Admin dashboard browser favicon'
 Assert-Contains 'app/Providers/Filament/FleetPanelProvider.php' "->favicon(asset('images/josi-logo.png'))" 'Fleet dashboard browser favicon'
 Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' 'PanelsRenderHook::BODY_START' 'Admin dashboard loading overlay hook'

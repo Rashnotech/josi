@@ -25,13 +25,16 @@ class RoleSelectionScreen extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(27, 24, 27, 24),
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   Align(
                     alignment: Alignment.centerLeft,
                     child: _BackSquareButton(
+                      dimension: 36,
+                      radius: 12,
+                      iconSize: 18,
                       onPressed: () {
                         if (GoRouter.of(context).canPop()) {
                           context.pop();
@@ -39,56 +42,56 @@ class RoleSelectionScreen extends StatelessWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 22),
-                  const Center(child: _LogoCard(size: 82, innerSize: 58)),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 16),
+                  const Center(child: _LogoCard(size: 64, innerSize: 46)),
+                  const SizedBox(height: 18),
                   Text(
                     'Welcome to Josi Ride',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0,
                         ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     'Select your experience',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: JosiColors.muted,
-                          fontSize: 16,
+                          fontSize: 14,
                           height: 1.2,
                         ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 22),
                   _RoleCard(
                     title: 'Continue as Customer',
                     subtitle:
                         'Book rides, track your driver, and\nmanage your trips.',
                     buttonLabel: 'Get Started',
-                    icon: const _SvgIcon(asset: AppAssets.profile, size: 30),
+                    icon: const _SvgIcon(asset: AppAssets.profile, size: 24),
                     onTap: () => context.go(AppRoutes.loginFor('customer')),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   _RoleCard(
                     title: 'Continue as Rider',
                     subtitle:
                         'Accept requests, navigate routes, and\nmanage your earnings.',
                     buttonLabel: 'Drive with Us',
                     isPrimary: false,
-                    icon: const _SvgIcon(asset: AppAssets.bikeLane, size: 30),
+                    icon: const _SvgIcon(asset: AppAssets.bikeLane, size: 24),
                     onTap: () => context.go(AppRoutes.loginFor('rider')),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                   Text(
                     'POWERED BY JOSI RIDE',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: JosiColors.outline,
-                          letterSpacing: 2.6,
-                          fontSize: 11,
+                          letterSpacing: 2.2,
+                          fontSize: 10,
                         ),
                   ),
                 ],
@@ -2001,30 +2004,36 @@ class _BackSquareButton extends StatelessWidget {
   const _BackSquareButton({
     required this.onPressed,
     this.outlined = false,
+    this.dimension = 42,
+    this.radius = 14,
+    this.iconSize = 20,
   });
 
   final VoidCallback onPressed;
   final bool outlined;
+  final double dimension;
+  final double radius;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
-      dimension: 42,
+      dimension: dimension,
       child: Material(
         color: outlined ? JosiColors.white : const Color(0xFFF0F2F4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(radius),
           side: BorderSide(
               color: outlined ? JosiColors.outlineVariant : Colors.transparent),
         ),
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(radius),
           child: Center(
             child: SvgPicture.asset(
               AppAssets.arrowLeft,
-              width: 20,
-              height: 20,
+              width: iconSize,
+              height: iconSize,
               colorFilter:
                   const ColorFilter.mode(JosiColors.ink, BlendMode.srcIn),
             ),
@@ -2129,7 +2138,7 @@ class _RoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
       decoration: BoxDecoration(
         color: JosiColors.white,
         borderRadius: BorderRadius.circular(8),
@@ -2139,12 +2148,12 @@ class _RoleCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           icon,
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           Text(
             title,
             style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   color: JosiColors.ink,
-                  fontSize: 23,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
                   height: 1.15,
                 ),
@@ -2154,14 +2163,14 @@ class _RoleCard extends StatelessWidget {
             subtitle,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.muted,
-                  fontSize: 15,
-                  height: 1.34,
+                  fontSize: 13,
+                  height: 1.32,
                 ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            height: 46,
+            height: 42,
             child: isPrimary
                 ? ElevatedButton(
                     onPressed: onTap,
@@ -2172,7 +2181,7 @@ class _RoleCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4)),
                       textStyle:
                           Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontSize: 15,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.4,
                               ),
@@ -2189,7 +2198,7 @@ class _RoleCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4)),
                       textStyle:
                           Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontSize: 15,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.8,
                               ),

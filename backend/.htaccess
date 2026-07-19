@@ -1,0 +1,12 @@
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # cPanel fallback for accounts whose subdomain document root points at the
+    # Laravel project directory. Prefer pointing the document root at public/.
+    RewriteRule ^public(?:/|$) - [L]
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

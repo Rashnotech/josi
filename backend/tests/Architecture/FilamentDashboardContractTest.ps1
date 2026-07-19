@@ -26,6 +26,19 @@ function Assert-Contains([string] $relativePath, [string] $needle, [string] $lab
     }
 }
 
+function Assert-NotContains([string] $relativePath, [string] $needle, [string] $label) {
+    $path = Resolve-RepoPath $relativePath
+    if (-not (Test-Path -LiteralPath $path)) {
+        $failures.Add("Cannot inspect missing file: $relativePath")
+        return
+    }
+
+    $content = Get-Content -LiteralPath $path -Raw
+    if ($content.Contains($needle)) {
+        $failures.Add("$label found forbidden text in $relativePath")
+    }
+}
+
 @(
     'composer.json',
     'config/app.php',
@@ -35,6 +48,7 @@ function Assert-Contains([string] $relativePath, [string] $needle, [string] $lab
     'app/Providers/AuthServiceProvider.php',
     'app/Providers/Filament/AdminPanelProvider.php',
     'app/Providers/Filament/FleetPanelProvider.php',
+    'tests/Architecture/FilamentPanelRegistryProbe.php',
     'app/Support/Filament/DashboardAccess.php',
     'app/Support/Filament/Display.php',
     'app/Support/Filament/ResourceActions.php',
@@ -96,8 +110,9 @@ Assert-Contains 'composer.json' '"filament/filament"' 'Filament package'
 Assert-Contains 'composer.json' '"spatie/laravel-permission"' 'Spatie permission package'
 Assert-Contains 'config/app.php' 'App\Providers\Filament\AdminPanelProvider::class' 'Admin panel provider registration'
 Assert-Contains 'config/app.php' 'App\Providers\Filament\FleetPanelProvider::class' 'Fleet panel provider registration'
-Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' 'shouldRegisterPanel()' 'Admin panel has boot guard'
-Assert-Contains 'app/Providers/Filament/FleetPanelProvider.php' 'shouldRegisterPanel()' 'Fleet panel has boot guard'
+Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' '->default()' 'Admin panel is the default panel'
+Assert-NotContains 'app/Providers/Filament/AdminPanelProvider.php' 'shouldRegisterPanel' 'Admin panel conditional registration'
+Assert-NotContains 'app/Providers/Filament/FleetPanelProvider.php' 'shouldRegisterPanel' 'Fleet panel conditional registration'
 
 Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "->id(DashboardAccess::ADMIN_PANEL)" 'Admin panel id'
 Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "->path('admin')" 'Admin panel path'
@@ -166,6 +181,30 @@ Assert-Contains 'app/Services/DocumentVerificationService.php' 'document.verifie
 Assert-Contains 'app/Services/VehicleVerificationService.php' 'vehicle.verified' 'Vehicle verify audit'
 Assert-Contains 'app/Services/PaymentService.php' 'payment.verified' 'Payment verify audit'
 Assert-Contains 'app/Services/CashLedgerService.php' 'cash_ledger.remittance_updated' 'Cash ledger audit'
+
+$probePath = Resolve-RepoPath 'tests/Architecture/FilamentPanelRegistryProbe.php'
+$probeOutput = & php $probePath 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $failures.Add("Filament panel registry probe failed: $probeOutput")
+} else {
+    try {
+        $registry = $probeOutput | ConvertFrom-Json
+
+        if ($registry.default -ne 'admin') {
+            $failures.Add("Expected admin as the default Filament panel, got $($registry.default)")
+        }
+
+        if (@($registry.panels) -notcontains 'admin') {
+            $failures.Add('Admin panel is missing from the Filament registry')
+        }
+
+        if (@($registry.panels) -notcontains 'fleet') {
+            $failures.Add('Fleet panel is missing from the Filament registry')
+        }
+    } catch {
+        $failures.Add("Filament panel registry probe did not return JSON: $probeOutput")
+    }
+}
 
 if ($failures.Count -gt 0) {
     Write-Host 'Filament dashboard contract test failed:' -ForegroundColor Red

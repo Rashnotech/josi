@@ -10,3 +10,9 @@ Gate checks for customer auth work:
 - Auth tokens are stored through `TokenStorage`; passwords are never stored.
 - Customer routes under `/customer/*` and `/edit-profile` require an authenticated customer.
 - Customer dashboard empty states are shown when recent locations, saved addresses, or trips have no backend endpoint/data.
+
+
+cd mobile/app
+flutter run --dart-define=JOSI_API_BASE_URL=http://10.0.2.2:8000/api/v1
+
+$env:JOSI_ANDROID_MAPS_API_KEY="<android-maps-api-key>"

@@ -37,15 +37,11 @@ foreach ($provider in @(
     'app/Providers/Filament/AdminPanelProvider.php',
     'app/Providers/Filament/FleetPanelProvider.php'
 )) {
-    Assert-Contains $provider 'public function register(): void' 'Panel provider register override'
-    Assert-Contains $provider 'shouldRegisterPanel()' 'Panel request guard'
-    Assert-Contains $provider '$this->app->runningInConsole()' 'Console boot guard'
-    Assert-Contains $provider 'isFilamentConsoleCommand()' 'Filament command opt-in'
-    Assert-Contains $provider 'parent::register();' 'Non-API Filament registration'
+    Assert-NotContains $provider 'public function register(): void' 'Panel provider register override'
+    Assert-NotContains $provider 'shouldRegisterPanel' 'Panel request guard'
 }
 
-Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' "`$this->app['request']->is('admin/*')" 'Admin panel path opt-in'
-Assert-Contains 'app/Providers/Filament/FleetPanelProvider.php' "`$this->app['request']->is('dashboard/*')" 'Fleet panel path opt-in'
+Assert-Contains 'app/Providers/Filament/AdminPanelProvider.php' '->default()' 'Default Filament panel'
 Assert-NotContains 'config/app.php' 'Filament\FilamentServiceProvider::class' 'Filament package provider duplicate'
 Assert-NotContains 'config/app.php' 'Livewire\LivewireServiceProvider::class' 'Livewire package provider duplicate'
 Assert-NotContains 'config/app.php' 'Spatie\Permission\PermissionServiceProvider::class' 'Spatie package provider duplicate'

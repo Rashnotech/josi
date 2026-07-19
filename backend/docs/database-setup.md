@@ -174,6 +174,38 @@ Use `migrate:fresh` only in local development or disposable test databases.
 9. Run migrations.
 10. Run seeders.
 
+### Subdomain document root and web login
+
+Set the `app` subdomain document root to Laravel's `public` directory, not to
+the Laravel project directory. For example, if the backend is uploaded to
+`/home/cpanelusername/josi-backend`, use:
+
+```text
+/home/cpanelusername/josi-backend/public
+```
+
+Point Laravel at the production API hostname and the React login page:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://app.example.com
+WEB_LOGIN_URL=https://example.com/login
+```
+
+With this setup:
+
+- `https://app.example.com` redirects to the React login page.
+- `https://app.example.com/api/v1/...` continues through Laravel's API routes.
+- `https://app.example.com/admin` and `https://app.example.com/dashboard`
+  continue through Laravel's Filament panels.
+
+If the host does not allow the subdomain document root to be changed, the
+project-level `.htaccess` forwards requests into `public/` and disables
+directory indexes as a fallback. The public document root is still preferred
+because it prevents direct web access to `.env`, `vendor`, and application
+source files at the server configuration level.
+
 cPanel `.env` example:
 
 ```env
