@@ -217,7 +217,7 @@ const List<_HelpContactItem> _helpContactItems = <_HelpContactItem>[
   _HelpContactItem(
     label: 'WhatsApp',
     icon: Icons.chat_bubble_outline_rounded,
-    detail: '+234 9162599418',
+    detail: '(480) 555-0103',
     expanded: true,
   ),
   _HelpContactItem(

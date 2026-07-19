@@ -12,3 +12,5 @@ android/local.properties
 ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
 ios/Pods/
+
+docs/deployment.md

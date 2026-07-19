@@ -5806,11 +5806,11 @@ class _BookingMiniMap extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
+      child: const SizedBox(
         height: 132,
         child: CustomPaint(
-          painter: const _BookingMiniMapPainter(),
-          child: const SizedBox.expand(),
+          painter: _BookingMiniMapPainter(),
+          child: SizedBox.expand(),
         ),
       ),
     );
