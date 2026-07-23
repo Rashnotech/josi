@@ -10,6 +10,7 @@ import '../../core/mock/josi_models.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/services/api_client.dart';
 import '../../core/theme/josi_colors.dart';
+import '../../core/validation/auth_validators.dart';
 import '../../core/widgets/app_components.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -138,11 +139,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     final Map<String, String> errors = <String, String>{};
-    if (_identityController.text.trim().isEmpty) {
-      errors['identifier'] = 'Enter your email or phone number.';
+    final String? identityError =
+        validateLoginIdentity(_identityController.text);
+    if (identityError != null) {
+      errors['identifier'] = identityError;
     }
-    if (_passwordController.text.isEmpty) {
-      errors['password'] = 'Enter your password.';
+    final String? passwordError =
+        validateLoginPassword(_passwordController.text);
+    if (passwordError != null) {
+      errors['password'] = passwordError;
     }
     setState(() => _fieldErrors = errors);
     if (errors.isNotEmpty) {
@@ -310,50 +315,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     size: 25),
                               ],
                             ),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  const _OrDivider(),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 56,
-                    child: OutlinedButton(
-                      onPressed: session.isLoading ? null : _submit,
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: JosiColors.white,
-                        side: BorderSide(
-                            color: _isWorker
-                                ? JosiColors.outlineVariant
-                                : JosiColors.outline),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          SizedBox.square(
-                            dimension: 24,
-                            child: SvgPicture.asset(AppAssets.google),
-                          ),
-                          const SizedBox(width: 14),
-                          Flexible(
-                            child: Text(
-                              'Continue with Google',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    color: JosiColors.ink,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.2,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -2362,30 +2323,3 @@ class _RedlineTextFieldState extends State<_RedlineTextField> {
   }
 }
 
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        const Expanded(
-            child: Divider(color: JosiColors.outlineVariant, thickness: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          child: Text(
-            'OR',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: JosiColors.line,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
-                ),
-          ),
-        ),
-        const Expanded(
-            child: Divider(color: JosiColors.outlineVariant, thickness: 1)),
-      ],
-    );
-  }
-}

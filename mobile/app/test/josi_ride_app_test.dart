@@ -108,10 +108,9 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey<String>('login-password-field')),
         findsOneWidget);
-    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsNothing);
     _expectVisibleInViewport(
         tester, find.byKey(const ValueKey<String>('login-button')));
-    _expectVisibleInViewport(tester, find.text('Continue with Google'));
     _expectVisibleInViewport(tester, find.text('Create account'));
 
     await tester.enterText(find.byType(TextField).at(0), 'customer@josi.test');
@@ -141,6 +140,33 @@ void main() {
         findsOneWidget);
     expect(find.text('Bookings'), findsWidgets);
     expect(find.text('No trips yet.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'login validates a short password before any loading state or request',
+      (WidgetTester tester) async {
+    await _pumpApp(tester, authRepository: const _NeverSignInAuthRepository());
+    await _finishSplash(tester);
+
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Customer Login'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).at(0), 'customer@josi.test');
+    await tester.enterText(find.byType(TextField).at(1), 'short');
+    await tester.tap(find.byKey(const ValueKey<String>('login-button')));
+    await tester.pump();
+
+    // Feedback is immediate: no spinner, no navigation, still on login.
+    expect(find.text('Password must be at least 8 characters.'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(const ValueKey<String>('login-screen')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-home-screen')),
+        findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey<String>('login-screen')), findsOneWidget);
   });
 
   testWidgets('customer home map fills screen and where to sheet drags up',
@@ -201,6 +227,7 @@ void main() {
 
     expect(find.text('Rider Login'), findsOneWidget);
     expect(find.text('Rider Dashboard Access'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsNothing);
     _expectVisibleInViewport(tester, find.text('Create account'));
 
     await tester.tap(find.text('Create account'));
@@ -1818,6 +1845,21 @@ class _FakeAuthRepository extends AuthRepository {
 
   @override
   Future<void> signOut() async {}
+}
+
+class _NeverSignInAuthRepository extends _FakeAuthRepository {
+  const _NeverSignInAuthRepository();
+
+  @override
+  Future<AuthResult> signIn({
+    required String identity,
+    required String password,
+    String role = 'customer',
+  }) async {
+    throw StateError(
+      'signIn must not be called when client-side validation fails.',
+    );
+  }
 }
 
 class _RestoreTimeoutAuthRepository extends _FakeAuthRepository {
