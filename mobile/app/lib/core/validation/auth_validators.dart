@@ -34,3 +34,36 @@ String? validateLoginPassword(String value) {
   }
   return null;
 }
+
+/// Strips spaces, dashes, and parentheses so phone numbers can be compared
+/// regardless of how the user separated the digits.
+String _normalizePhone(String value) =>
+    value.trim().replaceAll(RegExp(r'[\s\-()]'), '');
+
+/// Nigerian local mobile format: a leading 0 followed by 10 digits (11 total),
+/// e.g. 08012345678.
+final RegExp _localNigerianPhone = RegExp(r'^0\d{10}$');
+
+/// Nigerian international format: +234 (country code, plus optional) followed
+/// by the 10 digits that remain once the leading 0 is dropped, e.g.
+/// +2348012345678.
+final RegExp _internationalNigerianPhone = RegExp(r'^\+?234\d{10}$');
+
+/// Returns an error message for a registration phone number, or `null` when
+/// it matches the required 11-digit Nigerian format.
+///
+/// Rejects anything that isn't exactly an 11-digit local number (0XXXXXXXXXX)
+/// or its +234 international equivalent, so a 10-digit number missing the
+/// leading 0 is never accepted.
+String? validatePhoneNumber(String value) {
+  if (value.trim().isEmpty) {
+    return 'Phone number is required.';
+  }
+  final String normalized = _normalizePhone(value);
+  final bool isValid = _localNigerianPhone.hasMatch(normalized) ||
+      _internationalNigerianPhone.hasMatch(normalized);
+  if (!isValid) {
+    return 'Enter an 11-digit phone number (e.g. 08012345678).';
+  }
+  return null;
+}

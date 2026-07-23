@@ -18,7 +18,8 @@ class RegistrationService
         private readonly JwtTokenService $tokenService,
         private readonly RbacService $rbacService,
         private readonly NotificationService $notificationService,
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly EmailVerificationService $emailVerificationService
     ) {
     }
 
@@ -48,6 +49,7 @@ class RegistrationService
                 $user,
                 $role->requiresDashboard() ? null : ApplicationStatus::Pending->value
             );
+            $this->emailVerificationService->sendVerificationCode($user);
             $this->auditLogService->log('auth.public_registered', null, $profile ?? $user, [], [
                 'user_id' => $user->getKey(),
                 'role' => $role->value,
@@ -105,6 +107,7 @@ class RegistrationService
 
             $this->rbacService->syncUserRole($user);
             $this->notificationService->sendAccountCreated($user, ApplicationStatus::Pending->value);
+            $this->emailVerificationService->sendVerificationCode($user);
             $this->auditLogService->log('auth.driver_registered', null, $profile, [], [
                 'user_id' => $user->getKey(),
                 'application_status' => ApplicationStatus::Pending->value,
@@ -140,6 +143,7 @@ class RegistrationService
 
             $this->rbacService->syncUserRole($user);
             $this->notificationService->sendAccountCreated($user, ApplicationStatus::Pending->value);
+            $this->emailVerificationService->sendVerificationCode($user);
             $this->auditLogService->log('auth.fleet_registered', null, $fleet, [], [
                 'user_id' => $user->getKey(),
                 'application_status' => ApplicationStatus::Pending->value,
@@ -163,6 +167,7 @@ class RegistrationService
 
             $this->rbacService->syncUserRole($user);
             $this->notificationService->sendAccountCreated($user);
+            $this->emailVerificationService->sendVerificationCode($user);
             $this->auditLogService->log('auth.customer_registered', null, $user, [], [
                 'user_id' => $user->getKey(),
             ]);

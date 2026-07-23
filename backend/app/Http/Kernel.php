@@ -13,6 +13,7 @@ use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
+use Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks;
 use Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance;
 use Illuminate\Foundation\Http\Middleware\TrimStrings;
 use Illuminate\Foundation\Http\Middleware\ValidatePostSize;
@@ -35,6 +36,13 @@ class Kernel extends HttpKernel
         ValidatePostSize::class,
         TrimStrings::class,
         ConvertEmptyStringsToNull::class,
+        // Invokes defer()'d callbacks after the response is sent. Without this,
+        // every NotificationService::sendAfterResponse() call (account created,
+        // password reset code, email verification code) silently never fires,
+        // because Laravel only runs a deferred callback's owning middleware's
+        // terminate() hook, and this app defines its own Kernel middleware
+        // list instead of the framework's default bootstrap/app.php stack.
+        InvokeDeferredCallbacks::class,
     ];
 
     protected $middlewareGroups = [

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Notifications\AccountCreatedNotification;
+use App\Notifications\EmailVerificationCodeNotification;
 use App\Notifications\PasswordResetCodeNotification;
 use App\Notifications\PasswordResetSuccessfulNotification;
 use Carbon\CarbonInterface;
@@ -37,6 +38,15 @@ class NotificationService
             $user,
             new PasswordResetSuccessfulNotification(),
             'password_reset_successful'
+        );
+    }
+
+    public function sendEmailVerificationCode(User $user, string $code, CarbonInterface $expiresAt): void
+    {
+        $this->sendAfterResponse(
+            $user,
+            new EmailVerificationCodeNotification($code, $expiresAt),
+            'email_verification_code'
         );
     }
 

@@ -12,4 +12,5 @@
 /storage/framework/testing/*
 /storage/framework/views/*
 /storage/logs/*
+.phpunit.result.cache
 AGENTS.md

@@ -32,10 +32,13 @@ Register these aliases in Laravel 10 `app/Http/Kernel.php` or Laravel 11 `bootst
 
 - `jwt.auth` => `App\Http\Middleware\JwtAuthMiddleware`
 - `active` => `App\Http\Middleware\EnsureUserIsActive`
+- `verified` => `Illuminate\Auth\Middleware\EnsureEmailIsVerified` (works because `User` implements `MustVerifyEmail`; gates `customer`, `driver`, and `fleet` route groups on `email_verified_at`)
 - `role` => `App\Http\Middleware\RoleMiddleware`
 - `permission` => `App\Http\Middleware\PermissionMiddleware`
 - `approved.driver` => `App\Http\Middleware\EnsureDriverIsApproved`
 - `approved.fleet` => `App\Http\Middleware\EnsureFleetIsApproved`
+
+Global middleware must also include `Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks` (in `App\Http\Kernel::$middleware`). Every `NotificationService::sendAfterResponse()` call (account created, password reset code, email verification code) uses `defer()`; without this middleware registered, `defer()` callbacks are silently never invoked and no email is ever sent.
 
 ## Public Endpoints
 
@@ -162,10 +165,26 @@ All require `Authorization: Bearer <access_token>`.
 - `POST /api/v1/auth/refresh`
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/change-password`
+- `POST /api/v1/auth/email/verify`
+- `POST /api/v1/auth/email/resend`
 
 Refresh deletes the current Sanctum token and issues a new one.
 
 Change password required JSON fields: `current_password`, `password`, `password_confirmation`.
+
+### Email verification
+
+Every public registration path (`register`, `register/customer`, `register/driver`, `register/fleet`) sends a hashed 6-digit code by email via `EmailVerificationService::sendVerificationCode()` right after account creation. Login is never blocked by verification status, but the `customer`, `driver`, and `fleet` route groups carry the `verified` middleware, so an unverified account gets `403 {"message": "Your email address is not verified."}` from any of those routes until it verifies.
+
+`POST /api/v1/auth/email/verify`
+
+Required JSON fields: `code` (6 digits).
+
+Returns `data.email_verified: true` on success. Codes expire after 15 minutes and lock out after 5 wrong attempts (`422 {"message": "Invalid or expired verification code."}`).
+
+`POST /api/v1/auth/email/resend`
+
+No body required. Throttled to 5 requests/minute and rejected with `422` if the account is already verified or a code was sent within the last 60 seconds.
 
 ## Customer Trip Matching Endpoints
 

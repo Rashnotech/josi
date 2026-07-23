@@ -11,6 +11,7 @@ class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String verifyResetCode = '/verify-reset-code';
   static const String resetPassword = '/reset-password';
+  static const String verifyEmail = '/verify-email';
   static const String editProfile = '/edit-profile';
   static const String fleetDashboard = '/fleet/dashboard';
 
@@ -64,6 +65,8 @@ class AppRoutes {
   static String loginFor(String role) => '$login?role=$role';
 
   static String forgotPasswordFor(String role) => '$forgotPassword?role=$role';
+
+  static String verifyEmailFor(String role) => '$verifyEmail?role=$role';
 
   static String verifyResetCodeFor(String role, {String? identity}) {
     final Map<String, String> query = <String, String>{'role': role};

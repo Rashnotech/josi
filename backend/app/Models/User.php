@@ -7,6 +7,8 @@ use App\Enums\UserStatus;
 use App\Support\Filament\DashboardAccess;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailNotifications;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -15,11 +17,12 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
     use HasApiTokens;
     use HasFactory;
     use HasRoles;
+    use MustVerifyEmailNotifications;
     use Notifiable;
 
     protected $fillable = [
@@ -33,6 +36,10 @@ class User extends Authenticatable implements FilamentUser
         'email_verified_at',
         'phone_verified_at',
         'last_login_at',
+        'email_verification_code',
+        'email_verification_code_expires_at',
+        'email_verification_code_attempts',
+        'email_verification_sent_at',
         'password_reset_code',
         'password_reset_code_expires_at',
         'password_reset_verified_at',
@@ -44,6 +51,7 @@ class User extends Authenticatable implements FilamentUser
     protected $hidden = [
         'password',
         'remember_token',
+        'email_verification_code',
         'password_reset_code',
         'password_reset_token',
     ];
@@ -57,10 +65,23 @@ class User extends Authenticatable implements FilamentUser
             'password' => 'hashed',
             'role' => UserRole::class,
             'status' => UserStatus::class,
+            'email_verification_code_expires_at' => 'datetime',
+            'email_verification_sent_at' => 'datetime',
             'password_reset_code_expires_at' => 'datetime',
             'password_reset_verified_at' => 'datetime',
             'password_reset_sent_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The app sends its own OTP-based verification code (EmailVerificationService)
+     * right after registration and via /auth/email/resend. Laravel's default
+     * signed-link notification is unused, so this is a deliberate no-op rather
+     * than the inherited MustVerifyEmail behavior.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        //
     }
 
     public function riderProfile(): HasOne

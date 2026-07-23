@@ -40,4 +40,55 @@ void main() {
       expect(kMinPasswordLength, 8);
     });
   });
+
+  group('validatePhoneNumber', () {
+    test('rejects an empty phone number', () {
+      expect(validatePhoneNumber(''), 'Phone number is required.');
+    });
+
+    test('rejects a 10-digit number missing the leading 0', () {
+      // This is the exact bug: a 10-digit number was previously accepted.
+      expect(
+        validatePhoneNumber('8012345678'),
+        'Enter an 11-digit phone number (e.g. 08012345678).',
+      );
+    });
+
+    test('rejects a 9-digit or 12-digit local-looking number', () {
+      expect(
+        validatePhoneNumber('080123456'),
+        'Enter an 11-digit phone number (e.g. 08012345678).',
+      );
+      expect(
+        validatePhoneNumber('080123456789'),
+        'Enter an 11-digit phone number (e.g. 08012345678).',
+      );
+    });
+
+    test('accepts a well-formed 11-digit local number', () {
+      expect(validatePhoneNumber('08012345678'), isNull);
+    });
+
+    test('accepts formatted local numbers with spaces or dashes', () {
+      expect(validatePhoneNumber('0801 234 5678'), isNull);
+      expect(validatePhoneNumber('0801-234-5678'), isNull);
+    });
+
+    test('accepts the +234 international equivalent', () {
+      expect(validatePhoneNumber('+2348012345678'), isNull);
+      expect(validatePhoneNumber('2348012345678'), isNull);
+      expect(validatePhoneNumber('+234 801 234 5678'), isNull);
+    });
+
+    test('rejects other country codes and garbage input', () {
+      expect(
+        validatePhoneNumber('+15551234567'),
+        'Enter an 11-digit phone number (e.g. 08012345678).',
+      );
+      expect(
+        validatePhoneNumber('not a phone number'),
+        'Enter an 11-digit phone number (e.g. 08012345678).',
+      );
+    });
+  });
 }

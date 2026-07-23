@@ -422,8 +422,9 @@ class _CustomerRegistrationScreenState
     } else if (!_isValidEmail(email)) {
       errors['email'] = 'Enter a valid email address.';
     }
-    if (phone.isEmpty) {
-      errors['phone'] = 'Phone number is required.';
+    final String? phoneError = validatePhoneNumber(phone);
+    if (phoneError != null) {
+      errors['phone'] = phoneError;
     }
     if (password.isEmpty) {
       errors['password'] = 'Password is required.';
@@ -497,7 +498,7 @@ class _CustomerRegistrationScreenState
         const SizedBox(height: 12),
         _SignupTextField(
           label: 'Phone Number',
-          hintText: '+1 (555) 000-0000',
+          hintText: '08012345678',
           controller: _phoneController,
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
@@ -614,8 +615,9 @@ class _RiderRegistrationScreenState
     } else if (!_isValidEmail(email)) {
       errors['email'] = 'Enter a valid email address.';
     }
-    if (phone.isEmpty) {
-      errors['phone'] = 'Phone number is required.';
+    final String? phoneError = validatePhoneNumber(phone);
+    if (phoneError != null) {
+      errors['phone'] = phoneError;
     }
     if (password.isEmpty) {
       errors['password'] = 'Password is required.';
@@ -696,7 +698,7 @@ class _RiderRegistrationScreenState
         const SizedBox(height: 6),
         _SignupTextField(
           label: 'Phone Number',
-          hintText: '+1 (555) 000-0000',
+          hintText: '08012345678',
           controller: _phoneController,
           filled: false,
           borderColor: const Color(0xFF536178),
@@ -1669,6 +1671,140 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             isPrimary: false,
             onPressed: () => context.go(AppRoutes.loginFor(widget.role)),
           ),
+        ],
+      ],
+    );
+  }
+}
+
+class VerifyEmailScreen extends ConsumerStatefulWidget {
+  const VerifyEmailScreen({
+    super.key,
+    this.role = 'customer',
+  });
+
+  final String role;
+
+  @override
+  ConsumerState<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
+}
+
+class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
+  late final List<TextEditingController> _codeControllers =
+      List<TextEditingController>.generate(
+    6,
+    (_) => TextEditingController(),
+  );
+  String? _localError;
+
+  @override
+  void dispose() {
+    for (final TextEditingController controller in _codeControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final String code =
+        _codeControllers.map((TextEditingController item) => item.text).join();
+    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+      setState(() => _localError = 'Enter the 6-digit code sent to your email.');
+      return;
+    }
+
+    setState(() => _localError = null);
+    await ref.read(authControllerProvider.notifier).verifyEmail(code);
+    if (!mounted) {
+      return;
+    }
+
+    final AuthSession session = ref.read(authControllerProvider);
+    final JosiUser? user = session.user;
+    if (user != null && user.emailVerified) {
+      _routeToHome(user);
+    }
+  }
+
+  Future<void> _resend() async {
+    setState(() => _localError = null);
+    await ref.read(authControllerProvider.notifier).resendEmailVerification();
+  }
+
+  void _routeToHome(JosiUser user) {
+    if (user.role == AppRole.fleetOwner) {
+      context.go(AppRoutes.fleetDashboard);
+      return;
+    }
+    if (user.role == AppRole.rider) {
+      context.go(
+          user.applicationStatus == RiderApplicationStatus.approved
+              ? AppRoutes.riderHome
+              : AppRoutes.riderEntry);
+      return;
+    }
+    context.go(AppRoutes.customerHome);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AuthSession session = ref.watch(authControllerProvider);
+    final String? errorMessage = _localError ?? session.errorMessage;
+
+    return _RecoveryScaffold(
+      screenKey: const ValueKey<String>('verify-email-screen'),
+      title: 'Verify Your Email',
+      subtitle:
+          'Enter the 6-digit code we sent to your email to unlock your account.',
+      onBack: () async {
+        await ref.read(authControllerProvider.notifier).signOut();
+        if (context.mounted) {
+          context.go(AppRoutes.roleSelection);
+        }
+      },
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            for (int index = 0; index < 6; index++) ...<Widget>[
+              Expanded(
+                child: _OtpCodeField(
+                  index: index,
+                  controller: _codeControllers[index],
+                ),
+              ),
+              if (index < 5) const SizedBox(width: 8),
+            ],
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            TextButton(
+              onPressed: session.isLoading ? null : _resend,
+              child: const Text('Resend code'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _RecoveryButton(
+          key: const ValueKey<String>('verify-email-button'),
+          label: 'VERIFY',
+          isLoading: session.isLoading,
+          onPressed: _submit,
+        ),
+        if (errorMessage != null) ...<Widget>[
+          const SizedBox(height: 16),
+          _RecoveryStatusCard(
+            message: errorMessage,
+            icon: Icons.error_outline_rounded,
+            foregroundColor: JosiColors.redDark,
+            backgroundColor: JosiColors.redSoft,
+          ),
+        ],
+        if (errorMessage == null && session.successMessage != null) ...<Widget>[
+          const SizedBox(height: 16),
+          _RecoveryStatusCard(message: session.successMessage!),
         ],
       ],
     );

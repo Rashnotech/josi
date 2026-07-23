@@ -28,6 +28,7 @@ class JosiUser {
     this.firstName,
     this.lastName,
     this.gender,
+    this.emailVerified = true,
   });
 
   final String id;
@@ -41,6 +42,13 @@ class JosiUser {
   final String? lastName;
   final String? gender;
 
+  /// Whether the account has completed OTP-based email verification.
+  /// Defaults to `true` for mocks/fixtures that don't model verification;
+  /// real API responses always send this explicitly (see
+  /// `AuthRepository.userFromPayload`), where a missing value is treated
+  /// as unverified (fail closed).
+  final bool emailVerified;
+
   String get displayName {
     final String trimmedName = name.trim();
     if (trimmedName.isNotEmpty) {
@@ -52,6 +60,22 @@ class JosiUser {
         .map((String value) => value.trim())
         .where((String value) => value.isNotEmpty)
         .join(' ');
+  }
+
+  JosiUser copyWith({bool? emailVerified}) {
+    return JosiUser(
+      id: id,
+      name: name,
+      email: email,
+      phone: phone,
+      role: role,
+      applicationStatus: applicationStatus,
+      city: city,
+      firstName: firstName,
+      lastName: lastName,
+      gender: gender,
+      emailVerified: emailVerified ?? this.emailVerified,
+    );
   }
 
   String get greetingName {

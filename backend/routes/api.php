@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\DriverProfileController;
 use App\Http\Controllers\Api\V1\DriverTripController;
 use App\Http\Controllers\Api\V1\DriverWalletController;
 use App\Http\Controllers\Api\V1\DriverRegistrationController;
+use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\FleetProfileController;
 use App\Http\Controllers\Api\V1\FleetRegistrationController;
 use App\Http\Controllers\Api\V1\ForgotPasswordController;
@@ -33,10 +34,12 @@ Route::prefix('v1')->group(function () {
             Route::post('/refresh', [AuthController::class, 'refresh']);
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/change-password', [AuthController::class, 'changePassword']);
+            Route::post('/email/verify', [EmailVerificationController::class, 'verify']);
+            Route::post('/email/resend', [EmailVerificationController::class, 'resend'])->middleware('throttle:5,1');
         });
     });
 
-    Route::prefix('driver')->middleware(['jwt.auth', 'active', 'role:rider,courier,driver'])->group(function () {
+    Route::prefix('driver')->middleware(['jwt.auth', 'active', 'verified', 'role:rider,courier,driver'])->group(function () {
         Route::get('/profile', [DriverProfileController::class, 'profile']);
         Route::put('/profile', [DriverProfileController::class, 'update'])->middleware('permission:update_profile');
         Route::get('/application-status', [DriverProfileController::class, 'applicationStatus'])->middleware('permission:view_application_status');
@@ -55,7 +58,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/documents', [DriverProfileController::class, 'documents'])->middleware('permission:upload_documents');
     });
 
-    Route::prefix('fleet')->middleware(['jwt.auth', 'active', 'role:pack_owner,fleet_owner'])->group(function () {
+    Route::prefix('fleet')->middleware(['jwt.auth', 'active', 'verified', 'role:pack_owner,fleet_owner'])->group(function () {
         Route::get('/profile', [FleetProfileController::class, 'profile']);
         Route::put('/profile', [FleetProfileController::class, 'update'])->middleware('permission:update_own_fleet');
         Route::get('/application-status', [FleetProfileController::class, 'applicationStatus'])->middleware('permission:view_fleet_application_status');
@@ -65,7 +68,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/documents', [FleetProfileController::class, 'documents'])->middleware('permission:upload_fleet_documents');
     });
 
-    Route::prefix('customer')->middleware(['jwt.auth', 'active', 'role:customer'])->group(function () {
+    Route::prefix('customer')->middleware(['jwt.auth', 'active', 'verified', 'role:customer'])->group(function () {
         Route::get('/profile', [CustomerProfileController::class, 'profile']);
         Route::put('/profile', [CustomerProfileController::class, 'update'])->middleware('permission:update_profile');
         Route::get('/addresses', [CustomerAddressController::class, 'index'])->middleware('permission:view_profile');

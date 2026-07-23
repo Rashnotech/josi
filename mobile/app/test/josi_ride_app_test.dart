@@ -169,6 +169,59 @@ void main() {
     expect(find.byKey(const ValueKey<String>('login-screen')), findsOneWidget);
   });
 
+  testWidgets(
+      'unverified customer is gated to verify-email screen instead of home',
+      (WidgetTester tester) async {
+    await _pumpApp(tester,
+        authRepository: const _UnverifiedCustomerAuthRepository());
+    await _finishSplash(tester);
+
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'customer@josi.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Password123!');
+    await tester.tap(find.byKey(const ValueKey<String>('login-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('verify-email-screen')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-home-screen')),
+        findsNothing);
+    expect(find.text('Verify Your Email'), findsOneWidget);
+
+    // Wrong code: stays gated, no navigation.
+    for (int index = 0; index < 6; index += 1) {
+      await tester.enterText(
+          find.byKey(ValueKey<String>('otp-$index')), '9');
+    }
+    await tester
+        .tap(find.byKey(const ValueKey<String>('verify-email-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Invalid or expired verification code.'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('verify-email-screen')), findsOneWidget);
+
+    // Correct code: unlocks the gate and reaches customer home.
+    const String correctCode = '123456';
+    for (int index = 0; index < 6; index += 1) {
+      await tester.enterText(
+          find.byKey(ValueKey<String>('otp-$index')), correctCode[index]);
+    }
+    await tester
+        .tap(find.byKey(const ValueKey<String>('verify-email-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-home-screen')),
+        findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('verify-email-screen')), findsNothing);
+  });
+
   testWidgets('customer home map fills screen and where to sheet drags up',
       (WidgetTester tester) async {
     int locationCalls = 0;
@@ -1045,6 +1098,38 @@ void main() {
     expect(find.text('Where to?'), findsOneWidget);
   });
 
+  testWidgets(
+      'customer registration rejects a 10-digit phone number missing the leading 0',
+      (WidgetTester tester) async {
+    await _pumpApp(tester,
+        authRepository: const _NeverRegisterAuthRepository());
+    await _finishSplash(tester);
+
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'Abdulrasheed Aliyu');
+    await tester.enterText(find.byType(TextField).at(1), 'abdul@example.com');
+    // 10 digits, missing the leading 0 — this is the reported bug.
+    await tester.enterText(find.byType(TextField).at(2), '8012345678');
+    await tester.enterText(find.byType(TextField).at(3), 'Password123!');
+    await tester.enterText(find.byType(TextField).at(4), 'Password123!');
+    await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('customer-sign-up-button')));
+    await tester
+        .tap(find.byKey(const ValueKey<String>('customer-sign-up-button')));
+    await tester.pump();
+
+    expect(find.text('Enter an 11-digit phone number (e.g. 08012345678).'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-register-screen')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('customer-home-screen')),
+        findsNothing);
+  });
+
   testWidgets('forgot password flow uses redline recovery screens',
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
@@ -1844,6 +1929,25 @@ class _FakeAuthRepository extends AuthRepository {
   }
 
   @override
+  Future<void> verifyEmail({required String code}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    if (code != '123456') {
+      throw const ApiException(
+        'Invalid or expired verification code.',
+        errors: <String, Object?>{
+          'code': <String>['Invalid or expired verification code.'],
+        },
+      );
+    }
+  }
+
+  @override
+  Future<String> resendEmailVerification() async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return 'Verification code sent.';
+  }
+
+  @override
   Future<void> signOut() async {}
 }
 
@@ -1862,12 +1966,63 @@ class _NeverSignInAuthRepository extends _FakeAuthRepository {
   }
 }
 
+class _NeverRegisterAuthRepository extends _FakeAuthRepository {
+  const _NeverRegisterAuthRepository();
+
+  @override
+  Future<AuthResult> registerCustomer({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    throw StateError(
+      'registerCustomer must not be called when client-side validation fails.',
+    );
+  }
+
+  @override
+  Future<AuthResult> registerRider({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    required String passwordConfirmation,
+    String role = 'rider',
+  }) async {
+    throw StateError(
+      'registerRider must not be called when client-side validation fails.',
+    );
+  }
+}
+
 class _RestoreTimeoutAuthRepository extends _FakeAuthRepository {
   const _RestoreTimeoutAuthRepository();
 
   @override
   Future<JosiUser?> restoreSession() async {
     throw const ApiException('The request timed out. Please try again.');
+  }
+}
+
+class _UnverifiedCustomerAuthRepository extends _FakeAuthRepository {
+  const _UnverifiedCustomerAuthRepository();
+
+  static final JosiUser _unverifiedCustomer =
+      JosiMockData.customer.copyWith(emailVerified: false);
+
+  @override
+  Future<AuthResult> signIn({
+    required String identity,
+    required String password,
+    String role = 'customer',
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return AuthResult.authenticated(
+      _unverifiedCustomer,
+      message: 'Login successful',
+    );
   }
 }
 

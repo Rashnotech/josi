@@ -132,12 +132,29 @@ The backend now has a Laravel runtime and local Composer dependencies. Run Artis
 powershell -ExecutionPolicy Bypass -File tests\Architecture\CoreBackendFoundationTest.ps1
 powershell -ExecutionPolicy Bypass -File tests\Architecture\AuthApiFoundationTest.ps1
 powershell -ExecutionPolicy Bypass -File tests\Architecture\DatabaseSetupTest.ps1
+powershell -ExecutionPolicy Bypass -File tests\Architecture\EmailVerificationContractTest.ps1
 powershell -ExecutionPolicy Bypass -File evals\CoreBackendBusinessRulesEval.ps1
 powershell -ExecutionPolicy Bypass -File evals\AuthSecurityBusinessRulesEval.ps1
 powershell -ExecutionPolicy Bypass -File evals\DatabaseOperationalReadinessEval.ps1
 ```
 
-Add PHPUnit or Pest tests next for migrations, model relationships, service transitions, pricing failures, and cash ledger creation.
+### PHPUnit
+
+Real (non-static) feature tests run against an isolated `josi_db_testing` MySQL database, never the local dev `josi_db`. One-time setup:
+
+```powershell
+# Create the isolated test database (same credentials as .env)
+.tools\php83\php.exe artisan tinker --execute="DB::statement('CREATE DATABASE IF NOT EXISTS josi_db_testing');"
+# Copy .env to .env.testing and change DB_DATABASE to josi_db_testing, APP_ENV=testing, MAIL_MAILER=array
+```
+
+Then run:
+
+```powershell
+vendor\bin\phpunit
+```
+
+`tests/Feature/EmailVerificationTest.php` exercises the full registration -> code issuance -> verify/resend -> route-gating flow over real HTTP requests (`RefreshDatabase` migrates and rolls back `josi_db_testing` per test).
 
 ## Auth API
 

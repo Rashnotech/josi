@@ -63,6 +63,13 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         }
       }
 
+      if (user != null &&
+          !user.emailVerified &&
+          (isCustomerRoute || isRiderRoute)) {
+        return AppRoutes.verifyEmailFor(
+            user.role == AppRole.rider ? 'rider' : 'customer');
+      }
+
       if (isCustomerAuthRoute && user?.role == AppRole.customer) {
         return AppRoutes.customerHome;
       }
@@ -124,6 +131,12 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
           role: state.uri.queryParameters['role'] ?? 'customer',
           emailOrPhone: state.uri.queryParameters['identity'] ?? '',
           code: state.uri.queryParameters['code'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.verifyEmail,
+        builder: (BuildContext context, GoRouterState state) => VerifyEmailScreen(
+          role: state.uri.queryParameters['role'] ?? 'customer',
         ),
       ),
       GoRoute(

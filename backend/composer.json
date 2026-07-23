@@ -12,6 +12,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "mockery/mockery": "*",
         "nunomaduro/collision": "^8.0",
         "phpunit/phpunit": "^11.5"
     },

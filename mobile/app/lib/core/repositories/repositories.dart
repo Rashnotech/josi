@@ -259,6 +259,43 @@ class AuthRepository {
     return message.isEmpty ? 'Password updated successfully.' : message;
   }
 
+  Future<void> verifyEmail({required String code}) async {
+    if (!_api.isConfigured) {
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
+    }
+
+    final String? token = await _tokens.readToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Please sign in again to continue.');
+    }
+
+    await _api.post(
+      '/auth/email/verify',
+      token: token,
+      body: <String, Object?>{'code': code},
+    );
+  }
+
+  Future<String> resendEmailVerification() async {
+    if (!_api.isConfigured) {
+      throw const ApiException(
+          'Josi API is not configured. Please set JOSI_API_BASE_URL.');
+    }
+
+    final String? token = await _tokens.readToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Please sign in again to continue.');
+    }
+
+    final Map<String, Object?> envelope = await _api.post(
+      '/auth/email/resend',
+      token: token,
+    );
+    final String message = ApiClient.messageFromEnvelope(envelope);
+    return message.isEmpty ? 'Verification code sent.' : message;
+  }
+
   Future<void> signOut() async {
     final String? token = await _tokens.readToken();
     await _tokens.clearToken();
@@ -370,6 +407,9 @@ class AuthRepository {
       ),
       city: _string(user['city']) ?? _string(profile?['city']) ?? 'Abuja',
       gender: _string(user['gender']) ?? _string(profile?['gender']),
+      // Fail closed: an API response that omits this field is treated as
+      // unverified rather than silently granting access to primary features.
+      emailVerified: _bool(user['email_verified']) ?? false,
     );
   }
 
@@ -426,6 +466,21 @@ class AuthRepository {
 
     final String stringValue = '$value'.trim();
     return stringValue.isEmpty ? null : stringValue;
+  }
+
+  static bool? _bool(Object? value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    final String? stringValue = _string(value)?.toLowerCase();
+    return switch (stringValue) {
+      'true' || '1' || 'yes' => true,
+      'false' || '0' || 'no' => false,
+      _ => null,
+    };
   }
 }
 

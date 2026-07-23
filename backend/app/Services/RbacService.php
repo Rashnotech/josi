@@ -180,6 +180,7 @@ class RbacService
             'gender' => $user->gender,
             'role' => $this->roleValue($user),
             'status' => $this->enumValue($user->status),
+            'email_verified' => $user->hasVerifiedEmail(),
             'last_login_at' => $user->last_login_at?->toISOString(),
             'created_at' => $user->created_at?->toISOString(),
         ];

@@ -163,6 +163,38 @@ class AuthController extends StateNotifier<AuthSession> {
     }
   }
 
+  Future<void> verifyEmail(String code) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      await _repository.verifyEmail(code: code);
+      final JosiUser? currentUser = state.user;
+      state = AuthSession(
+        isLoading: false,
+        user: currentUser?.copyWith(emailVerified: true),
+        successMessage: 'Email verified successfully.',
+      );
+    } on Object catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: _friendlyError(error, 'Invalid or expired code.'),
+        fieldErrors: _fieldErrors(error),
+      );
+    }
+  }
+
+  Future<void> resendEmailVerification() async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final String message = await _repository.resendEmailVerification();
+      state = state.copyWith(isLoading: false, successMessage: message);
+    } on Object catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: _friendlyError(error, 'Unable to send verification code.'),
+      );
+    }
+  }
+
   Future<void> signOut() async {
     await _repository.signOut();
     state = const AuthSession.guest();
