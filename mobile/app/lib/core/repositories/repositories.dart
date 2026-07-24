@@ -743,6 +743,8 @@ class CustomerRepository {
       address: _string(payload['address']) ?? '',
       floor: _string(payload['floor']),
       landmark: _string(payload['landmark']),
+      latitude: _amount(payload['latitude']),
+      longitude: _amount(payload['longitude']),
     );
   }
 

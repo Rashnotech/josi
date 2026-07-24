@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geocoding/geocoding.dart' show Location;
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:josi_ride/core/constants/app_routes.dart';
 import 'package:josi_ride/core/location/location_providers.dart';
@@ -1262,9 +1264,7 @@ void main() {
         52);
     _expectCustomerNavLabelColor(tester, 'Rider', JosiColors.red);
 
-    await tester
-        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
-    await tester.pumpAndSettle();
+    await _confirmDestinationAndPay(tester);
 
     expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
         findsOneWidget);
@@ -1470,9 +1470,7 @@ void main() {
 
     await tester.tap(find.text('Rider').last);
     await tester.pumpAndSettle();
-    await tester
-        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
-    await tester.pumpAndSettle();
+    await _confirmDestinationAndPay(tester);
 
     expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
         findsOneWidget);
@@ -1541,13 +1539,136 @@ void main() {
     expect(find.text('Confirm'), findsOneWidget);
     _expectCustomerNavLabelColor(tester, 'Rider', JosiColors.red);
 
-    await tester
-        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
-    await tester.pumpAndSettle();
+    await _confirmDestinationAndPay(tester);
 
     expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
         findsOneWidget);
     expect(find.text('Ride Found'), findsOneWidget);
+  });
+
+  testWidgets('tapping the map moves the pickup marker to the tapped position',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(find.text('Rider').last);
+    await tester.pumpAndSettle();
+
+    JosiGoogleMap mapWidget() => tester.widget<JosiGoogleMap>(
+        find.byKey(const ValueKey<String>('customer-select-location-map')));
+
+    Marker pickupMarker() => mapWidget()
+        .markers
+        .firstWhere((Marker marker) => marker.markerId.value == 'pickup');
+
+    final LatLng initialPickup = pickupMarker().position;
+
+    await tester.tapAt(const Offset(80, 220));
+    await tester.pumpAndSettle();
+
+    final LatLng updatedPickup = pickupMarker().position;
+    expect(updatedPickup, isNot(initialPickup));
+    expect(updatedPickup, const LatLng(9.0816, 7.4634));
+  });
+
+  testWidgets(
+      'selecting a saved address sets the destination and follows the same booking flow as manual entry',
+      (WidgetTester tester) async {
+    await _pumpApp(
+      tester,
+      customerRepository: _FakeCustomerRepository(
+        savedAddresses: const <CustomerSavedAddress>[
+          CustomerSavedAddress(
+            id: '1',
+            title: 'Office',
+            address: 'Jabi Lake Mall, Abuja',
+            latitude: 9.0816,
+            longitude: 7.4634,
+          ),
+        ],
+      ),
+    );
+    await _finishSplash(tester);
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'customer@josi.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Password123!');
+    await tester.tap(find.byKey(const ValueKey<String>('login-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Rider').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Jabi Lake Mall, Abuja'));
+    await tester.tap(find.text('Jabi Lake Mall, Abuja'));
+    await tester.pumpAndSettle();
+
+    // Selecting the saved address populates the destination field, exactly
+    // like typing or tapping the map would.
+    final TextField destinationField = tester.widget<TextField>(
+        find.byKey(const ValueKey<String>('destination-location-field')));
+    expect(destinationField.controller!.text, 'Jabi Lake Mall, Abuja');
+
+    // Same single "Confirm" -> payment -> "Confirm Payment" path as every
+    // other destination-selection method: a trip is created before payment,
+    // and the real zone-priced fare (not a hardcoded placeholder) is shown.
+    await tester
+        .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('customer-payment-methods-screen')),
+        findsOneWidget);
+    expect(find.text('To be calculated'), findsNothing);
+    expect(find.text('NGN 3500'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('confirm-payment-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-ride-found-screen')),
+        findsOneWidget);
+  });
+
+  testWidgets(
+      'selecting a saved address without coordinates falls back to geocoding the address text',
+      (WidgetTester tester) async {
+    await _pumpApp(
+      tester,
+      customerRepository: _FakeCustomerRepository(
+        savedAddresses: const <CustomerSavedAddress>[
+          CustomerSavedAddress(
+            id: '1',
+            title: 'Home',
+            address: 'Geocodable Landmark, Wuse 2',
+          ),
+        ],
+      ),
+    );
+    await _finishSplash(tester);
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'customer@josi.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Password123!');
+    await tester.tap(find.byKey(const ValueKey<String>('login-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Rider').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Geocodable Landmark, Wuse 2'));
+    await tester.tap(find.text('Geocodable Landmark, Wuse 2'));
+    await tester.pumpAndSettle();
+
+    JosiGoogleMap mapWidget() => tester.widget<JosiGoogleMap>(
+        find.byKey(const ValueKey<String>('customer-select-location-map')));
+    final Marker destinationMarker = mapWidget()
+        .markers
+        .firstWhere((Marker marker) => marker.markerId.value == 'destination');
+    expect(destinationMarker.position, const LatLng(9.0765, 7.3986));
   });
 
   testWidgets('customer profile opens editable profile form',
@@ -2248,11 +2369,14 @@ class _FakeProfilePhotoPicker implements ProfilePhotoPicker {
 }
 
 class _FakeCustomerRepository extends CustomerRepository {
-  _FakeCustomerRepository({List<Trip> trips = const <Trip>[]})
-      : _trips = List<Trip>.of(trips);
+  _FakeCustomerRepository({
+    List<Trip> trips = const <Trip>[],
+    List<CustomerSavedAddress> savedAddresses = const <CustomerSavedAddress>[],
+  })  : _trips = List<Trip>.of(trips),
+        _addresses = List<CustomerSavedAddress>.of(savedAddresses);
 
   JosiUser _profile = JosiMockData.customer;
-  final List<CustomerSavedAddress> _addresses = <CustomerSavedAddress>[];
+  final List<CustomerSavedAddress> _addresses;
   final List<Trip> _trips;
   bool _arrivalReturned = false;
 
@@ -2884,6 +3008,22 @@ Future<void> _loginAsCustomer(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Taps the destination screen's "Confirm" button, then the payment
+/// screen's "Confirm Payment" button, mirroring the one booking path every
+/// destination-selection method (typed, map tap, or saved address) now
+/// funnels through before a rider search begins.
+Future<void> _confirmDestinationAndPay(WidgetTester tester) async {
+  await tester
+      .tap(find.byKey(const ValueKey<String>('destination-confirm-button')));
+  await tester.pumpAndSettle();
+
+  expect(find.byKey(const ValueKey<String>('customer-payment-methods-screen')),
+      findsOneWidget);
+
+  await tester.tap(find.byKey(const ValueKey<String>('confirm-payment-button')));
+  await tester.pumpAndSettle();
+}
+
 Future<void> _loginAsRider(
   WidgetTester tester, {
   RiderRepository? riderRepository,
@@ -2995,6 +3135,18 @@ class _FakeReverseGeocodingService extends ReverseGeocodingService {
       return 'Jabi, Abuja, Federal Capital Territory, Nigeria';
     }
     return 'Wuse 2, Abuja, Federal Capital Territory, Nigeria';
+  }
+
+  @override
+  Future<Location?> coordinatesFromAddress(String address) async {
+    if (address == 'Geocodable Landmark, Wuse 2') {
+      return Location(
+        latitude: 9.0765,
+        longitude: 7.3986,
+        timestamp: DateTime(2026, 1, 1),
+      );
+    }
+    return null;
   }
 }
 

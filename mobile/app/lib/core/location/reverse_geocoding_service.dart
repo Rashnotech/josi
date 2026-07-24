@@ -20,6 +20,24 @@ class ReverseGeocodingService {
     }
   }
 
+  /// Forward geocoding: resolves a free-text address into coordinates.
+  ///
+  /// Used when selecting a saved address that predates coordinate capture
+  /// (older `CustomerSavedAddress` rows saved before latitude/longitude were
+  /// recorded) so the booking flow can still request a trip at a real
+  /// position instead of a stale default.
+  Future<Location?> coordinatesFromAddress(String address) async {
+    if (address.trim().isEmpty) {
+      return null;
+    }
+    try {
+      final List<Location> locations = await locationFromAddress(address);
+      return locations.isEmpty ? null : locations.first;
+    } catch (_) {
+      return null;
+    }
+  }
+
   String formatPlacemark(
     Placemark placemark, {
     String fallback = 'Selected location',

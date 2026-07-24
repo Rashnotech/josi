@@ -359,6 +359,8 @@ class CustomerSavedAddress {
     this.id,
     this.floor,
     this.landmark,
+    this.latitude,
+    this.longitude,
   });
 
   final String? id;
@@ -366,4 +368,8 @@ class CustomerSavedAddress {
   final String address;
   final String? floor;
   final String? landmark;
+  final double? latitude;
+  final double? longitude;
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 }

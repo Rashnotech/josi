@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geocoding/geocoding.dart' show Location;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 
@@ -871,6 +872,55 @@ class _CustomerSelectLocationScreenState
         );
   }
 
+  /// Selecting a saved address must set the destination the same way typing
+  /// or tapping the map does, so confirming afterwards follows the one
+  /// booking path regardless of how the destination was chosen.
+  Future<void> _selectSavedAddress(CustomerSavedAddress address) async {
+    setState(() {
+      _destinationController.text = address.address;
+      _selectingDestination = true;
+      _mapErrorMessage = null;
+      _isFetchingDestinationAddress = !address.hasCoordinates;
+    });
+    ref.read(selectedDestinationAddressProvider.notifier).state =
+        address.address;
+
+    LatLng? location = address.hasCoordinates
+        ? LatLng(address.latitude!, address.longitude!)
+        : null;
+    if (location == null) {
+      final Location? geocoded = await ref
+          .read(reverseGeocodingServiceProvider)
+          .coordinatesFromAddress(address.address);
+      if (geocoded != null) {
+        location = LatLng(geocoded.latitude, geocoded.longitude);
+      }
+    }
+    if (!mounted) {
+      return;
+    }
+
+    if (location == null) {
+      setState(() => _isFetchingDestinationAddress = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Unable to locate this address on the map. Please select it manually.'),
+          ),
+        );
+      return;
+    }
+
+    setState(() {
+      _selectedDestination = location!;
+      _isFetchingDestinationAddress = false;
+    });
+    ref.read(selectedDestinationProvider.notifier).state = location;
+    await _moveCamera(location);
+  }
+
   Future<void> _moveCamera(LatLng location) async {
     await _mapController?.animateCamera(
       CameraUpdate.newCameraPosition(MapConstants.cameraFor(location)),
@@ -979,7 +1029,10 @@ class _CustomerSelectLocationScreenState
       ref.invalidate(customerTripsProvider);
       ref.invalidate(customerRecentLocationsProvider);
       if (mounted) {
-        context.go(AppRoutes.customerSearchingRider);
+        // Payment is always requested before the rider search starts,
+        // regardless of how the destination was chosen (typed, tapped on
+        // the map, or picked from a saved address).
+        context.go(AppRoutes.customerConfirmTrip);
       }
     } on Object catch (error) {
       if (!mounted) {
@@ -1031,6 +1084,11 @@ class _CustomerSelectLocationScreenState
               isPermissionPermanentlyDenied: _isPermissionPermanentlyDenied,
               onMapCreated: (GoogleMapController controller) {
                 _mapController = controller;
+                // initialCameraPosition is only honored once, at native view
+                // creation, so if the real location resolved before this
+                // callback fired, the camera would otherwise stay stuck on
+                // the default center. Sync it explicitly here.
+                _moveCamera(_mapCenter);
                 _fitCameraAfterRoute(route.value);
               },
               onTap: _handleMapTap,
@@ -1129,6 +1187,8 @@ class _CustomerSelectLocationScreenState
                                               const EdgeInsets.only(bottom: 12),
                                           child: _RecentDestinationTile(
                                             location: address.address,
+                                            onTap: () =>
+                                                _selectSavedAddress(address),
                                           ),
                                         ),
                                       )
@@ -1931,14 +1991,18 @@ class _SavedPlacesCard extends StatelessWidget {
 }
 
 class _RecentDestinationTile extends StatelessWidget {
-  const _RecentDestinationTile({required this.location});
+  const _RecentDestinationTile({
+    required this.location,
+    required this.onTap,
+  });
 
   final String location;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return _DestinationListCard(
-      onTap: () => context.go(AppRoutes.customerConfirmTrip),
+      onTap: onTap,
       child: Row(
         children: <Widget>[
           const Icon(Icons.history_rounded, color: JosiColors.muted, size: 25),
@@ -2269,6 +2333,12 @@ class _ConfirmTripSummaryCard extends ConsumerWidget {
     final String destinationAddress =
         ref.watch(selectedDestinationAddressProvider);
     final AsyncValue<RouteDetails> route = ref.watch(selectedTripRouteProvider);
+    // The zone-priced fare only exists once the trip has been created
+    // (PricingService::quote() against the zone tables runs server-side at
+    // request time); there is no separate quote endpoint, so this screen
+    // reads it from the trip requestTrip() already produced.
+    final Trip? activeTrip = ref.watch(activeCustomerTripProvider);
+    final String fareLabel = activeTrip?.fare ?? 'To be calculated';
 
     return Container(
       key: const ValueKey<String>('confirm-trip-summary-card'),
@@ -2302,9 +2372,9 @@ class _ConfirmTripSummaryCard extends ConsumerWidget {
                   duration: details.durationLabel,
                 ),
                 const SizedBox(height: 10),
-                const _RouteStat(
+                _RouteStat(
                   label: 'Estimated fare',
-                  value: 'To be calculated',
+                  value: fareLabel,
                   icon: Icons.payments_rounded,
                 ),
               ],
