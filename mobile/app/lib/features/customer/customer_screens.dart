@@ -116,7 +116,8 @@ class _HomeHeader extends StatelessWidget {
     return Row(
       children: <Widget>[
         _SoftIconButton(
-          onTap: () {},
+          key: const ValueKey<String>('customer-home-menu-button'),
+          onTap: () => context.go(AppRoutes.customerProfile),
           child:
               const Icon(Icons.menu_rounded, color: JosiColors.red, size: 18),
         ),
@@ -134,6 +135,7 @@ class _HomeHeader extends StatelessWidget {
           ),
         ),
         _SoftIconButton(
+          key: const ValueKey<String>('customer-home-notifications-button'),
           onTap: onNotifications,
           child: const _AssetIcon(
             asset: AppAssets.notification,
@@ -459,8 +461,8 @@ class _WhereToPanel extends StatelessWidget {
               Expanded(
                 child: _HomePlaceTile(
                   key: const ValueKey<String>('home-destination-tile'),
-                  title: 'Destination',
-                  subtitle: 'Enter Destination',
+                  title: 'Book a Ride',
+                  subtitle: 'Where are you going?',
                   asset: AppAssets.location,
                   isPrimary: true,
                   onTap: () => context.go(
@@ -2049,6 +2051,7 @@ class _SoftIconButton extends StatelessWidget {
   const _SoftIconButton({
     required this.child,
     required this.onTap,
+    super.key,
   });
 
   final Widget child;

@@ -11,7 +11,7 @@ import '../../core/services/api_client.dart';
 import '../../core/theme/josi_colors.dart';
 import '../../core/widgets/app_components.dart';
 
-class NotificationsScreen extends ConsumerWidget {
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({
     required this.role,
     super.key,
@@ -20,27 +20,54 @@ class NotificationsScreen extends ConsumerWidget {
   final AppNavRole role;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationsScreen> createState() =>
+      _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  String _selectedFilter = 'All';
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> filters = widget.role == AppNavRole.customer
+        ? const <String>['All', 'Trips']
+        : const <String>['All', 'Trips', 'Wallet', 'Rider'];
+
     final AsyncValue<List<JosiNotification>> notifications =
-        ref.watch(notificationsProvider);
+        widget.role == AppNavRole.customer
+            ? ref
+                .watch(customerTripsProvider)
+                .whenData(_notificationsFromCustomerTrips)
+            : ref.watch(notificationsProvider);
 
     return AppScaffold(
       title: 'Notifications',
       subtitle: 'Trips, wallet, and account updates',
-      navRole: role,
+      navRole: widget.role,
       selectedTab: 'notifications',
       child: AppScreenBody(
         children: <Widget>[
-          const _FilterRow(
-              filters: <String>['All', 'Trips', 'Wallet', 'Rider']),
+          _FilterRow(
+            filters: filters,
+            selected: _selectedFilter,
+            onSelected: (String filter) =>
+                setState(() => _selectedFilter = filter),
+          ),
           const SizedBox(height: 14),
           notifications.when(
-            data: (List<JosiNotification> values) => values.isEmpty
-                ? const EmptyState(
-                    title: 'No notifications',
-                    message: 'New updates will appear here.')
-                : Column(
-                    children: values
+            data: (List<JosiNotification> values) {
+              final List<JosiNotification> filtered = _selectedFilter == 'All'
+                  ? values
+                  : values
+                      .where(
+                          (JosiNotification item) => item.type == _selectedFilter)
+                      .toList();
+              return filtered.isEmpty
+                  ? const EmptyState(
+                      title: 'No notifications',
+                      message: 'New updates will appear here.')
+                  : Column(
+                      children: filtered
                         .map(
                           (JosiNotification notification) => Padding(
                             padding: const EdgeInsets.only(bottom: 10),
@@ -105,7 +132,8 @@ class NotificationsScreen extends ConsumerWidget {
                           ),
                         )
                         .toList(),
-                  ),
+                    );
+            },
             error: (Object error, StackTrace stackTrace) => const ErrorState(
                 title: 'Notifications unavailable',
                 message: 'Please try again later.'),
@@ -1239,9 +1267,15 @@ class _SharedAssetIcon extends StatelessWidget {
 }
 
 class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.filters});
+  const _FilterRow({
+    required this.filters,
+    required this.selected,
+    required this.onSelected,
+  });
 
   final List<String> filters;
+  final String selected;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1253,8 +1287,10 @@ class _FilterRow extends StatelessWidget {
               (String label) => Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: FilterChip(
-                  selected: label == 'All',
-                  onSelected: (bool value) {},
+                  key: ValueKey<String>(
+                      'notification-filter-${label.toLowerCase()}'),
+                  selected: label == selected,
+                  onSelected: (bool value) => onSelected(label),
                   label: Text(label),
                 ),
               ),
@@ -1264,6 +1300,42 @@ class _FilterRow extends StatelessWidget {
     );
   }
 }
+
+List<JosiNotification> _notificationsFromCustomerTrips(List<Trip> trips) {
+  final List<Trip> relevant = trips
+      .where((Trip trip) =>
+          trip.status == TripStatus.completed ||
+          trip.status == TripStatus.cancelled)
+      .toList()
+    ..sort((Trip a, Trip b) {
+      final DateTime? aTime = a.completedAt ?? a.cancelledAt ?? a.requestedAt;
+      final DateTime? bTime = b.completedAt ?? b.cancelledAt ?? b.requestedAt;
+      if (aTime == null || bTime == null) {
+        return 0;
+      }
+      return bTime.compareTo(aTime);
+    });
+
+  return relevant.map((Trip trip) {
+    final bool isCancelled = trip.status == TripStatus.cancelled;
+    return JosiNotification(
+      title: isCancelled ? 'Trip cancelled' : 'Trip completed',
+      body: isCancelled
+          ? 'Your trip from ${trip.pickup} to ${trip.destination} was cancelled.'
+          : 'Your trip from ${trip.pickup} to ${trip.destination} is complete. '
+              '${trip.fare} - ${_paymentMethodLabel(trip.paymentMethod)}.',
+      type: 'Trips',
+      time: trip.dateLabel,
+      isRead: true,
+    );
+  }).toList();
+}
+
+String _paymentMethodLabel(PaymentMethod method) => switch (method) {
+      PaymentMethod.cash => 'Cash',
+      PaymentMethod.online => 'Online',
+      PaymentMethod.wallet => 'Wallet',
+    };
 
 class _ReferenceHeader extends StatelessWidget {
   const _ReferenceHeader({

@@ -40,7 +40,7 @@ void main() {
     expect(find.text('Continue as Customer'), findsOneWidget);
     expect(find.text('Continue as Rider'), findsOneWidget);
     _expectVisibleInViewport(tester, find.text('Get Started'));
-    _expectVisibleInViewport(tester, find.text('Drive with Us'));
+    _expectVisibleInViewport(tester, find.text('Ride with Us'));
     _expectVisibleInViewport(tester, find.text('POWERED BY JOSI RIDE'));
   });
 
@@ -123,11 +123,12 @@ void main() {
     expect(find.byKey(const ValueKey<String>('customer-home-screen')),
         findsOneWidget);
     expect(find.text('Where to?'), findsOneWidget);
-    expect(find.text('Destination'), findsOneWidget);
+    expect(find.text('Book a Ride'), findsOneWidget);
+    expect(find.text('Where are you going?'), findsOneWidget);
     expect(find.text('Courier'), findsOneWidget);
     expect(
         tester.widget<Text>(find.text('Current Location')).style?.fontSize, 14);
-    expect(tester.widget<Text>(find.text('Destination')).style?.fontSize, 16);
+    expect(tester.widget<Text>(find.text('Book a Ride')).style?.fontSize, 16);
     expect(find.text('No recent locations yet.'), findsOneWidget);
     _expectVisibleInViewport(tester, find.text('Home'));
     _expectVisibleInViewport(tester, find.text('Activity'));
@@ -274,8 +275,8 @@ void main() {
       (WidgetTester tester) async {
     await _pumpToRoleSelection(tester);
 
-    _expectVisibleInViewport(tester, find.text('Drive with Us'));
-    await tester.tap(find.text('Drive with Us'));
+    _expectVisibleInViewport(tester, find.text('Ride with Us'));
+    await tester.tap(find.text('Ride with Us'));
     await tester.pumpAndSettle();
 
     expect(find.text('Rider Login'), findsOneWidget);
@@ -344,7 +345,7 @@ void main() {
 
     await _finishSplash(tester);
 
-    await tester.tap(find.text('Drive with Us'));
+    await tester.tap(find.text('Ride with Us'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'rider@josi.test');
     await tester.enterText(find.byType(TextField).at(1), 'Password123!');
@@ -385,7 +386,7 @@ void main() {
     );
 
     await _finishSplash(tester);
-    await tester.tap(find.text('Drive with Us'));
+    await tester.tap(find.text('Ride with Us'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'rider@josi.test');
     await tester.enterText(find.byType(TextField).at(1), 'Password123!');
@@ -1787,6 +1788,98 @@ void main() {
     expect(find.text('Josi Ride'), findsNWidgets(3));
   });
 
+  testWidgets('customer home menu button opens the profile screen',
+      (WidgetTester tester) async {
+    await _loginAsCustomer(tester);
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('customer-home-menu-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('customer-profile-screen')),
+        findsOneWidget);
+  });
+
+  testWidgets(
+      'customer notifications reflect this account\'s real trips and filter tabs respond',
+      (WidgetTester tester) async {
+    final List<Trip> seededTrips = <Trip>[
+      const Trip(
+        id: 'TRP-9001',
+        pickup: 'Wuse 2',
+        destination: 'Jabi Lake Mall',
+        fare: 'NGN 3,500',
+        status: TripStatus.completed,
+        paymentMethod: PaymentMethod.cash,
+        dateLabel: 'Jul 20, 2026',
+        riderName: 'Ayo Balogun',
+        customerName: 'Rik Space',
+        distance: '8.2 km',
+        duration: '22 mins',
+        completedAt: null,
+      ),
+      const Trip(
+        id: 'TRP-9002',
+        pickup: 'Garki',
+        destination: 'Maitama',
+        fare: 'NGN 2,100',
+        status: TripStatus.cancelled,
+        paymentMethod: PaymentMethod.wallet,
+        dateLabel: 'Jul 18, 2026',
+        riderName: 'Ayo Balogun',
+        customerName: 'Rik Space',
+        distance: '5.1 km',
+        duration: '14 mins',
+        cancelledAt: null,
+      ),
+    ];
+
+    await _pumpApp(
+      tester,
+      customerRepository: _FakeCustomerRepository(trips: seededTrips),
+    );
+    await _finishSplash(tester);
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'customer@josi.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Password123!');
+    await tester.tap(find.byKey(const ValueKey<String>('login-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(
+        const ValueKey<String>('customer-home-notifications-button')));
+    await tester.pumpAndSettle();
+
+    // Reflects this signed-in customer's real trips, not generic mock content.
+    expect(find.textContaining('Wuse 2'), findsOneWidget);
+    expect(find.textContaining('Jabi Lake Mall'), findsOneWidget);
+    expect(find.text('Trip completed'), findsOneWidget);
+    expect(find.text('Trip cancelled'), findsOneWidget);
+    expect(find.textContaining('driver license'), findsNothing);
+    expect(find.textContaining('Wallet update'), findsNothing);
+
+    // Filter tabs actually respond and filter the list.
+    final FilterChip allChip = tester.widget<FilterChip>(
+        find.byKey(const ValueKey<String>('notification-filter-all')));
+    expect(allChip.selected, isTrue);
+
+    await tester
+        .tap(find.byKey(const ValueKey<String>('notification-filter-trips')));
+    await tester.pumpAndSettle();
+
+    final FilterChip tripsChip = tester.widget<FilterChip>(
+        find.byKey(const ValueKey<String>('notification-filter-trips')));
+    expect(tripsChip.selected, isTrue);
+    final FilterChip allChipAfter = tester.widget<FilterChip>(
+        find.byKey(const ValueKey<String>('notification-filter-all')));
+    expect(allChipAfter.selected, isFalse);
+    // Both seeded trips are type 'Trips', so selecting it keeps them visible.
+    expect(find.text('Trip completed'), findsOneWidget);
+    expect(find.text('Trip cancelled'), findsOneWidget);
+  });
+
   test('theme follows the Josi light redline', () {
     final ThemeData theme = JosiTheme.light;
 
@@ -1805,6 +1898,7 @@ void main() {
 Future<void> _pumpApp(
   WidgetTester tester, {
   AuthRepository authRepository = const _FakeAuthRepository(),
+  CustomerRepository? customerRepository,
   RiderRepository? riderRepository,
   WalletRepository? walletRepository,
   ProfilePhotoPicker? profilePhotoPicker,
@@ -1821,7 +1915,8 @@ Future<void> _pumpApp(
     ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(authRepository),
-        customerRepositoryProvider.overrideWithValue(_FakeCustomerRepository()),
+        customerRepositoryProvider
+            .overrideWithValue(customerRepository ?? _FakeCustomerRepository()),
         riderRepositoryProvider
             .overrideWithValue(riderRepository ?? _FakeRiderRepository()),
         walletRepositoryProvider.overrideWithValue(
@@ -2153,11 +2248,12 @@ class _FakeProfilePhotoPicker implements ProfilePhotoPicker {
 }
 
 class _FakeCustomerRepository extends CustomerRepository {
-  _FakeCustomerRepository();
+  _FakeCustomerRepository({List<Trip> trips = const <Trip>[]})
+      : _trips = List<Trip>.of(trips);
 
   JosiUser _profile = JosiMockData.customer;
   final List<CustomerSavedAddress> _addresses = <CustomerSavedAddress>[];
-  final List<Trip> _trips = <Trip>[];
+  final List<Trip> _trips;
   bool _arrivalReturned = false;
 
   @override
@@ -2800,8 +2896,8 @@ Future<void> _loginAsRider(
     walletRepository: walletRepository,
     profilePhotoPicker: profilePhotoPicker,
   );
-  _expectVisibleInViewport(tester, find.text('Drive with Us'));
-  await tester.tap(find.text('Drive with Us'));
+  _expectVisibleInViewport(tester, find.text('Ride with Us'));
+  await tester.tap(find.text('Ride with Us'));
   await tester.pumpAndSettle();
   _expectVisibleInViewport(
       tester, find.byKey(const ValueKey<String>('login-button')));

@@ -80,7 +80,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     title: 'Continue as Rider',
                     subtitle:
                         'Accept requests, navigate routes, and\nmanage your earnings.',
-                    buttonLabel: 'Drive with Us',
+                    buttonLabel: 'Ride with Us',
                     isPrimary: false,
                     icon: const _SvgIcon(asset: AppAssets.bikeLane, size: 24),
                     onTap: () => context.go(AppRoutes.loginFor('rider')),
@@ -229,7 +229,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: _isWorker ? TextAlign.left : TextAlign.center,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0,
                         ),
@@ -240,7 +240,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: _isWorker ? TextAlign.left : TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: JosiColors.softMuted,
-                          fontSize: _isWorker ? 17 : 16,
+                          fontSize: 14,
                           height: 1.18,
                         ),
                   ),
@@ -296,7 +296,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Theme.of(context).textTheme.titleLarge?.copyWith(
                                   color: JosiColors.white,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 17,
+                                  fontSize: 16,
                                   letterSpacing: 1.2,
                                 ),
                       ),
@@ -329,7 +329,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style:
                               Theme.of(context).textTheme.bodyLarge?.copyWith(
                                     color: JosiColors.softMuted,
-                                    fontSize: 17,
+                                    fontSize: 14,
                                   ),
                         ),
                       ),
@@ -350,7 +350,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       color: _isWorker
                                           ? JosiColors.ink
                                           : JosiColors.redDark,
-                                      fontSize: 17,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w800,
                                     ),
                           ),
@@ -669,7 +669,6 @@ class _RiderRegistrationScreenState
           : 'Start earning on your own schedule',
       logoSize: 60,
       logoInnerSize: 60,
-      titleFontSize: 26,
       topSpacing: 0,
       titleSpacing: 12,
       fieldSpacing: 8,
@@ -796,7 +795,6 @@ class _SignupScaffold extends StatelessWidget {
     super.key,
     this.logoSize = 68,
     this.logoInnerSize = 68,
-    this.titleFontSize = 22,
     this.topSpacing = 8,
     this.titleSpacing = 18,
     this.fieldSpacing = 24,
@@ -808,7 +806,6 @@ class _SignupScaffold extends StatelessWidget {
   final VoidCallback onBack;
   final double logoSize;
   final double logoInnerSize;
-  final double titleFontSize;
   final double topSpacing;
   final double titleSpacing;
   final double fieldSpacing;
@@ -853,7 +850,7 @@ class _SignupScaffold extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: titleFontSize,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0,
                         ),
@@ -864,7 +861,7 @@ class _SignupScaffold extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: JosiColors.muted,
-                          fontSize: 16,
+                          fontSize: 14,
                           height: 1.2,
                         ),
                   ),
@@ -1231,7 +1228,7 @@ class _SignupLoginLink extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.muted,
-                  fontSize: 16,
+                  fontSize: 14,
                 ),
           ),
         ),
@@ -1242,7 +1239,7 @@ class _SignupLoginLink extends StatelessWidget {
             'Log in',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: JosiColors.redDark,
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                 ),
           ),
@@ -1861,7 +1858,7 @@ class _RecoveryScaffold extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                           color: JosiColors.ink,
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0,
                         ),
@@ -1872,7 +1869,7 @@ class _RecoveryScaffold extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: JosiColors.softMuted,
-                          fontSize: 16,
+                          fontSize: 14,
                           height: 1.22,
                         ),
                   ),
