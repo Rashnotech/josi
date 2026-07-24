@@ -59,7 +59,7 @@ Assert-Contains 'app/Services/RbacService.php' "'redirect_to' =>" 'Auth payload 
 Assert-Contains 'app/Services/RbacService.php' "'dashboard_url' =>" 'Auth payload has Laravel dashboard URL'
 Assert-Contains 'app/Services/RbacService.php' "'requires_dashboard' =>" 'Auth payload has dashboard flag'
 Assert-Contains 'app/Services/RbacService.php' "'gender' =>" 'Auth/customer payload exposes profile gender'
-Assert-Contains 'app/Http/Controllers/Api/V1/CustomerProfileController.php' "Rule::unique('users', 'email')->ignore" 'Customer profile update preserves unique email validation'
+Assert-NotContains 'app/Http/Controllers/Api/V1/CustomerProfileController.php' "'email' =>" 'Customer profile update must not accept email changes (locked to the verified registration address)'
 Assert-Contains 'app/Http/Controllers/Api/V1/CustomerAddressController.php' 'Customer saved address created successfully' 'Customer address create response exists'
 Assert-Contains 'app/Http/Controllers/Api/V1/CustomerTripController.php' 'Customer trip requested successfully' 'Customer trip request response exists'
 Assert-Contains 'routes/api.php' "Route::post('/trips', [CustomerTripController::class, 'store'])->middleware('permission:create_trip')" 'Customer trip route is permission-protected'

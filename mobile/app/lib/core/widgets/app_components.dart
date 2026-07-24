@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,22 @@ import '../constants/app_assets.dart';
 import '../constants/app_routes.dart';
 import '../mock/josi_models.dart';
 import '../theme/josi_colors.dart';
+
+/// Resolves a stored profile photo value (a local device file path or an
+/// http(s) URL) to an [ImageProvider], or `null` when there is nothing to
+/// show. Backed by whatever `ProfilePhotoPicker`/upload endpoints currently
+/// store (see `saveProfilePicture` docs) — a local path today, a URL once
+/// real file upload exists.
+ImageProvider? profilePhotoImageProvider(String? photo) {
+  final String? trimmed = photo?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    return null;
+  }
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return NetworkImage(trimmed);
+  }
+  return FileImage(File(trimmed));
+}
 
 enum AppButtonVariant { primary, secondary, ghost, danger }
 
@@ -625,11 +643,15 @@ class ProfileAvatar extends StatelessWidget {
     super.key,
     this.size = 64,
     this.showEdit = false,
+    this.photoPath,
+    this.onEditTap,
   });
 
   final String name;
   final double size;
   final bool showEdit;
+  final String? photoPath;
+  final VoidCallback? onEditTap;
 
   @override
   Widget build(BuildContext context) {
@@ -639,6 +661,15 @@ class ProfileAvatar extends StatelessWidget {
         .take(2)
         .map((String part) => part.characters.first.toUpperCase())
         .join();
+    final ImageProvider? image = profilePhotoImageProvider(photoPath);
+
+    Widget initialsText() => Text(
+          initials,
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(color: JosiColors.red),
+        );
 
     return Stack(
       clipBehavior: Clip.none,
@@ -652,25 +683,38 @@ class ProfileAvatar extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: JosiColors.white, width: 3),
           ),
-          child: Text(
-            initials,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(color: JosiColors.red),
+          child: ClipOval(
+            child: image == null
+                ? initialsText()
+                : Image(
+                    image: image,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                    errorBuilder: (BuildContext context, Object error,
+                            StackTrace? stackTrace) =>
+                        initialsText(),
+                  ),
           ),
         ),
         if (showEdit)
           Positioned(
             right: -2,
             bottom: -2,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: const BoxDecoration(
-                  color: JosiColors.red, shape: BoxShape.circle),
-              child: const Icon(Icons.edit_rounded,
-                  color: JosiColors.white, size: 15),
+            child: Material(
+              color: JosiColors.red,
+              shape: const CircleBorder(),
+              child: InkWell(
+                key: const ValueKey<String>('profile-avatar-edit-button'),
+                onTap: onEditTap,
+                customBorder: const CircleBorder(),
+                child: const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Icon(Icons.edit_rounded,
+                      color: JosiColors.white, size: 15),
+                ),
+              ),
             ),
           ),
       ],

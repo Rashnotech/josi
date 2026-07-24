@@ -346,7 +346,7 @@ All require role `customer`.
 - `GET /api/v1/customer/trips`
 - `POST /api/v1/customer/trips`
 
-Customer profile update accepts partial JSON fields: `name`, `email`, `phone`, and `gender`.
+Customer profile update accepts partial JSON fields: `name`, `phone`, and `gender`. `email` is not accepted — it's the account identifier tied to OTP verification and is silently ignored if sent.
 
 Customer saved address create requires `label` and `address`. Optional JSON fields: `floor`, `landmark`, `latitude`, `longitude`, `is_default`.
 

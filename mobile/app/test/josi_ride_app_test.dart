@@ -17,6 +17,7 @@ import 'package:josi_ride/core/services/api_client.dart';
 import 'package:josi_ride/core/services/profile_photo_picker.dart';
 import 'package:josi_ride/core/theme/josi_colors.dart';
 import 'package:josi_ride/core/theme/josi_theme.dart';
+import 'package:josi_ride/core/widgets/app_components.dart';
 import 'package:josi_ride/core/widgets/josi_google_map.dart';
 import 'package:josi_ride/main.dart';
 
@@ -491,6 +492,116 @@ void main() {
     expect(find.text('Complete Your Riding Details'), findsOneWidget);
     expect(find.text('Government ID'), findsNothing);
     expect(find.text('Documents'), findsNothing);
+  });
+
+  testWidgets(
+      'profile picture uploaded during registration appears on the rider profile page',
+      (WidgetTester tester) async {
+    final _FakeProfilePhotoPicker profilePhotoPicker = _FakeProfilePhotoPicker(
+      cameraPath: 'camera-selfie.jpg',
+      galleryPath: 'gallery-selfie.png',
+    );
+    await _loginAsRider(tester, profilePhotoPicker: profilePhotoPicker);
+
+    await tester.tap(find.text('Profile Picture'));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-profile-photo-picker')));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-profile-photo-gallery')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bottom-action-continue')));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('rider-bank-account-details-screen')),
+        findsOneWidget);
+
+    final BuildContext bankContext = tester.element(
+      find.byKey(const ValueKey<String>('rider-bank-account-details-screen')),
+    );
+    bankContext.go(AppRoutes.riderProfile);
+    await tester.pumpAndSettle();
+
+    // Not just saved to onboarding storage - the rider's own profile page
+    // now reflects the uploaded photo (riderProfileProvider was refreshed).
+    final ProfileAvatar avatar =
+        tester.widget<ProfileAvatar>(find.byType(ProfileAvatar));
+    expect(avatar.photoPath, 'gallery-selfie.png');
+  });
+
+  testWidgets(
+      'rider profile page avatar edit control opens the picker and uploads a new photo',
+      (WidgetTester tester) async {
+    final _FakeProfilePhotoPicker profilePhotoPicker = _FakeProfilePhotoPicker(
+      galleryPath: 'new-selfie.png',
+    );
+    await _loginAsRider(tester, profilePhotoPicker: profilePhotoPicker);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderProfile);
+    await tester.pumpAndSettle();
+
+    final Finder editButton =
+        find.byKey(const ValueKey<String>('profile-avatar-edit-button'));
+    expect(editButton, findsOneWidget);
+
+    await tester.tap(editButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Profile Photo'), findsOneWidget);
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-profile-photo-gallery')));
+    await tester.pumpAndSettle();
+
+    expect(profilePhotoPicker.pickedSources,
+        <ProfilePhotoSource>[ProfilePhotoSource.gallery]);
+    expect(find.text('Profile picture updated successfully.'), findsOneWidget);
+
+    final ProfileAvatar avatar =
+        tester.widget<ProfileAvatar>(find.byType(ProfileAvatar));
+    expect(avatar.photoPath, 'new-selfie.png');
+  });
+
+  testWidgets(
+      "rider 'Your profile' photo control opens the real picker instead of a static box",
+      (WidgetTester tester) async {
+    final _FakeProfilePhotoPicker profilePhotoPicker = _FakeProfilePhotoPicker(
+      cameraPath: 'update-selfie.jpg',
+    );
+    await _loginAsRider(tester, profilePhotoPicker: profilePhotoPicker);
+
+    final BuildContext context = tester.element(
+      find.byKey(const ValueKey<String>('rider-application-status-screen')),
+    );
+    context.go(AppRoutes.riderProfileSetupUpdate);
+    await tester.pumpAndSettle();
+
+    final Finder photoPickerBox =
+        find.byKey(const ValueKey<String>('rider-profile-photo-picker'));
+    expect(photoPickerBox, findsOneWidget);
+    expect(find.text('Profile Photo URL or File Path'), findsNothing);
+
+    await tester.ensureVisible(photoPickerBox);
+    await tester.tap(photoPickerBox);
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey<String>('rider-profile-photo-camera')));
+    await tester.pumpAndSettle();
+
+    expect(profilePhotoPicker.pickedSources,
+        <ProfilePhotoSource>[ProfilePhotoSource.camera]);
+    expect(find.text('update-selfie.jpg'), findsOneWidget);
+
+    await tester.tap(
+        find.byKey(const ValueKey<String>('rider-bottom-action-save-changes')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rider account'), findsOneWidget);
   });
 
   testWidgets(
@@ -1712,9 +1823,17 @@ void main() {
             .height,
         52);
 
+    // Email is locked: read-only and rejects programmatic edits alike.
+    final TextField emailField =
+        tester.widget<TextField>(find.byType(TextField).at(2));
+    expect(emailField.readOnly, isTrue);
+    expect(emailField.controller?.text, 'rik@josi.ng');
+
     await tester.enterText(find.byType(TextField).at(0), 'Ada Johnson');
     await tester.enterText(find.byType(TextField).at(1), '+2348099990000');
     await tester.enterText(find.byType(TextField).at(2), 'ada@example.com');
+    expect(emailField.controller?.text, 'rik@josi.ng');
+
     await tester
         .tap(find.byKey(const ValueKey<String>('profile-update-button')));
     await tester.pumpAndSettle();

@@ -935,6 +935,31 @@ class _RiderProfileSetupScreenState
     _hydrated = true;
   }
 
+  Future<void> _showPhotoSourceSheet() async {
+    final ProfilePhotoSource? source =
+        await showProfilePhotoSourceSheet(context);
+    if (source == null) {
+      return;
+    }
+
+    try {
+      final String? profilePhoto =
+          await ref.read(profilePhotoPickerProvider).pick(source);
+      if (!mounted || profilePhoto == null || profilePhoto.trim().isEmpty) {
+        return;
+      }
+      setState(() => _profilePhotoController.text = profilePhoto.trim());
+    } on Object {
+      if (mounted) {
+        setState(() {
+          _message = source == ProfilePhotoSource.camera
+              ? 'Unable to open the camera. Please try again.'
+              : 'Unable to open the photo gallery. Please try again.';
+        });
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (_saving) {
       return;
@@ -1092,6 +1117,8 @@ class _RiderProfileSetupScreenState
                 const SizedBox(height: 22),
                 _RiderProfilePictureFields(
                   controller: _profilePhotoController,
+                  selectedPhoto: _profilePhotoController.text.trim(),
+                  onOpenPicker: _showPhotoSourceSheet,
                   errorText: _errors['profile_photo'],
                 ),
               ],
@@ -1111,6 +1138,117 @@ class _RiderProfileSetupScreenState
         ),
       ),
     );
+  }
+}
+
+/// Shared bottom sheet offering camera/gallery as the profile photo source.
+/// Used by the registration profile-picture step, the "Your profile" update
+/// screen, and the rider profile page's avatar edit control so all three
+/// pick a photo the same way.
+Future<ProfilePhotoSource?> showProfilePhotoSourceSheet(BuildContext context) {
+  return showModalBottomSheet<ProfilePhotoSource>(
+    context: context,
+    backgroundColor: JosiColors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+    ),
+    builder: (BuildContext sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: JosiColors.line,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Profile Photo',
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      color: JosiColors.ink,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 10),
+              _PhotoSourceTile(
+                key: const ValueKey<String>('rider-profile-photo-camera'),
+                icon: Icons.photo_camera_outlined,
+                label: 'Take a selfie',
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(ProfilePhotoSource.camera),
+              ),
+              const SizedBox(height: 8),
+              _PhotoSourceTile(
+                key: const ValueKey<String>('rider-profile-photo-gallery'),
+                icon: Icons.photo_library_outlined,
+                label: 'Choose from gallery',
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(ProfilePhotoSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Picks a photo via [showProfilePhotoSourceSheet], immediately uploads it
+/// through `saveProfilePicture`, and refreshes every provider that surfaces
+/// the rider's profile photo. Used by the profile page's avatar edit
+/// control, where there is no separate "save" step to defer to.
+Future<void> pickAndUploadRiderProfilePhoto(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final ProfilePhotoSource? source = await showProfilePhotoSourceSheet(context);
+  if (source == null || !context.mounted) {
+    return;
+  }
+
+  try {
+    final String? profilePhoto =
+        await ref.read(profilePhotoPickerProvider).pick(source);
+    if (profilePhoto == null || profilePhoto.trim().isEmpty) {
+      return;
+    }
+
+    await ref
+        .read(riderRepositoryProvider)
+        .saveProfilePicture(profilePhoto: profilePhoto.trim());
+    ref
+      ..invalidate(riderOnboardingProvider)
+      ..invalidate(riderProfileProvider)
+      ..invalidate(currentRiderProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Profile picture updated successfully.')),
+        );
+    }
+  } on Object catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              _riderErrorMessage(error, 'Unable to update profile picture.'),
+            ),
+          ),
+        );
+    }
   }
 }
 
@@ -1145,66 +1283,13 @@ class _RiderProfilePictureScreenState
     _hydrated = true;
   }
 
-  void _showPhotoSourceSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: JosiColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
-      ),
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: JosiColors.line,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Profile Photo',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: JosiColors.ink,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                _PhotoSourceTile(
-                  key: const ValueKey<String>('rider-profile-photo-camera'),
-                  icon: Icons.photo_camera_outlined,
-                  label: 'Take a selfie',
-                  onTap: () {
-                    Navigator.of(sheetContext).pop();
-                    _pickProfilePhoto(ProfilePhotoSource.camera);
-                  },
-                ),
-                const SizedBox(height: 8),
-                _PhotoSourceTile(
-                  key: const ValueKey<String>('rider-profile-photo-gallery'),
-                  icon: Icons.photo_library_outlined,
-                  label: 'Choose from gallery',
-                  onTap: () {
-                    Navigator.of(sheetContext).pop();
-                    _pickProfilePhoto(ProfilePhotoSource.gallery);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  Future<void> _showPhotoSourceSheet() async {
+    final ProfilePhotoSource? source =
+        await showProfilePhotoSourceSheet(context);
+    if (source == null) {
+      return;
+    }
+    await _pickProfilePhoto(source);
   }
 
   Future<void> _pickProfilePhoto(ProfilePhotoSource source) async {
@@ -1258,7 +1343,10 @@ class _RiderProfilePictureScreenState
       await ref
           .read(riderRepositoryProvider)
           .saveProfilePicture(profilePhoto: profilePhoto);
-      ref.invalidate(riderOnboardingProvider);
+      ref
+        ..invalidate(riderOnboardingProvider)
+        ..invalidate(riderProfileProvider)
+        ..invalidate(currentRiderProvider);
       if (mounted) {
         context.go(AppRoutes.riderBankAccountDetails);
       }
@@ -2793,7 +2881,13 @@ class RiderProfileScreen extends ConsumerWidget {
               return AppCard(
                 child: Row(
                   children: <Widget>[
-                    ProfileAvatar(name: value.fullName, showEdit: true),
+                    ProfileAvatar(
+                      name: value.fullName,
+                      showEdit: true,
+                      photoPath: value.profilePhoto,
+                      onEditTap: () =>
+                          pickAndUploadRiderProfilePhoto(context, ref),
+                    ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -5071,12 +5165,9 @@ class _ProfilePhotoUploadBox extends StatelessWidget {
                                 : const Color(0xFF6A6A6A),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: Icon(
-                            hasPhoto
-                                ? Icons.check_rounded
-                                : Icons.add_a_photo_outlined,
-                            color: JosiColors.white,
-                            size: 32,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: _buildPreviewOrIcon(selectedPhoto),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -5126,6 +5217,23 @@ class _ProfilePhotoUploadBox extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildPreviewOrIcon(String selectedPhoto) {
+    final ImageProvider? image = profilePhotoImageProvider(selectedPhoto);
+    if (image == null) {
+      return const Icon(
+        Icons.add_a_photo_outlined,
+        color: JosiColors.white,
+        size: 32,
+      );
+    }
+    return Image(
+      image: image,
+      fit: BoxFit.cover,
+      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+          const Icon(Icons.check_rounded, color: JosiColors.white, size: 32),
     );
   }
 }

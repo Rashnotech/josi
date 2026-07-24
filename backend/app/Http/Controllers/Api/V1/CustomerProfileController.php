@@ -21,9 +21,11 @@ class CustomerProfileController extends Controller
     {
         $user = $request->user();
 
+        // Email is intentionally not accepted here: it's the account
+        // identifier tied to OTP verification, so it can't be changed from
+        // this endpoint. Any 'email' field in the request body is ignored.
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:150'],
-            'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->getKey())],
             'phone' => ['sometimes', 'string', 'max:30', Rule::unique('users', 'phone')->ignore($user->getKey())],
             'gender' => ['sometimes', 'nullable', 'string', 'max:50'],
         ]);

@@ -821,18 +821,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     final String name = _nameController.text.trim();
     final String phone = _phoneController.text.trim();
-    final String email = _emailController.text.trim();
     final Map<String, String> errors = <String, String>{};
     if (name.isEmpty) {
       errors['name'] = 'Enter your name.';
     }
     if (phone.isEmpty) {
       errors['phone'] = 'Enter your phone number.';
-    }
-    if (email.isEmpty) {
-      errors['email'] = 'Enter your email address.';
-    } else if (!email.contains('@')) {
-      errors['email'] = 'Enter a valid email address.';
     }
 
     setState(() {
@@ -845,10 +839,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     setState(() => _saving = true);
     try {
+      // Email is read-only here and always equals the hydrated value; the
+      // backend ignores it on this endpoint so a changed email never bypasses
+      // OTP email verification.
       await ref.read(customerRepositoryProvider).updateProfile(
             name: name,
             phone: phone,
-            email: email,
+            email: _emailController.text.trim(),
             gender: _gender,
           );
       ref.invalidate(currentCustomerProvider);
@@ -935,7 +932,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     label: 'Email',
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    errorText: _errors['email'],
+                    readOnly: true,
                   ),
                   const SizedBox(height: 22),
                   _EditGenderField(
@@ -1116,12 +1113,14 @@ class _EditProfileField extends StatelessWidget {
     required this.controller,
     this.keyboardType,
     this.errorText,
+    this.readOnly = false,
   });
 
   final String label;
   final TextEditingController controller;
   final TextInputType? keyboardType;
   final String? errorText;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -1142,13 +1141,16 @@ class _EditProfileField extends StatelessWidget {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            readOnly: readOnly,
+            showCursor: !readOnly,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: JosiColors.ink,
+                  color: readOnly ? JosiColors.muted : JosiColors.ink,
                   fontSize: 18,
                 ),
             decoration: InputDecoration(
               filled: true,
-              fillColor: JosiColors.white,
+              fillColor:
+                  readOnly ? const Color(0xFFF4F5F7) : JosiColors.white,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               border: OutlineInputBorder(
